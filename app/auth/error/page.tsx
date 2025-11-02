@@ -53,9 +53,6 @@ export default function AuthErrorPage({
                 </h1>
 
                 <p style={{ opacity: 0.8, margin: 0 }}>{message}</p>
-
-                {/* Client-only actions (Sign in with GitHub / Go home) */}
-                <AuthActions />
             </div>
         </main>
     );
