@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    useCallback,
+    Fragment,
+} from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -48,17 +55,29 @@ export default function Finder() {
     const dragRectRef = useRef<HTMLDivElement | null>(null);
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 
+    // race-safe fetch
+    const currentLoadAbortRef = useRef<AbortController | null>(null);
+
+    // context menu
+    const [menu, setMenu] = useState<{
+        open: boolean;
+        x: number;
+        y: number;
+        item: Item | null;
+    }>({ open: false, x: 0, y: 0, item: null });
+
     // toast
-    const toast = (t: string) => {
+    const toast = (t: string, ms = 3000) => {
         setMsg(t);
-        setTimeout(() => setMsg(null), 2000);
+        window.clearTimeout((toast as any).__t);
+        (toast as any).__t = window.setTimeout(() => setMsg(null), ms);
     };
 
     /* ---------------- Data loading ---------------- */
 
-    // Load ALL pages for a path (auto-pagination)
+    // Load ALL pages for a path (auto-pagination), abortable & race-safe
     const loadAll = useCallback(
-        async (currentPath: string) => {
+        async (currentPath: string, signal?: AbortSignal) => {
             setLoading(true);
             try {
                 const accFolders: FolderItem[] = [];
@@ -68,34 +87,47 @@ export default function Finder() {
                 do {
                     const qs = new URLSearchParams({ prefix: currentPath });
                     if (cursor) qs.set("cursor", cursor);
-                    const res = await fetch(`/api/files?${qs}`, { credentials: "same-origin" });
+                    const res = await fetch(`/api/files?${qs}`, {
+                        credentials: "same-origin",
+                        signal,
+                    });
                     if (!res.ok) {
                         const text = await res.text().catch(() => "");
                         console.error("[files] list failed", res.status, text);
                         toast(`List failed (${res.status})`);
                         break;
                     }
-                    const data: { folders: FolderItem[]; files: FileItem[]; nextCursor: string | null } =
-                        await res.json();
+                    const data: {
+                        folders: FolderItem[];
+                        files: FileItem[];
+                        nextCursor: string | null;
+                    } = await res.json();
                     accFolders.push(...data.folders);
                     accFiles.push(...data.files);
                     cursor = data.nextCursor;
-                } while (cursor);
+                } while (cursor && !signal?.aborted);
 
+                if (signal?.aborted) return;
                 setItems([...accFolders, ...accFiles]);
                 setSelected(new Set());
             } catch (e) {
+                if ((e as any).name === "AbortError") return;
                 console.error(e);
-                toast("Network error while listing");
+                toast("Network error while listing", 5000);
             } finally {
-                setLoading(false);
+                if (!signal?.aborted) setLoading(false);
             }
         },
         []
     );
 
     useEffect(() => {
-        if (status === "authenticated") loadAll(path);
+        if (status !== "authenticated") return;
+        currentLoadAbortRef.current?.abort();
+        const ctrl = new AbortController();
+        currentLoadAbortRef.current = ctrl;
+        loadAll(path, ctrl.signal);
+        return () => ctrl.abort();
     }, [status, path, loadAll]);
 
     /* ---------------- Navigation ---------------- */
@@ -103,7 +135,10 @@ export default function Finder() {
     const goInto = useCallback((folder: string) => {
         setPath((p) => [p, folder].filter(Boolean).join("/"));
     }, []);
-    const crumbs = useMemo(() => (path ? path.split("/").filter(Boolean) : []), [path]);
+    const crumbs = useMemo(
+        () => (path ? path.split("/").filter(Boolean) : []),
+        [path]
+    );
     const goToIndex = useCallback(
         (idx: number) => setPath(crumbs.slice(0, idx + 1).join("/")),
         [crumbs]
@@ -155,10 +190,10 @@ export default function Finder() {
             } catch (err) {
                 console.error(err);
                 setProgress(null);
-                toast("Upload error");
+                toast("Upload error", 5000);
             }
         }
-        await loadAll(path);
+        await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
     }
 
     /* ---------------- Actions ---------------- */
@@ -174,29 +209,32 @@ export default function Finder() {
         });
         if (!res.ok) return toast("Couldn't create folder");
         toast("Folder created");
-        await loadAll(path);
+        await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
     }, [path, loadAll]);
 
-    const deleteKey = useCallback(
-        async (key: string, recursive = false) => {
-            const res = await fetch("/api/files/delete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify({ key, recursive }),
-            });
-            return res.ok;
-        },
-        []
-    );
+    const deleteKey = useCallback(async (key: string, recursive = false) => {
+        const res = await fetch("/api/files/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ key, recursive }),
+        });
+        return res.ok;
+    }, []);
 
     const remove = useCallback(
         async (key: string) => {
             const isFolder = key.endsWith("/");
-            if (!confirm(`Delete ${isFolder ? "folder" : "file"}?\n${key}`)) return;
+            if (
+                !confirm(
+                    `Permanently delete ${isFolder ? "folder" : "file"}?\n${key}\nThis action cannot be undone.`
+                )
+            )
+                return;
             const ok = await deleteKey(key, isFolder);
-            if (!ok) toast("Delete failed");
-            await loadAll(path);
+            if (!ok) toast("Delete failed", 5000);
+            else toast("Deleted");
+            await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
         [deleteKey, loadAll, path]
     );
@@ -204,10 +242,17 @@ export default function Finder() {
     // Bulk delete for selected items
     const removeSelected = useCallback(async () => {
         if (!selected.size) return;
-        if (!confirm(`Delete ${selected.size} selected item(s)?`)) return;
-        await Promise.all(Array.from(selected).map((key) => deleteKey(key, key.endsWith("/"))));
+        if (
+            !confirm(
+                `Permanently delete ${selected.size} selected item(s)?\nThis action cannot be undone.`
+            )
+        )
+            return;
+        await Promise.all(
+            Array.from(selected).map((key) => deleteKey(key, key.endsWith("/")))
+        );
         toast("Deleted");
-        await loadAll(path);
+        await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
     }, [selected, deleteKey, loadAll, path]);
 
     // File rename (single) via /api/files/rename
@@ -224,9 +269,9 @@ export default function Finder() {
                 credentials: "same-origin",
                 body: JSON.stringify({ fromKey: file.key, toKey }),
             });
-            if (!res.ok) return toast("Rename failed");
+            if (!res.ok) return toast("Rename failed", 5000);
             toast("Renamed");
-            await loadAll(path);
+            await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
         [loadAll, path]
     );
@@ -252,7 +297,7 @@ export default function Finder() {
                     path: parentPrefix.replace(/^user\/[^/]+\//, ""),
                 }),
             });
-            if (!markerRes.ok) return toast("Couldn't create new folder");
+            if (!markerRes.ok) return toast("Couldn't create new folder", 5000);
 
             // Move visible files (when viewing the parent)
             const visibleInFolder = items.filter(
@@ -276,7 +321,7 @@ export default function Finder() {
             await deleteKey(oldPrefix, true);
 
             toast("Folder renamed");
-            await loadAll(path);
+            await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
         [items, deleteKey, loadAll, path]
     );
@@ -288,27 +333,38 @@ export default function Finder() {
 
     /* ---------------- Filtering & Sorting ---------------- */
 
+    const debouncedQuery = useDebouncedValue(query, 120);
+
     const visibleItems = useMemo(() => {
-        if (!query) return items;
-        const q = query.toLowerCase();
+        if (!debouncedQuery) return items;
+        const q = debouncedQuery.toLowerCase();
         return items.filter((i) => i.name.toLowerCase().includes(q));
-    }, [items, query]);
+    }, [items, debouncedQuery]);
 
     const sorted = useMemo(() => {
         const arr = [...visibleItems];
         arr.sort((a, b) => {
-            if ((a.kind === "folder") !== (b.kind === "folder")) return a.kind === "folder" ? -1 : 1;
+            // group folders first (toggle-able later if desired)
+            if ((a.kind === "folder") !== (b.kind === "folder"))
+                return a.kind === "folder" ? -1 : 1;
+
             if (sortKey === "name") {
-                return sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+                const cmp = a.name.localeCompare(b.name);
+                return sortAsc ? cmp : -cmp;
             }
             if (sortKey === "size") {
                 const sa = a.kind === "file" ? a.size : 0;
                 const sb = b.kind === "file" ? b.size : 0;
-                return sortAsc ? sa - sb : sb - sa;
+                const diff = sa - sb || a.name.localeCompare(b.name);
+                return sortAsc ? diff : -diff;
             }
-            const da = a.kind === "file" && a.lastModified ? +new Date(a.lastModified) : 0;
-            const db = b.kind === "file" && b.lastModified ? +new Date(b.lastModified) : 0;
-            return sortAsc ? da - db : db - da;
+            // date
+            const da =
+                a.kind === "file" && a.lastModified ? +new Date(a.lastModified) : 0;
+            const db =
+                b.kind === "file" && b.lastModified ? +new Date(b.lastModified) : 0;
+            const diff = da - db || a.name.localeCompare(b.name);
+            return sortAsc ? diff : -diff;
         });
         return arr;
     }, [visibleItems, sortKey, sortAsc]);
@@ -323,9 +379,9 @@ export default function Finder() {
 
     /* ---------------- Selection (click / shift / meta / drag) ---------------- */
 
-    const toggleSelect = (key: string, e: React.MouseEvent) => {
-        const meta = e.metaKey || e.ctrlKey;
-        const shift = e.shiftKey;
+    const toggleSelect = (key: string, e: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }) => {
+        const meta = !!(e.metaKey || e.ctrlKey);
+        const shift = !!e.shiftKey;
 
         setSelected((prev) => {
             const next = new Set(prev);
@@ -342,6 +398,7 @@ export default function Finder() {
                 else next.add(key);
                 lastClickedRef.current = key;
             } else {
+                // single select
                 next.clear();
                 next.add(key);
                 lastClickedRef.current = key;
@@ -372,7 +429,14 @@ export default function Finder() {
         container.appendChild(sel);
         dragRectRef.current = sel;
 
-        if (!(e.metaKey || e.ctrlKey || e.shiftKey)) setSelected(new Set());
+        if (!(e.metaKey || e.ctrlKey || e.shiftKey)) {
+            // preserve selection if starting on a card; clear only if empty area
+            const target = e.target as HTMLElement;
+            if (!target.closest("[data-key]")) setSelected(new Set());
+        }
+
+        // ensure cleanup even if mouseup occurs outside
+        window.addEventListener("mouseup", onGridMouseUpWindow, { once: true });
     };
 
     const onGridMouseMove = (e: React.MouseEvent) => {
@@ -421,6 +485,7 @@ export default function Finder() {
             dragRectRef.current = null;
         }
     };
+    const onGridMouseUpWindow = () => onGridMouseUp();
 
     /* ---------------- Keyboard shortcuts ---------------- */
 
@@ -430,9 +495,14 @@ export default function Finder() {
                 e.preventDefault();
                 createFolder();
             }
-            if (e.key === "Delete" && selected.size) {
+            if ((e.key === "Delete" || e.key === "Backspace") && selected.size) {
+                // allow backspace as delete too
                 e.preventDefault();
                 void removeSelected();
+            }
+            if (e.key === "Escape") {
+                setSelected(new Set());
+                setMenu({ open: false, x: 0, y: 0, item: null });
             }
         };
         window.addEventListener("keydown", onKey);
@@ -442,7 +512,8 @@ export default function Finder() {
     /* ---------------- Render ---------------- */
 
     if (status === "loading") return <div style={{ padding: 24 }}>Loading…</div>;
-    if (status !== "authenticated") return <div style={{ padding: 24 }}>Sign in to view files.</div>;
+    if (status !== "authenticated")
+        return <div style={{ padding: 24 }}>Sign in to view files.</div>;
 
     const count = sorted.length;
 
@@ -477,6 +548,10 @@ export default function Finder() {
                 }}
                 aria-label="File manager"
                 role="application"
+                onContextMenu={(e) => {
+                    // prevent default global context menu only if we're inside the app
+                    e.preventDefault();
+                }}
             >
                 {/* toast */}
                 {msg && (
@@ -493,7 +568,7 @@ export default function Finder() {
                             border: "1px solid #3a3a3f",
                             background: "#3a2f12",
                             color: "#ffe9a6",
-                            zIndex: 10,
+                            zIndex: 20,
                         }}
                     >
                         {msg}
@@ -546,14 +621,18 @@ export default function Finder() {
                         background: "#232326",
                     }}
                 >
-                    <button style={btn} onClick={createFolder}>New Folder</button>
-                    <button style={btn} onClick={pickFiles}>Upload</button>
+                    <button style={btn} onClick={createFolder}>
+                        New Folder
+                    </button>
+                    <button style={btn} onClick={pickFiles}>
+                        Upload
+                    </button>
                     <button
                         style={{ ...btn, opacity: selected.size ? 1 : 0.6 }}
                         onClick={removeSelected}
                         disabled={!selected.size}
                         aria-disabled={!selected.size}
-                        title="Delete selected"
+                        title={selected.size ? "Delete selected" : "No selection"}
                     >
                         Delete Selected
                     </button>
@@ -571,9 +650,14 @@ export default function Finder() {
                             border: "1px solid #3a3a3f",
                             background: "#1f1f21",
                             color: "#fff",
+                            outline: "none",
                         }}
                     />
-                    <button style={btn} onClick={() => setView((v) => (v === "list" ? "grid" : "list"))}>
+                    <button
+                        style={btn}
+                        onClick={() => setView((v) => (v === "list" ? "grid" : "list"))}
+                        aria-label={`Switch to ${view === "list" ? "grid" : "list"} view`}
+                    >
                         {view === "list" ? "Grid" : "List"}
                     </button>
                 </div>
@@ -591,45 +675,61 @@ export default function Finder() {
                     }}
                     aria-label="Path bar"
                 >
-                    <button onClick={() => setPath("")} style={crumb} aria-label="Go to root">
+                    <button
+                        onClick={() => setPath("")}
+                        style={crumb}
+                        aria-label="Go to root"
+                        aria-current={crumbs.length === 0 ? "page" : undefined}
+                    >
                         Home
                     </button>
                     {crumbs.map((c, i) => (
-                        <span key={`sep-${i}`} style={{ color: "#8e8e93" }} aria-hidden="true">
-                            ›
-                        </span>
-                    )).concat(
-                        crumbs.map((c, i) => (
-                            <button key={`${c}-${i}`} onClick={() => goToIndex(i)} style={crumb} aria-label={`Go to ${c}`}>
+                        <Fragment key={`${c}-${i}`}>
+                            <span style={{ color: "#8e8e93" }} aria-hidden="true">
+                                ›
+                            </span>
+                            <button
+                                onClick={() => goToIndex(i)}
+                                style={crumb}
+                                aria-label={`Go to ${c}`}
+                                aria-current={i === crumbs.length - 1 ? "page" : undefined}
+                            >
                                 {c}
                             </button>
-                        ))
-                    )}
+                        </Fragment>
+                    ))}
                 </div>
 
-                {/* main content (no left sidebar) */}
+                {/* main content */}
                 <section style={{ background: "#1b1b1d", display: "grid", gridTemplateRows: "1fr" }}>
                     <div style={{ overflow: "auto" }}>
                         {view === "list" ? (
                             <>
-                                <RowHeader sortKey={sortKey} sortAsc={sortAsc} sortBy={sortBy} />
-                                {loading ? (
-                                    <SkeletonList />
-                                ) : sorted.length ? (
-                                    sorted.map((it, i) => (
-                                        <Row
-                                            key={`${it.kind}-${it.key}-${i}`}
-                                            item={it}
-                                            selected={selected.has(it.key)}
-                                            onSelect={(e) => toggleSelect(it.key, e)}
-                                            onOpenFolder={() => goInto((it as FolderItem).name)}
-                                            onDelete={() => remove((it as FileItem).key)}
-                                            onRename={() => onRename(it)}
-                                        />
-                                    ))
-                                ) : (
-                                    <Empty />
-                                )}
+                                <div role="grid" aria-rowcount={count + 1} aria-colcount={4}>
+                                    <RowHeader sortKey={sortKey} sortAsc={sortAsc} sortBy={sortBy} />
+                                    {loading ? (
+                                        <SkeletonList />
+                                    ) : sorted.length ? (
+                                        sorted.map((it, i) => (
+                                            <Row
+                                                key={`${it.kind}-${it.key}-${i}`}
+                                                item={it}
+                                                selected={selected.has(it.key)}
+                                                onSelect={(e) => toggleSelect(it.key, e)}
+                                                onOpenFolder={() => goInto((it as FolderItem).name)}
+                                                onDelete={() =>
+                                                    remove(it.kind === "folder" ? (it as FolderItem).key : (it as FileItem).key)
+                                                }
+                                                onRename={() => onRename(it)}
+                                                onContextMenu={(x, y) =>
+                                                    setMenu({ open: true, x, y, item: it })
+                                                }
+                                            />
+                                        ))
+                                    ) : (
+                                        <Empty />
+                                    )}
+                                </div>
                             </>
                         ) : loading ? (
                             <SkeletonGrid />
@@ -638,11 +738,12 @@ export default function Finder() {
                                 ref={gridContainerRef}
                                 onMouseDown={onGridMouseDown}
                                 onMouseMove={onGridMouseMove}
-                                onMouseUp={onGridMouseUp}
                                 style={{
                                     position: "relative",
                                     userSelect: dragStartRef.current ? "none" : "auto",
                                 }}
+                                role="grid"
+                                aria-rowcount={Math.ceil(sorted.length)}
                             >
                                 <Grid
                                     items={sorted}
@@ -651,6 +752,7 @@ export default function Finder() {
                                     open={(name) => goInto(name)}
                                     del={(k) => remove(k)}
                                     rename={(it) => onRename(it)}
+                                    onContextMenu={(it, x, y) => setMenu({ open: true, x, y, item: it })}
                                 />
                             </div>
                         ) : (
@@ -669,16 +771,36 @@ export default function Finder() {
                         display: "flex",
                         justifyContent: "space-between",
                     }}
+                    aria-live="polite"
                 >
                     <span>
                         {sorted.length} item{sorted.length === 1 ? "" : "s"}
                     </span>
-                    <span>{selected.size ? `${selected.size} selected` : ""}</span>
+                    <span>
+                        {selected.size
+                            ? `${selected.size} selected${selected.size > 1
+                                ? ` • ${formatBytes(
+                                    Array.from(selected)
+                                        .map((k) => {
+                                            const it = sorted.find((i) => i.key === k);
+                                            return it?.kind === "file" ? (it as FileItem).size : 0;
+                                        })
+                                        .reduce((a, b) => a + b, 0)
+                                )}`
+                                : ""
+                            }`
+                            : ""}
+                    </span>
                 </div>
 
                 {/* upload progress */}
                 {typeof progress === "number" && (
                     <div
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress}
+                        aria-label="Upload progress"
                         style={{
                             position: "absolute",
                             bottom: 0,
@@ -688,7 +810,28 @@ export default function Finder() {
                             background: "#0a84ff",
                             transition: "width .2s linear",
                         }}
-                        aria-label={`Upload progress ${progress}%`}
+                    />
+                )}
+
+                {/* context menu */}
+                {menu.open && menu.item && (
+                    <ContextMenu
+                        x={menu.x}
+                        y={menu.y}
+                        onClose={() => setMenu({ open: false, x: 0, y: 0, item: null })}
+                        onOpen={() => {
+                            const it = menu.item!;
+                            if (it.kind === "folder") goInto((it as FolderItem).name);
+                            else window.open((it as FileItem).url, "_blank");
+                        }}
+                        onRename={() => onRename(menu.item!)}
+                        onDelete={() =>
+                            remove(
+                                menu.item!.kind === "folder"
+                                    ? (menu.item as FolderItem).key
+                                    : (menu.item as FileItem).key
+                            )
+                        }
                     />
                 )}
             </div>
@@ -711,7 +854,9 @@ async function putWithProgress(
             if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
         };
         xhr.onload = () =>
-            xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`PUT ${xhr.status}`));
+            xhr.status >= 200 && xhr.status < 300
+                ? resolve()
+                : reject(new Error(`PUT ${xhr.status}`));
         xhr.onerror = () => reject(new Error("PUT network error"));
         xhr.send(file);
     });
@@ -767,14 +912,26 @@ function RowHeader({
                 zIndex: 1,
             }}
         >
-            <div role="columnheader" onClick={() => sortBy("name")} style={{ cursor: "pointer" }}>
+            <div
+                role="columnheader"
+                onClick={() => sortBy("name")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+            >
                 Name{caret("name")}
             </div>
-            <div role="columnheader" onClick={() => sortBy("size")} style={{ cursor: "pointer" }}>
+            <div
+                role="columnheader"
+                onClick={() => sortBy("size")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+            >
                 Size{caret("size")}
             </div>
             <div role="columnheader">Kind</div>
-            <div role="columnheader" onClick={() => sortBy("date")} style={{ cursor: "pointer" }}>
+            <div
+                role="columnheader"
+                onClick={() => sortBy("date")}
+                style={{ cursor: "pointer", userSelect: "none" }}
+            >
                 Date Added{caret("date")}
             </div>
         </div>
@@ -788,13 +945,15 @@ function Row({
     onOpenFolder,
     onDelete,
     onRename,
+    onContextMenu,
 }: {
     item: Item;
     selected: boolean;
-    onSelect: (e: React.MouseEvent) => void;
+    onSelect: (e: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }) => void;
     onOpenFolder: () => void;
     onDelete: () => void;
     onRename: () => void;
+    onContextMenu: (x: number, y: number) => void;
 }) {
     const isFolder = item.kind === "folder";
 
@@ -807,32 +966,38 @@ function Row({
         return d.toLocaleString();
     })();
 
-    const onContext = (e: React.MouseEvent) => {
-        e.preventDefault();
-        const action = window.prompt(
-            `Action for "${item.name}" (delete/rename/open/cancel):`,
-            "delete"
-        );
-        if (!action) return;
-        const a = action.toLowerCase();
-        if (a.startsWith("del")) onDelete();
-        else if (a.startsWith("ren")) onRename();
-        else if (a.startsWith("op"))
-            isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank");
-    };
+    const openItem = () =>
+        isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank");
 
     return (
         <div
             role="row"
             tabIndex={0}
-            onDoubleClick={() =>
-                isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank")
-            }
-            onContextMenu={onContext}
+            aria-selected={selected}
+            onDoubleClick={openItem}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                onContextMenu(e.clientX, e.clientY);
+            }}
             onMouseDown={(e) => {
                 if (e.shiftKey) e.preventDefault();
             }}
-            onClick={onSelect}
+            onClick={() => onSelect({})}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    openItem();
+                } else if (e.key === " ") {
+                    e.preventDefault();
+                    onSelect({ metaKey: true }); // toggle-like
+                } else if (e.key === "F2") {
+                    e.preventDefault();
+                    onRename();
+                } else if (e.key === "Delete" || e.key === "Backspace") {
+                    e.preventDefault();
+                    onDelete();
+                }
+            }}
             style={{
                 display: "grid",
                 gridTemplateColumns: "minmax(280px,1.4fr) 120px 1fr 220px",
@@ -841,23 +1006,14 @@ function Row({
                 borderBottom: "1px solid #2a2a2d",
                 cursor: "default",
                 background: selected ? "#2c2c30" : undefined,
+                outline: "none",
             }}
         >
             <div role="cell" style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <span aria-hidden="true">{isFolder ? "📁" : iconFor(item.name)}</span>
                 <span
                     title={item.name}
-                    onDoubleClick={(e) => {
-                        e.stopPropagation();
-                    }}
-                    onClick={(e) => {
-                        if (!isFolder) {
-                            e.stopPropagation();
-                            onRename();
-                        }
-                    }}
                     style={{
-                        cursor: !isFolder ? "text" : "default",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -880,6 +1036,7 @@ function Grid({
     open,
     del,
     rename,
+    onContextMenu,
 }: {
     items: Item[];
     selected: Set<string>;
@@ -887,6 +1044,7 @@ function Grid({
     open: (name: string) => void;
     del: (key: string) => void;
     rename: (it: Item) => void;
+    onContextMenu: (it: Item, x: number, y: number) => void;
 }) {
     return (
         <div
@@ -903,27 +1061,38 @@ function Grid({
                 const file = it as FileItem;
                 const isSel = selected.has(it.key);
 
+                const openItem = () =>
+                    isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank");
+
                 return (
                     <div
                         key={it.key}
                         data-key={it.key}
-                        onDoubleClick={() =>
-                            isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank")
-                        }
+                        role="row"
+                        aria-selected={isSel}
+                        tabIndex={0}
+                        onDoubleClick={openItem}
                         onContextMenu={(e) => {
                             e.preventDefault();
-                            const action = window.prompt(
-                                `Action for "${it.name}" (delete/rename/open/cancel):`,
-                                "delete"
-                            );
-                            if (!action) return;
-                            const a = action.toLowerCase();
-                            if (a.startsWith("del")) del(isFolder ? (it as FolderItem).key : file.key);
-                            else if (a.startsWith("ren")) rename(it);
-                            else if (a.startsWith("op"))
-                                isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank");
+                            onContextMenu(it, e.clientX, e.clientY);
                         }}
                         onClick={(e) => onSelect(it.key, e)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                openItem();
+                            } else if (e.key === " ") {
+                                e.preventDefault();
+                                // toggle select
+                                onSelect(it.key, Object.assign({}, e, { metaKey: true }) as any);
+                            } else if (e.key === "F2") {
+                                e.preventDefault();
+                                rename(it);
+                            } else if (e.key === "Delete" || e.key === "Backspace") {
+                                e.preventDefault();
+                                del(isFolder ? (it as FolderItem).key : file.key);
+                            }
+                        }}
                         style={{
                             border: "1px solid #3a3a3f",
                             borderRadius: 12,
@@ -931,6 +1100,7 @@ function Grid({
                             background: isSel ? "#2c2c30" : "#232326",
                             textAlign: "center",
                             userSelect: "none",
+                            outline: "none",
                         }}
                     >
                         <div style={{ fontSize: 48, marginBottom: 8 }} aria-hidden="true">
@@ -1026,7 +1196,9 @@ function SkeletonGrid() {
                         background: "#232326",
                     }}
                 >
-                    <div style={{ height: 48, background: "#2a2a2d", borderRadius: 8, marginBottom: 8 }} />
+                    <div
+                        style={{ height: 48, background: "#2a2a2d", borderRadius: 8, marginBottom: 8 }}
+                    />
                     <div style={{ height: 12, background: "#2a2a2d", borderRadius: 6 }} />
                 </div>
             ))}
@@ -1083,4 +1255,102 @@ function kindFor(name: string) {
         log: "Log File",
     };
     return map[ext] || `${ext.toUpperCase()} file`;
+}
+
+/* ---------- Context Menu ---------- */
+
+function ContextMenu({
+    x,
+    y,
+    onClose,
+    onOpen,
+    onRename,
+    onDelete,
+}: {
+    x: number;
+    y: number;
+    onClose: () => void;
+    onOpen: () => void;
+    onRename: () => void;
+    onDelete: () => void;
+}) {
+    useEffect(() => {
+        const onDocClick = (e: MouseEvent) => {
+            const t = e.target as HTMLElement;
+            if (!t.closest?.("#ctxmenu")) onClose();
+        };
+        const onEsc = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+        document.addEventListener("mousedown", onDocClick);
+        document.addEventListener("keydown", onEsc);
+        return () => {
+            document.removeEventListener("mousedown", onDocClick);
+            document.removeEventListener("keydown", onEsc);
+        };
+    }, [onClose]);
+
+    return (
+        <div
+            id="ctxmenu"
+            role="menu"
+            style={{
+                position: "absolute",
+                top: y,
+                left: x,
+                background: "#2a2a2d",
+                color: "#fff",
+                border: "1px solid #3a3a3f",
+                borderRadius: 8,
+                minWidth: 160,
+                zIndex: 30,
+                boxShadow: "0 10px 24px rgba(0,0,0,.35)",
+                overflow: "hidden",
+            }}
+        >
+            <MenuItem onClick={onOpen} label="Open" />
+            <MenuItem onClick={onRename} label="Rename (F2)" />
+            <MenuItem onClick={onDelete} label="Delete (Del)" danger />
+        </div>
+    );
+}
+
+function MenuItem({
+    label,
+    onClick,
+    danger,
+}: {
+    label: string;
+    onClick: () => void;
+    danger?: boolean;
+}) {
+    return (
+        <button
+            role="menuitem"
+            onClick={onClick}
+            style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 12px",
+                background: "transparent",
+                border: "none",
+                color: danger ? "#ff6b6b" : "#fff",
+                cursor: "pointer",
+            }}
+        >
+            {label}
+        </button>
+    );
+}
+
+/* ---------- Hooks ---------- */
+
+function useDebouncedValue<T>(value: T, delay = 120) {
+    const [debounced, setDebounced] = useState(value);
+    useEffect(() => {
+        const t = setTimeout(() => setDebounced(value), delay);
+        return () => clearTimeout(t);
+    }, [value, delay]);
+    return debounced;
 }
