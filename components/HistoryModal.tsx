@@ -22,6 +22,7 @@ type Props = {
 
 type TimeKey = "1M" | "3M" | "6M" | "1Y" | "5Y" | "Max";
 type CurrencyKey = "USD" | "AUD";
+type ViewMode = "chart" | "table";
 
 /* ---------- Helpers ---------- */
 
@@ -40,16 +41,18 @@ const usdToAud = (v: number, audusd: number | null) =>
 /* ---------- Formatting helpers ---------- */
 
 function formatDate(dISO: string) {
-    // keep it short and locale-safe (AU)
     const d = new Date(dISO);
     return d.toLocaleDateString("en-AU", { month: "short", year: "2-digit" });
 }
 function formatDateDense(dISO: string) {
     const d = new Date(dISO);
-    return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
+    return d.toLocaleDateString("en-AU", {
+        day: "2-digit",
+        month: "short",
+        year: "2-digit",
+    });
 }
 function niceNumber(x: number, round = true) {
-    // simple 'nice' algorithm for tick step selection
     const exp = Math.floor(Math.log10(Math.max(1e-12, Math.abs(x))));
     const f = x / Math.pow(10, exp);
     let nf = 1;
@@ -61,9 +64,10 @@ function niceNumber(x: number, round = true) {
     return round ? n : nf;
 }
 function formatNumber(v: number) {
-    // compact-ish without losing precision for commodity prices
     if (Math.abs(v) >= 1000) {
-        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(v);
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
+            v
+        );
     }
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
@@ -82,11 +86,15 @@ function HistoryChart({
     height?: number;
 }) {
     if (!data?.length) {
-        return <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>No data</div>;
+        return (
+            <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>
+                No data
+            </div>
+        );
     }
 
     // Layout
-    const m = { top: 16, right: 16, bottom: 44, left: 64 }; // room for axes & labels
+    const m = { top: 16, right: 16, bottom: 44, left: 64 };
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
@@ -121,7 +129,7 @@ function HistoryChart({
         })
         .join(" ");
 
-    // Y ticks (5–6 nice ticks)
+    // Y ticks
     const yTickCount = 6;
     const stepRaw = (yMax - yMin) / (yTickCount - 1);
     const step = niceNumber(stepRaw);
@@ -131,7 +139,7 @@ function HistoryChart({
         if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
     }
 
-    // X ticks (6 evenly spaced)
+    // X ticks
     const xTickCount = 6;
     const xTicks: number[] = [];
     for (let i = 0; i < xTickCount; i++) {
@@ -159,7 +167,8 @@ function HistoryChart({
                     {formatNumber(last)} vs {formatNumber(first)} ({pct.toFixed(2)}%)
                 </div>
                 <div>
-                    {formatDateDense(data[0].date)} → {formatDateDense(data[data.length - 1].date)}
+                    {formatDateDense(data[0].date)} →{" "}
+                    {formatDateDense(data[data.length - 1].date)}
                 </div>
             </div>
 
@@ -210,7 +219,7 @@ function HistoryChart({
                     );
                 })}
 
-                {/* Axes lines */}
+                {/* Axes */}
                 <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} opacity={0.5} />
                 <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} opacity={0.5} />
 
@@ -330,6 +339,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
 
     const [tf, setTf] = useState<TimeKey>("6M");
     const [ccy, setCcy] = useState<CurrencyKey>("AUD"); // default to AUD for AU users
+    const [view, setView] = useState<ViewMode>("chart");
 
     useEffect(() => {
         if (!open || !id) return;
@@ -347,8 +357,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                 const j = (await res.json()) as ApiPayload;
                 if (!cancelled) {
                     setPayload(j);
-                    // If no FX available, force USD
-                    if (!j.fx?.audusd) setCcy("USD");
+                    if (!j.fx?.audusd) setCcy("USD"); // no FX → force USD
                 }
             } catch (e: any) {
                 if (!cancelled) setErr(e?.message ?? "Failed to load history");
@@ -365,9 +374,8 @@ export default function HistoryModal({ open, onClose, id }: Props) {
     const series = useMemo<SeriesPoint[]>(() => {
         if (!payload) return [];
         if (ccy === "USD") return payload.seriesUSD;
-        // AUD
         const rate = payload.fx?.audusd ?? null; // USD per 1 AUD
-        if (!rate) return []; // no FX → cannot show AUD
+        if (!rate) return [];
         return payload.seriesUSD.map((p) => ({ date: p.date, value: p.value / rate }));
     }, [payload, ccy]);
 
@@ -388,6 +396,34 @@ export default function HistoryModal({ open, onClose, id }: Props) {
         if (!payload) return undefined;
         return `${unitLabel} • ${new Date(payload.asof).toLocaleString("en-AU")}`;
     }, [payload, unitLabel]);
+
+    const numberFmt = useMemo(() => {
+        const currency = ccy;
+        // If the unit has a suffix like "USD/oz", show currency symbol in table
+        const hasCurrency = payload?.unitUSD?.startsWith("USD");
+        return hasCurrency
+            ? new Intl.NumberFormat(currency === "AUD" ? "en-AU" : "en-US", {
+                style: "currency",
+                currency,
+                maximumFractionDigits: 2,
+            })
+            : new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+    }, [ccy, payload?.unitUSD]);
+
+    function downloadCSV() {
+        const rows = [
+            ["Date", `Price (${unitLabel})`],
+            ...filtered.map((r) => [r.date, String(r.value)]),
+        ];
+        const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${payload?.id ?? "series"}_${ccy}_${tf}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 
     return (
         <ModalShell
@@ -411,6 +447,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
             )}
             {!loading && !err && payload && (
                 <>
+                    {/* Controls */}
                     <div
                         style={{
                             display: "flex",
@@ -440,7 +477,44 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                             ))}
                         </div>
 
-                        <div style={{ display: "flex", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <div role="tablist" aria-label="View mode" style={{ display: "flex", gap: 6 }}>
+                                <button
+                                    role="tab"
+                                    aria-selected={view === "chart"}
+                                    onClick={() => setView("chart")}
+                                    style={{
+                                        padding: "4px 10px",
+                                        borderRadius: 8,
+                                        border: "1px solid currentColor",
+                                        background: "transparent",
+                                        opacity: view === "chart" ? 1 : 0.7,
+                                        cursor: "pointer",
+                                        fontSize: 12,
+                                    }}
+                                >
+                                    Chart
+                                </button>
+                                <button
+                                    role="tab"
+                                    aria-selected={view === "table"}
+                                    onClick={() => setView("table")}
+                                    style={{
+                                        padding: "4px 10px",
+                                        borderRadius: 8,
+                                        border: "1px solid currentColor",
+                                        background: "transparent",
+                                        opacity: view === "table" ? 1 : 0.7,
+                                        cursor: "pointer",
+                                        fontSize: 12,
+                                    }}
+                                >
+                                    Table
+                                </button>
+                            </div>
+
+                            <div style={{ width: 8 }} />
+
                             <button
                                 onClick={() => setCcy("USD")}
                                 disabled={ccy === "USD"}
@@ -473,11 +547,119 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                             >
                                 AUD
                             </button>
+
+                            <div style={{ width: 8 }} />
+
+                            <button
+                                onClick={downloadCSV}
+                                style={{
+                                    padding: "4px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid currentColor",
+                                    background: "transparent",
+                                    cursor: "pointer",
+                                    fontSize: 12,
+                                }}
+                            >
+                                Download CSV
+                            </button>
                         </div>
                     </div>
 
+                    {/* Content */}
                     <div style={{ marginTop: 8 }}>
-                        <HistoryChart data={filtered} unitLabel={unitLabel} />
+                        {view === "chart" ? (
+                            <HistoryChart data={filtered} unitLabel={unitLabel} />
+                        ) : (
+                            <div
+                                role="region"
+                                aria-label="Price history table"
+                                style={{
+                                    maxHeight: 360,
+                                    overflow: "auto",
+                                    border: "1px solid rgba(255,255,255,0.12)",
+                                    borderRadius: 8,
+                                }}
+                            >
+                                <table
+                                    style={{
+                                        width: "100%",
+                                        borderCollapse: "separate",
+                                        borderSpacing: 0,
+                                        fontVariantNumeric: "tabular-nums",
+                                    }}
+                                >
+                                    <thead
+                                        style={{
+                                            position: "sticky",
+                                            top: 0,
+                                            background: "rgba(0,0,0,0.6)",
+                                            backdropFilter: "blur(6px)",
+                                        }}
+                                    >
+                                        <tr>
+                                            <th
+                                                style={{
+                                                    textAlign: "left",
+                                                    padding: "10px 12px",
+                                                    borderBottom: "1px solid rgba(255,255,255,0.12)",
+                                                    position: "sticky",
+                                                    left: 0,
+                                                    background: "inherit",
+                                                }}
+                                            >
+                                                Date
+                                            </th>
+                                            <th
+                                                style={{
+                                                    textAlign: "right",
+                                                    padding: "10px 12px",
+                                                    borderBottom: "1px solid rgba(255,255,255,0.12)",
+                                                }}
+                                            >
+                                                Price ({unitLabel})
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filtered
+                                            .slice()
+                                            .reverse() /* show most-recent first */
+                                            .map((row) => (
+                                                <tr key={row.date}>
+                                                    <td
+                                                        style={{
+                                                            padding: "10px 12px",
+                                                            borderBottom: "1px solid rgba(255,255,255,0.06)",
+                                                            position: "sticky",
+                                                            left: 0,
+                                                            background: "var(--modal-bg, #0b0b0b)",
+                                                        }}
+                                                    >
+                                                        {formatDateDense(row.date)}
+                                                    </td>
+                                                    <td
+                                                        style={{
+                                                            padding: "10px 12px",
+                                                            textAlign: "right",
+                                                            borderBottom: "1px solid rgba(255,255,255,0.06)",
+                                                        }}
+                                                    >
+                                                        {numberFmt.format(row.value)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        {filtered.length === 0 && (
+                                            <tr>
+                                                <td colSpan={2} style={{ padding: 12, opacity: 0.8 }}>
+                                                    No rows to display
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </>
             )}
