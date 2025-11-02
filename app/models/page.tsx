@@ -4,9 +4,19 @@
 import ASCIIText from "@/components/ASCIIText";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import type { Route } from "next";
 
 export default function ModelsPage() {
     const { status } = useSession(); // 'loading' | 'unauthenticated' | 'authenticated'
+
+    // Strongly-typed routes (satisfy Link's RouteImpl requirement)
+    const routes = {
+        strategies: "/models/strategies/seed" as Route,
+        runs: "/models/runs" as Route,
+        bots: "/models/bots" as Route,
+        home: "/" as Route,
+        signin: "/api/auth/signin" as Route,
+    };
 
     return (
         <main
@@ -27,11 +37,7 @@ export default function ModelsPage() {
                         height: "clamp(80px, 20vw, 200px)",
                     }}
                 >
-                    <ASCIIText
-                        text="Models"
-                        enableWaves
-                        interactive={false}
-                    />
+                    <ASCIIText text="Models" enableWaves interactive={false} />
                 </div>
 
                 {status === "loading" && <p>Checking access…</p>}
@@ -40,7 +46,7 @@ export default function ModelsPage() {
                     <>
                         <p>You must sign in to view models.</p>
                         <Link
-                            href="/api/auth/signin"
+                            href={routes.signin}
                             style={{
                                 padding: "0.6rem 1.2rem",
                                 borderRadius: "6px",
@@ -55,11 +61,53 @@ export default function ModelsPage() {
                 )}
 
                 {status === "authenticated" && (
-                    <p>🚧 Model viewer coming soon…</p>
+                    <div style={{ display: "grid", gap: "1rem", justifyItems: "center" }}>
+                        <Link
+                            href={routes.strategies}
+                            style={{
+                                padding: "0.8rem 1.5rem",
+                                borderRadius: "6px",
+                                border: "2px solid currentColor",
+                                fontWeight: 600,
+                                textDecoration: "none",
+                                width: "min(240px, 70vw)",
+                            }}
+                        >
+                            📊 Strategies
+                        </Link>
+
+                        <Link
+                            href={routes.runs}
+                            style={{
+                                padding: "0.8rem 1.5rem",
+                                borderRadius: "6px",
+                                border: "2px solid currentColor",
+                                fontWeight: 600,
+                                textDecoration: "none",
+                                width: "min(240px, 70vw)",
+                            }}
+                        >
+                            🚀 Runs
+                        </Link>
+
+                        <Link
+                            href={routes.bots}
+                            style={{
+                                padding: "0.8rem 1.5rem",
+                                borderRadius: "6px",
+                                border: "2px solid currentColor",
+                                fontWeight: 600,
+                                textDecoration: "none",
+                                width: "min(240px, 70vw)",
+                            }}
+                        >
+                            🤖 Bots
+                        </Link>
+                    </div>
                 )}
 
                 <Link
-                    href="/"
+                    href={routes.home}
                     style={{
                         marginTop: "1rem",
                         opacity: 0.7,
