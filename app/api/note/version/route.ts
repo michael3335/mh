@@ -6,7 +6,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // optional, avoids caching surprises
 
-const BUCKET = process.env.S3_BUCKET!;
+const BUCKET = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET;
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
