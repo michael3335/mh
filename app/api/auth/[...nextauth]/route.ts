@@ -1,6 +1,9 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import GitHub from "next-auth/providers/github";
 
+const ALLOWED_GITHUB_ID = process.env.ALLOWED_GITHUB_ID; // e.g. "12345678"
+const ALLOWED_GITHUB_LOGIN = process.env.ALLOWED_GITHUB_LOGIN; // e.g. "your-username"
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GitHub({
@@ -8,17 +11,45 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_SECRET!,
     }),
   ],
+  pages: {
+    // Custom error page for denied users
+    error: "/auth/error",
+  },
   callbacks: {
+    async signIn({ account, profile }) {
+      // Only enforce allowlist for GitHub provider
+      if (account?.provider === "github") {
+        // GitHub returns both a numeric id and a login (username)
+        const githubId = String(
+          // @ts-expect-error profile shape depends on provider
+          profile?.id ?? account.providerAccountId ?? ""
+        );
+        // @ts-expect-error profile shape depends on provider
+        const githubLogin: string | undefined = profile?.login;
+
+        const allowById = ALLOWED_GITHUB_ID
+          ? githubId === String(ALLOWED_GITHUB_ID)
+          : false;
+        const allowByLogin = ALLOWED_GITHUB_LOGIN
+          ? githubLogin === ALLOWED_GITHUB_LOGIN
+          : false;
+
+        if (!allowById && !allowByLogin) {
+          // Returning false blocks the sign-in and redirects to pages.error
+          return false;
+        }
+      }
+
+      return true;
+    },
     async session({ session, token }) {
-      // `session` and `token` are now typed.
-      // `token.sub` is a string | undefined (user id for OAuth/JWT)
+      // Expose the user's id on the session for convenience
       if (session.user && token?.sub) {
-        session.user.id = token.sub; // ✅ no `any`
+        (session.user as { id?: string }).id = token.sub;
       }
       return session;
     },
   },
-  // pages: { signIn: "/login" },
   // debug: process.env.NODE_ENV === "development",
 };
 
