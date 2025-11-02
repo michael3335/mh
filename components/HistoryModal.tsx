@@ -9,9 +9,9 @@ type SeriesPoint = { date: string; value: number };
 type ApiPayload = {
     id: string;
     title: string;
-    unitUSD: string;
-    fx: { audusd: number | null };
-    seriesUSD: SeriesPoint[];
+    unitUSD: string; // e.g., "USD/oz" or "USD"
+    fx: { audusd: number | null }; // USD per 1 AUD
+    seriesUSD: SeriesPoint[]; // ascending full history in USD
     asof: number;
 };
 
@@ -52,7 +52,7 @@ function formatNumber(v: number) {
     }).format(v);
 }
 
-/* ---------- Chart with vertical-at-cursor & horizontal-at-curve (interpolated) ---------- */
+/* ---------- Chart with your cursor rules ---------- */
 function HistoryChart({
     data,
     unitLabel,
@@ -73,26 +73,34 @@ function HistoryChart({
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
-    // Colors
+    // Theme
     const gridY = "rgba(255,255,255,0.12)";
     const gridX = "rgba(255,255,255,0.10)";
     const axis = "rgba(255,255,255,0.6)";
     const label = "rgba(255,255,255,0.9)";
-    const area = "currentColor";
-    const line = "currentColor";
 
     // Domains
     const xs = useMemo(() => data.map((d) => new Date(d.date).getTime()), [data]);
     const ys = useMemo(() => data.map((d) => d.value), [data]);
-    const xMin = xs[0], xMax = xs[xs.length - 1];
+    const xMin = xs[0];
+    const xMax = xs[xs.length - 1];
 
-    const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
+    const yMinRaw = Math.min(...ys);
+    const yMaxRaw = Math.max(...ys);
     const pad = (yMaxRaw - yMinRaw) * 0.08 || 1;
-    const yMin = Math.max(0, yMinRaw - pad), yMax = yMaxRaw + pad;
+    const yMin = Math.max(0, yMinRaw - pad);
+    const yMax = yMaxRaw + pad;
 
     // Scales
     const xScale = (t: number) => m.left + ((t - xMin) / Math.max(1, xMax - xMin)) * iw;
     const yScale = (v: number) => m.top + (1 - (v - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
+
+    // Trend color: green / red / gray
+    const firstVal = ys[0];
+    const lastVal = ys[ys.length - 1];
+    const delta = lastVal - firstVal;
+    const chartColor =
+        delta > 0 ? "var(--pos, #22c55e)" : delta < 0 ? "var(--neg, #ef4444)" : "rgba(255,255,255,0.9)";
 
     // Path
     const dPath = useMemo(
@@ -121,30 +129,36 @@ function HistoryChart({
     for (let i = 0; i < xTickCount; i++) xTicks.push(xMin + ((xMax - xMin) * i) / (xTickCount - 1));
 
     // Header change
-    const first = ys[0], last = ys[ys.length - 1];
-    const pct = first ? ((last - first) / first) * 100 : 0;
+    const pct = firstVal ? ((lastVal - firstVal) / firstVal) * 100 : 0;
 
-    /* ----- Cursor -> interpolate series at cursorX ----- */
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [cursorX, setCursorX] = useState<number | null>(null);   // vertical line (in px)
-    const [curveY, setCurveY] = useState<number | null>(null);     // horizontal line (in px) from interpolation
-    const [tip, setTip] = useState<{ x: number; y: number; labelDate: string; labelValue: number } | null>(null);
+    /* ----- Cursor state following your rules ----- */
+    const containerRef = useRef<HTMLElement | null>(null);
+
+    // vertical line: cursor X (px inside container)
+    const [cursorX, setCursorX] = useState<number | null>(null);
+
+    // horizontal line + tooltip: cursor Y (px inside container)
+    const [cursorY, setCursorY] = useState<number | null>(null);
+
+    // snapped dot + data: nearest ACTUAL point by time to cursor X
+    const [snapIdx, setSnapIdx] = useState<number | null>(null);
 
     const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
-    // find surrounding indices around target time t
-    function bracketIndices(t: number) {
-        // first index with xs[i] >= t
-        let lo = 0, hi = xs.length - 1;
+    const nearestIndexFromXpx = (xPx: number) => {
+        const t = xMin + ((xMax - xMin) * (xPx - m.left)) / iw;
+        if (!Number.isFinite(t)) return null;
+        let lo = 0,
+            hi = xs.length - 1;
         while (lo < hi) {
             const mid = (lo + hi) >> 1;
             if (xs[mid] < t) lo = mid + 1;
             else hi = mid;
         }
-        const iR = lo;
-        const iL = Math.max(0, iR - 1);
-        return { iL, iR };
-    }
+        const a = Math.max(0, lo - 1);
+        const b = lo;
+        return Math.abs(xs[a] - t) <= Math.abs(xs[b] - t) ? a : b;
+    };
 
     function onMove(e: React.MouseEvent<HTMLDivElement>) {
         const el = containerRef.current;
@@ -156,61 +170,42 @@ function HistoryChart({
         const inside = xPx >= m.left && xPx <= m.left + iw && yPx >= m.top && yPx <= m.top + ih;
         if (!inside) {
             setCursorX(null);
-            setCurveY(null);
-            setTip(null);
+            setCursorY(null);
+            setSnapIdx(null);
             return;
         }
 
-        // vertical line at cursor
         const xBound = clamp(xPx, m.left, m.left + iw);
-        setCursorX(xBound);
+        const yBound = clamp(yPx, m.top, m.top + ih);
 
-        // time at cursor x
-        const t = xMin + ((xMax - xMin) * (xBound - m.left)) / iw;
+        setCursorX(xBound); // vertical line → cursor X
+        setCursorY(yBound); // horizontal line + tooltip → cursor Y
 
-        // interpolate y between surrounding points
-        const { iL, iR } = bracketIndices(t);
-        const xL = xs[iL], yL = ys[iL];
-        const xR = xs[iR], yR = ys[iR];
-
-        let yVal: number;
-        if (iL === iR || xR === xL) {
-            yVal = yL; // degenerate / single point
-        } else {
-            const alpha = (t - xL) / (xR - xL);
-            yVal = yL + alpha * (yR - yL);
-        }
-
-        const yPix = yScale(yVal);
-        setCurveY(yPix);
-
-        // Tooltip: show interpolated value & cursor date (more intuitive)
-        const cursorDate = new Date(t);
-        const iso = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), cursorDate.getDate()).toISOString();
-        setTip({ x: xBound, y: yPix, labelDate: iso, labelValue: yVal });
+        const idx = nearestIndexFromXpx(xBound);
+        setSnapIdx(idx);
     }
 
     function onLeave() {
         setCursorX(null);
-        setCurveY(null);
-        setTip(null);
+        setCursorY(null);
+        setSnapIdx(null);
     }
 
     return (
         <div
-            ref={containerRef}
-            style={{ position: "relative", width: "100%", height, overflow: "hidden" }}
+            ref={(el) => (containerRef.current = el)}
+            style={{ position: "relative", width: "100%", height, overflow: "hidden", color: chartColor }}
             onMouseMove={onMove}
             onMouseLeave={onLeave}
         >
-            {/* Crosshair: vertical at cursor, horizontal at interpolated series y */}
+            {/* Crosshair: vX = cursorX, hY = cursorY (follows mouse) */}
             <Crosshair
                 containerRef={containerRef}
-                color="rgba(255,255,255,0.65)"
+                color="currentColor"
                 mode="controlled"
                 vX={cursorX}
-                hY={curveY}
-                show={cursorX != null && curveY != null}
+                hY={cursorY}
+                show={cursorX != null && cursorY != null}
             />
 
             <svg
@@ -221,8 +216,10 @@ function HistoryChart({
                 aria-label={`Price history (${unitLabel}) with axes`}
                 shapeRendering="crispEdges"
             >
+                {/* Plot background */}
                 <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" />
 
+                {/* Y grid + labels */}
                 {yTicks.map((yt, i) => {
                     const y = yScale(yt);
                     return (
@@ -235,6 +232,7 @@ function HistoryChart({
                     );
                 })}
 
+                {/* X grid + labels */}
                 {xTicks.map((xt, i) => {
                     const x = xScale(xt);
                     return (
@@ -247,9 +245,11 @@ function HistoryChart({
                     );
                 })}
 
+                {/* Axes */}
                 <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} stroke={axis} strokeWidth={1} />
                 <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} stroke={axis} strokeWidth={1} />
 
+                {/* Axis labels */}
                 <text x={m.left + iw / 2} y={height - 6} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
                     Date
                 </text>
@@ -263,18 +263,31 @@ function HistoryChart({
                     Price ({unitLabel})
                 </text>
 
-                <path d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`} fill={area} opacity={0.12} />
-                <path d={dPath} fill="none" stroke={line} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                {/* Area + line (inherit chartColor via currentColor) */}
+                <path d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`} fill="currentColor" opacity={0.12} />
+                <path d={dPath} fill="none" stroke="currentColor" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+
+                {/* Snapped dot at nearest REAL point */}
+                {snapIdx != null && (
+                    <circle
+                        cx={xScale(xs[snapIdx])}
+                        cy={yScale(ys[snapIdx])}
+                        r={4}
+                        fill="currentColor"
+                        stroke="white"
+                        strokeWidth={1}
+                    />
+                )}
             </svg>
 
-            {/* Tooltip shows interpolated value at cursor’s date */}
-            {tip && (
+            {/* Tooltip follows cursor Y, shows data from snapped index */}
+            {cursorX != null && cursorY != null && snapIdx != null && (
                 <div
                     role="note"
                     style={{
                         position: "absolute",
-                        left: Math.min(Math.max(tip.x + 8, m.left), m.left + iw - 220),
-                        top: Math.max(tip.y - 44, m.top + 4),
+                        left: Math.min(Math.max(cursorX + 8, m.left), m.left + iw - 220),
+                        top: Math.max(cursorY - 44, m.top + 4),
                         width: 208,
                         padding: "8px 10px",
                         borderRadius: 8,
@@ -285,15 +298,13 @@ function HistoryChart({
                         pointerEvents: "none",
                     }}
                 >
-                    <div style={{ opacity: 0.85 }}>
-                        {new Date(tip.labelDate).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" })}
-                    </div>
+                    <div style={{ opacity: 0.85 }}>{formatDateDense(data[snapIdx].date)}</div>
                     <div style={{ fontWeight: 700 }}>
                         {new Intl.NumberFormat(unitLabel.startsWith("AUD") ? "en-AU" : "en-US", {
                             style: unitLabel.startsWith("USD") || unitLabel.startsWith("AUD") ? "currency" : "decimal",
                             currency: unitLabel.startsWith("AUD") ? "AUD" : unitLabel.startsWith("USD") ? "USD" : undefined,
                             maximumFractionDigits: 2,
-                        }).format(tip.labelValue)}{" "}
+                        }).format(data[snapIdx].value)}{" "}
                         <span style={{ opacity: 0.7, fontWeight: 400 }}>
                             {unitLabel.replace(/^(USD|AUD)/, "").trim()}
                         </span>
@@ -313,10 +324,11 @@ function HistoryChart({
                     padding: "0 4px 8px 4px",
                     fontVariantNumeric: "tabular-nums",
                     pointerEvents: "none",
+                    color: "inherit",
                 }}
             >
                 <div>
-                    Change: {formatNumber(last)} vs {formatNumber(first)} ({pct.toFixed(2)}%)
+                    Change: {formatNumber(lastVal)} vs {formatNumber(firstVal)} ({pct.toFixed(2)}%)
                 </div>
                 <div>
                     {formatDateDense(data[0].date)} → {formatDateDense(data[data.length - 1].date)}
@@ -485,37 +497,17 @@ export default function HistoryModal({ open, onClose, id }: Props) {
     return (
         <ModalShell open={open} onClose={onClose} title={payload?.title ?? (id ? `Loading ${id}…` : "History")} subtitle={subtitle}>
             {loading && <div style={{ padding: 16, opacity: 0.8 }}>Loading…</div>}
-            {err && (
-                <div style={{ padding: 16, color: "rgba(255,120,120,0.95)", border: "1px solid rgba(255,0,0,0.25)", borderRadius: 8 }}>
-                    {err}
-                </div>
-            )}
+            {err && <div style={{ padding: 16, color: "rgba(255,120,120,0.95)", border: "1px solid rgba(255,0,0,0.25)", borderRadius: 8 }}>{err}</div>}
             {!loading && !err && payload && (
                 <>
                     {/* Controls */}
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: 8,
-                            flexWrap: "wrap",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                        }}
-                    >
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             {timeframes.map((t) => (
                                 <button
                                     key={t.key}
                                     onClick={() => setTf(t.key)}
-                                    style={{
-                                        padding: "4px 10px",
-                                        borderRadius: 999,
-                                        border: "1px solid currentColor",
-                                        opacity: tf === t.key ? 1 : 0.7,
-                                        background: "transparent",
-                                        cursor: "pointer",
-                                        fontSize: 12,
-                                    }}
+                                    style={{ padding: "4px 10px", borderRadius: 999, border: "1px solid currentColor", opacity: tf === t.key ? 1 : 0.7, background: "transparent", cursor: "pointer", fontSize: 12 }}
                                 >
                                     {t.key}
                                 </button>
@@ -524,20 +516,10 @@ export default function HistoryModal({ open, onClose, id }: Props) {
 
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                             <div role="tablist" aria-label="View mode" style={{ display: "flex", gap: 6 }}>
-                                <button
-                                    role="tab"
-                                    aria-selected={view === "chart"}
-                                    onClick={() => setView("chart")}
-                                    style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: view === "chart" ? 1 : 0.7, cursor: "pointer", fontSize: 12 }}
-                                >
+                                <button role="tab" aria-selected={view === "chart"} onClick={() => setView("chart")} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: view === "chart" ? 1 : 0.7, cursor: "pointer", fontSize: 12 }}>
                                     Chart
                                 </button>
-                                <button
-                                    role="tab"
-                                    aria-selected={view === "table"}
-                                    onClick={() => setView("table")}
-                                    style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: view === "table" ? 1 : 0.7, cursor: "pointer", fontSize: 12 }}
-                                >
+                                <button role="tab" aria-selected={view === "table"} onClick={() => setView("table")} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: view === "table" ? 1 : 0.7, cursor: "pointer", fontSize: 12 }}>
                                     Table
                                 </button>
                             </div>
