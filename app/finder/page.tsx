@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 /* ---------------- Types ---------------- */
 
@@ -23,11 +25,11 @@ type ViewMode = "list" | "grid";
 
 export default function Finder() {
     const { status } = useSession();
+    const router = useRouter();
 
     // path / data / ui state
     const [path, setPath] = useState<string>("");
     const [items, setItems] = useState<Item[]>([]);
-    const [cursor, setCursor] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [msg, setMsg] = useState<string | null>(null);
     const [view, setView] = useState<ViewMode>("grid");
@@ -49,28 +51,39 @@ export default function Finder() {
     // toast
     const toast = (t: string) => {
         setMsg(t);
-        setTimeout(() => setMsg(null), 2200);
+        setTimeout(() => setMsg(null), 2000);
     };
 
     /* ---------------- Data loading ---------------- */
 
-    const load = useCallback(
-        async (reset = true) => {
+    // Load ALL pages for a path (auto-pagination)
+    const loadAll = useCallback(
+        async (currentPath: string) => {
+            setLoading(true);
             try {
-                setLoading(true);
-                const qs = new URLSearchParams({ prefix: path });
-                if (!reset && cursor) qs.set("cursor", cursor);
-                const res = await fetch(`/api/files?${qs}`, { credentials: "same-origin" });
-                if (!res.ok) {
-                    const text = await res.text().catch(() => "");
-                    console.error("[files] list failed", res.status, text);
-                    toast(`List failed (${res.status})`);
-                    return;
-                }
-                const data: { folders: FolderItem[]; files: FileItem[]; nextCursor: string | null } = await res.json();
-                setItems(prev => (reset ? [...data.folders, ...data.files] : [...prev, ...data.folders, ...data.files]));
-                setCursor(data.nextCursor);
-                setSelected(new Set()); // clear selection when listing changes
+                const accFolders: FolderItem[] = [];
+                const accFiles: FileItem[] = [];
+                let cursor: string | null = null;
+
+                do {
+                    const qs = new URLSearchParams({ prefix: currentPath });
+                    if (cursor) qs.set("cursor", cursor);
+                    const res = await fetch(`/api/files?${qs}`, { credentials: "same-origin" });
+                    if (!res.ok) {
+                        const text = await res.text().catch(() => "");
+                        console.error("[files] list failed", res.status, text);
+                        toast(`List failed (${res.status})`);
+                        break;
+                    }
+                    const data: { folders: FolderItem[]; files: FileItem[]; nextCursor: string | null } =
+                        await res.json();
+                    accFolders.push(...data.folders);
+                    accFiles.push(...data.files);
+                    cursor = data.nextCursor;
+                } while (cursor);
+
+                setItems([...accFolders, ...accFiles]);
+                setSelected(new Set());
             } catch (e) {
                 console.error(e);
                 toast("Network error while listing");
@@ -78,25 +91,23 @@ export default function Finder() {
                 setLoading(false);
             }
         },
-        [path, cursor]
+        []
     );
 
     useEffect(() => {
-        if (status === "authenticated") load(true);
-    }, [status, path, load]);
+        if (status === "authenticated") loadAll(path);
+    }, [status, path, loadAll]);
 
     /* ---------------- Navigation ---------------- */
 
     const goInto = useCallback((folder: string) => {
-        setPath(p => [p, folder].filter(Boolean).join("/"));
-    }, []);
-    const goUp = useCallback(() => {
-        setPath(p => p.split("/").slice(0, -1).join("/"));
+        setPath((p) => [p, folder].filter(Boolean).join("/"));
     }, []);
     const crumbs = useMemo(() => (path ? path.split("/").filter(Boolean) : []), [path]);
-    const goToIndex = useCallback((idx: number) => {
-        setPath(crumbs.slice(0, idx + 1).join("/"));
-    }, [crumbs]);
+    const goToIndex = useCallback(
+        (idx: number) => setPath(crumbs.slice(0, idx + 1).join("/")),
+        [crumbs]
+    );
 
     /* ---------------- Uploads ---------------- */
 
@@ -147,7 +158,7 @@ export default function Finder() {
                 toast("Upload error");
             }
         }
-        await load(true);
+        await loadAll(path);
     }
 
     /* ---------------- Actions ---------------- */
@@ -163,8 +174,8 @@ export default function Finder() {
         });
         if (!res.ok) return toast("Couldn't create folder");
         toast("Folder created");
-        await load(true);
-    }, [path, load]);
+        await loadAll(path);
+    }, [path, loadAll]);
 
     const deleteKey = useCallback(
         async (key: string, recursive = false) => {
@@ -185,22 +196,19 @@ export default function Finder() {
             if (!confirm(`Delete ${isFolder ? "folder" : "file"}?\n${key}`)) return;
             const ok = await deleteKey(key, isFolder);
             if (!ok) toast("Delete failed");
-            await load(true);
+            await loadAll(path);
         },
-        [deleteKey, load]
+        [deleteKey, loadAll, path]
     );
 
     // Bulk delete for selected items
     const removeSelected = useCallback(async () => {
         if (!selected.size) return;
         if (!confirm(`Delete ${selected.size} selected item(s)?`)) return;
-        // Run deletes in parallel
-        await Promise.all(
-            Array.from(selected).map(key => deleteKey(key, key.endsWith("/")))
-        );
+        await Promise.all(Array.from(selected).map((key) => deleteKey(key, key.endsWith("/"))));
         toast("Deleted");
-        await load(true);
-    }, [selected, deleteKey, load]);
+        await loadAll(path);
+    }, [selected, deleteKey, loadAll, path]);
 
     // File rename (single) via /api/files/rename
     const renameFile = useCallback(
@@ -218,56 +226,42 @@ export default function Finder() {
             });
             if (!res.ok) return toast("Rename failed");
             toast("Renamed");
-            await load(true);
+            await loadAll(path);
         },
-        [load]
+        [loadAll, path]
     );
 
-    // Folder rename (client-side recursive):
-    // 1) List all contents under folder prefix
-    // 2) For each file: POST /api/files/rename (copy+delete) to new prefix
-    // 3) Delete the old folder marker
+    // Folder rename (client-side pragmatic approach)
     const renameFolder = useCallback(
         async (folder: FolderItem) => {
             const base = folder.name;
             const next = prompt("Rename folder to:", base);
             if (!next || next === base) return;
 
-            const oldPrefix = folder.key;                // "user/<uid>/.../Old/"
+            const oldPrefix = folder.key; // "user/<uid>/.../Old/"
             const parentPrefix = oldPrefix.replace(/[^/]+\/$/, ""); // up to parent with trailing slash
             const newPrefix = parentPrefix + next + "/";
 
-            // 1) Walk listing to get all objects inside the folder (client-driven pagination)
-            let token: string | null = null;
-            const toMove: string[] = [];
-            do {
-                const qs = new URLSearchParams({ prefix: oldPrefix.replace(/^user\/[^/]+\//, "") }); // API expects relative path; but our /api/files lists by relative path
-                // The /api/files GET lists based on current "path", not an arbitrary prefix. So we fetch by setting path temporarily on client? Simpler: call server rename per file is tricky.
-                // Workaround: use a dedicated helper that lists path= (relative) from current Finder. If the folder is inside current path, we can filter items in UI. Otherwise, ask server for deeper list.
-                // To keep client-only: just call a small helper route? Not available. So we’ll iterate via S3 API proxy is not exposed.
-                // => Pragmatic approach: rely on delete API recursive + rename file by file using our current view when inside the folder.
-                // But to guarantee, we can ask user to open the folder and rename there. Simpler fallback:
-                token = null;
-            } while (token);
-
-            // If we're inside the folder, we can move visible files; otherwise do a best-effort marker move:
-            // Create new folder marker and (if empty) delete old marker so UI reflects rename.
+            // Create new folder marker
             const markerRes = await fetch("/api/files/folder", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "same-origin",
-                body: JSON.stringify({ name: next, path: parentPrefix.replace(/^user\/[^/]+\//, "") }), // server builds prefix using session
+                body: JSON.stringify({
+                    name: next,
+                    path: parentPrefix.replace(/^user\/[^/]+\//, ""),
+                }),
             });
             if (!markerRes.ok) return toast("Couldn't create new folder");
 
-            // Try to rename files we can see (when user is in parent directory)
+            // Move visible files (when viewing the parent)
             const visibleInFolder = items.filter(
-                it => it.kind === "file" && it.key.startsWith(oldPrefix)
+                (it) => it.kind === "file" && it.key.startsWith(oldPrefix)
             ) as FileItem[];
 
             await Promise.all(
                 visibleInFolder.map((f) => {
-                    const relName = f.key.slice(oldPrefix.length); // remainder after folder/
+                    const relName = f.key.slice(oldPrefix.length);
                     const toKey = newPrefix + relName;
                     return fetch("/api/files/rename", {
                         method: "POST",
@@ -278,13 +272,13 @@ export default function Finder() {
                 })
             );
 
-            // Finally delete old folder (recursive) to remove marker + leftovers
+            // Delete old folder recursively
             await deleteKey(oldPrefix, true);
 
             toast("Folder renamed");
-            await load(true);
+            await loadAll(path);
         },
-        [items, deleteKey, load]
+        [items, deleteKey, loadAll, path]
     );
 
     const onRename = useCallback(
@@ -297,7 +291,7 @@ export default function Finder() {
     const visibleItems = useMemo(() => {
         if (!query) return items;
         const q = query.toLowerCase();
-        return items.filter(i => i.name.toLowerCase().includes(q));
+        return items.filter((i) => i.name.toLowerCase().includes(q));
     }, [items, query]);
 
     const sorted = useMemo(() => {
@@ -320,36 +314,34 @@ export default function Finder() {
     }, [visibleItems, sortKey, sortAsc]);
 
     const sortBy = (k: SortKey) => {
-        if (k === sortKey) setSortAsc(a => !a);
-        else { setSortKey(k); setSortAsc(true); }
+        if (k === sortKey) setSortAsc((a) => !a);
+        else {
+            setSortKey(k);
+            setSortAsc(true);
+        }
     };
 
     /* ---------------- Selection (click / shift / meta / drag) ---------------- */
 
-    // Click handling (list + grid)
     const toggleSelect = (key: string, e: React.MouseEvent) => {
         const meta = e.metaKey || e.ctrlKey;
         const shift = e.shiftKey;
 
-        setSelected(prev => {
+        setSelected((prev) => {
             const next = new Set(prev);
-
-            // compute ordered keys according to current "sorted"
-            const order = sorted.map(it => it.key);
+            const order = sorted.map((it) => it.key);
             const last = lastClickedRef.current;
 
             if (shift && last && order.includes(last) && order.includes(key)) {
-                // range select
                 const a = order.indexOf(last);
                 const b = order.indexOf(key);
                 const [start, end] = a < b ? [a, b] : [b, a];
                 for (let i = start; i <= end; i++) next.add(order[i]);
             } else if (meta) {
-                // toggle single
-                if (next.has(key)) next.delete(key); else next.add(key);
+                if (next.has(key)) next.delete(key);
+                else next.add(key);
                 lastClickedRef.current = key;
             } else {
-                // single select
                 next.clear();
                 next.add(key);
                 lastClickedRef.current = key;
@@ -368,7 +360,6 @@ export default function Finder() {
         const start = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         dragStartRef.current = start;
 
-        // create selection rect
         const sel = document.createElement("div");
         sel.style.position = "absolute";
         sel.style.border = "1px solid #3a3a3f";
@@ -381,7 +372,6 @@ export default function Finder() {
         container.appendChild(sel);
         dragRectRef.current = sel;
 
-        // if no meta/shift, start a new selection
         if (!(e.metaKey || e.ctrlKey || e.shiftKey)) setSelected(new Set());
     };
 
@@ -402,20 +392,21 @@ export default function Finder() {
         sel.style.width = `${x2 - x1}px`;
         sel.style.height = `${y2 - y1}px`;
 
-        // hit-test children
         const hits = new Set<string>();
-        container.querySelectorAll<HTMLElement>('[data-key]').forEach((el) => {
+        container.querySelectorAll<HTMLElement>("[data-key]").forEach((el) => {
             const b = el.getBoundingClientRect();
-            const bx1 = b.left - rect.left, by1 = b.top - rect.top, bx2 = bx1 + b.width, by2 = by1 + b.height;
+            const bx1 = b.left - rect.left,
+                by1 = b.top - rect.top,
+                bx2 = bx1 + b.width,
+                by2 = by1 + b.height;
             const overlap = !(bx2 < x1 || bx1 > x2 || by2 < y1 || by1 > y2);
             if (overlap) hits.add(el.dataset.key!);
         });
 
-        setSelected(prev => {
-            // merge with previous if meta is held; else replace selection
+        setSelected((prev) => {
             if (e.metaKey || e.ctrlKey) {
                 const merged = new Set(prev);
-                hits.forEach(k => merged.add(k));
+                hits.forEach((k) => merged.add(k));
                 return merged;
             } else {
                 return hits;
@@ -435,18 +426,18 @@ export default function Finder() {
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.metaKey && e.key.toLowerCase() === "n") { e.preventDefault(); createFolder(); }
-            if (e.key === "Backspace") { e.preventDefault(); goUp(); }
-            if (e.key === "Delete") {
-                if (selected.size) {
-                    e.preventDefault();
-                    void removeSelected();
-                }
+            if (e.metaKey && e.key.toLowerCase() === "n") {
+                e.preventDefault();
+                createFolder();
+            }
+            if (e.key === "Delete" && selected.size) {
+                e.preventDefault();
+                void removeSelected();
             }
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [createFolder, goUp, removeSelected, selected.size]);
+    }, [createFolder, removeSelected, selected.size]);
 
     /* ---------------- Render ---------------- */
 
@@ -464,9 +455,11 @@ export default function Finder() {
                 width: "100vw",
                 display: "grid",
                 placeItems: "center",
-                background: "radial-gradient(1200px 800px at 20% -10%, #232325 0%, #1a1a1c 30%, #121214 100%)",
+                background:
+                    "radial-gradient(1200px 800px at 20% -10%, #232325 0%, #1a1a1c 30%, #121214 100%)",
                 color: "#f2f2f7",
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif',
+                fontFamily:
+                    '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif',
             }}
         >
             <div
@@ -519,22 +512,27 @@ export default function Finder() {
                     }}
                 >
                     <div style={{ display: "flex", gap: 8 }}>
-                        <Dot c="#ff5f57" />
-                        <Dot c="#febc2e" />
-                        <Dot c="#28c840" />
+                        {/* Red closes to '/' */}
+                        <Dot c="#ff5f57" onClick={() => router.push("/")} title="Close" />
+                        <Dot c="#febc2e" title="Minimize (inactive)" />
+                        <Dot c="#28c840" title="Zoom (inactive)" />
                     </div>
                     <strong style={{ marginLeft: 8 }}>Files</strong>
-                    <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-                        <button onClick={goUp} style={btn} aria-label="Go up">◀︎ Up</button>
-                        <button
-                            onClick={() => (cursor ? load(false) : toast("No more items"))}
-                            disabled={!cursor || loading}
-                            style={btn}
-                            aria-disabled={!cursor || loading}
-                        >
-                            {loading ? "Loading…" : "Load more"}
-                        </button>
-                    </div>
+                    <Link
+                        href="/"
+                        style={{
+                            marginLeft: "auto",
+                            textDecoration: "none",
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            border: "1px solid #3a3a3f",
+                            background: "#2a2a2e",
+                            color: "#fff",
+                        }}
+                        aria-label="Back to Home"
+                    >
+                        Home →
+                    </Link>
                 </div>
 
                 {/* toolbar */}
@@ -575,7 +573,7 @@ export default function Finder() {
                             color: "#fff",
                         }}
                     />
-                    <button style={btn} onClick={() => setView(v => (v === "list" ? "grid" : "list"))}>
+                    <button style={btn} onClick={() => setView((v) => (v === "list" ? "grid" : "list"))}>
                         {view === "list" ? "Grid" : "List"}
                     </button>
                 </div>
@@ -593,9 +591,13 @@ export default function Finder() {
                     }}
                     aria-label="Path bar"
                 >
-                    <button onClick={() => setPath("")} style={crumb} aria-label="Go to root">Home</button>
+                    <button onClick={() => setPath("")} style={crumb} aria-label="Go to root">
+                        Home
+                    </button>
                     {crumbs.map((c, i) => (
-                        <span key={`sep-${i}`} style={{ color: "#8e8e93" }} aria-hidden="true">›</span>
+                        <span key={`sep-${i}`} style={{ color: "#8e8e93" }} aria-hidden="true">
+                            ›
+                        </span>
                     )).concat(
                         crumbs.map((c, i) => (
                             <button key={`${c}-${i}`} onClick={() => goToIndex(i)} style={crumb} aria-label={`Go to ${c}`}>
@@ -605,86 +607,57 @@ export default function Finder() {
                     )}
                 </div>
 
-                {/* main content */}
-                <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", height: "100%" }}>
-                    {/* sidebar (light hint of Finder but simple) */}
-                    <aside
-                        style={{
-                            background: "linear-gradient(180deg,#202022,#1a1a1c)",
-                            borderRight: "1px solid #3a3a3f",
-                            padding: 12,
-                        }}
-                        aria-label="Sidebar"
-                    >
-                        <p style={sideTitle}>Favourites</p>
-                        <div style={sideItem(true)}>📥 Downloads</div>
-                        <div style={sideItem(false)}>📄 Documents</div>
-                        <div style={sideItem(false)}>⭐ Starred (todo)</div>
-
-                        <p style={{ ...sideTitle, marginTop: 12 }}>Path</p>
-                        <div style={{ fontSize: 12, opacity: 0.9 }}>{path || "(root)"}</div>
-                        <p style={{ ...sideTitle, marginTop: 12 }}>Selected</p>
-                        <div style={{ fontSize: 12, opacity: 0.9 }}>{selected.size} item(s)</div>
-                    </aside>
-
-                    {/* files */}
-                    <section style={{ background: "#1b1b1d", display: "grid", gridTemplateRows: "auto 1fr" }}>
-                        {view === "list" && (
-                            <div style={{ padding: "10px 14px", borderBottom: "1px solid #3a3a3f", color: "#8e8e93" }}>
-                                Tip: ⌘N new folder • Backspace up • Delete selected • Shift-click range • ⌘/Ctrl-click multi
+                {/* main content (no left sidebar) */}
+                <section style={{ background: "#1b1b1d", display: "grid", gridTemplateRows: "1fr" }}>
+                    <div style={{ overflow: "auto" }}>
+                        {view === "list" ? (
+                            <>
+                                <RowHeader sortKey={sortKey} sortAsc={sortAsc} sortBy={sortBy} />
+                                {loading ? (
+                                    <SkeletonList />
+                                ) : sorted.length ? (
+                                    sorted.map((it, i) => (
+                                        <Row
+                                            key={`${it.kind}-${it.key}-${i}`}
+                                            item={it}
+                                            selected={selected.has(it.key)}
+                                            onSelect={(e) => toggleSelect(it.key, e)}
+                                            onOpenFolder={() => goInto((it as FolderItem).name)}
+                                            onDelete={() => remove((it as FileItem).key)}
+                                            onRename={() => onRename(it)}
+                                        />
+                                    ))
+                                ) : (
+                                    <Empty />
+                                )}
+                            </>
+                        ) : loading ? (
+                            <SkeletonGrid />
+                        ) : sorted.length ? (
+                            <div
+                                ref={gridContainerRef}
+                                onMouseDown={onGridMouseDown}
+                                onMouseMove={onGridMouseMove}
+                                onMouseUp={onGridMouseUp}
+                                style={{
+                                    position: "relative",
+                                    userSelect: dragStartRef.current ? "none" : "auto",
+                                }}
+                            >
+                                <Grid
+                                    items={sorted}
+                                    selected={selected}
+                                    onSelect={(key, e) => toggleSelect(key, e)}
+                                    open={(name) => goInto(name)}
+                                    del={(k) => remove(k)}
+                                    rename={(it) => onRename(it)}
+                                />
                             </div>
+                        ) : (
+                            <Empty />
                         )}
-
-                        <div style={{ overflow: "auto" }}>
-                            {view === "list" ? (
-                                <>
-                                    <RowHeader sortKey={sortKey} sortAsc={sortAsc} sortBy={sortBy} />
-                                    {loading ? (
-                                        <SkeletonList />
-                                    ) : count ? (
-                                        sorted.map((it, i) => (
-                                            <Row
-                                                key={`${it.kind}-${it.key}-${i}`}
-                                                item={it}
-                                                selected={selected.has(it.key)}
-                                                onSelect={(e) => toggleSelect(it.key, e)}
-                                                onOpenFolder={() => goInto((it as FolderItem).name)}
-                                                onDelete={() => remove((it as FileItem).key)}
-                                                onRename={() => onRename(it)}
-                                            />
-                                        ))
-                                    ) : (
-                                        <Empty />
-                                    )}
-                                </>
-                            ) : loading ? (
-                                <SkeletonGrid />
-                            ) : count ? (
-                                <div
-                                    ref={gridContainerRef}
-                                    onMouseDown={onGridMouseDown}
-                                    onMouseMove={onGridMouseMove}
-                                    onMouseUp={onGridMouseUp}
-                                    style={{
-                                        position: "relative",
-                                        userSelect: dragStartRef.current ? "none" : "auto",
-                                    }}
-                                >
-                                    <Grid
-                                        items={sorted}
-                                        selected={selected}
-                                        onSelect={(key, e) => toggleSelect(key, e)}
-                                        open={(name) => goInto(name)}
-                                        del={(k) => remove(k)}
-                                        rename={(it) => onRename(it)}
-                                    />
-                                </div>
-                            ) : (
-                                <Empty />
-                            )}
-                        </div>
-                    </section>
-                </div>
+                    </div>
+                </section>
 
                 {/* bottom bar */}
                 <div
@@ -697,7 +670,9 @@ export default function Finder() {
                         justifyContent: "space-between",
                     }}
                 >
-                    <span>{count} item{count === 1 ? "" : "s"}</span>
+                    <span>
+                        {sorted.length} item{sorted.length === 1 ? "" : "s"}
+                    </span>
                     <span>{selected.size ? `${selected.size} selected` : ""}</span>
                 </div>
 
@@ -723,23 +698,55 @@ export default function Finder() {
 
 /* ---------------- Helpers & Subcomponents ---------------- */
 
-async function putWithProgress(url: string, file: File, onProgress: (p: number) => void): Promise<void> {
+async function putWithProgress(
+    url: string,
+    file: File,
+    onProgress: (p: number) => void
+): Promise<void> {
     await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", url);
         xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-        xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`PUT ${xhr.status}`)));
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`PUT ${xhr.status}`));
         xhr.onerror = () => reject(new Error("PUT network error"));
         xhr.send(file);
     });
 }
 
-function Dot({ c }: { c: string }) {
-    return <span style={{ width: 12, height: 12, background: c, borderRadius: "50%", border: "1px solid rgba(0,0,0,.25)", display: "inline-block" }} />;
+function Dot({ c, onClick, title }: { c: string; onClick?: () => void; title?: string }) {
+    return (
+        <span
+            onClick={onClick}
+            title={title}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : -1}
+            onKeyDown={(e) => onClick && (e.key === "Enter" || e.key === " ") && onClick()}
+            style={{
+                width: 12,
+                height: 12,
+                background: c,
+                borderRadius: "50%",
+                border: "1px solid rgba(0,0,0,.25)",
+                display: "inline-block",
+                cursor: onClick ? "pointer" : "default",
+            }}
+        />
+    );
 }
 
-function RowHeader({ sortKey, sortAsc, sortBy }: { sortKey: SortKey; sortAsc: boolean; sortBy: (k: SortKey) => void; }) {
+function RowHeader({
+    sortKey,
+    sortAsc,
+    sortBy,
+}: {
+    sortKey: SortKey;
+    sortAsc: boolean;
+    sortBy: (k: SortKey) => void;
+}) {
     const caret = (k: SortKey) => (sortKey === k ? (sortAsc ? " ▲" : " ▼") : "");
     return (
         <div
@@ -760,10 +767,16 @@ function RowHeader({ sortKey, sortAsc, sortBy }: { sortKey: SortKey; sortAsc: bo
                 zIndex: 1,
             }}
         >
-            <div role="columnheader" onClick={() => sortBy("name")} style={{ cursor: "pointer" }}>Name{caret("name")}</div>
-            <div role="columnheader" onClick={() => sortBy("size")} style={{ cursor: "pointer" }}>Size{caret("size")}</div>
+            <div role="columnheader" onClick={() => sortBy("name")} style={{ cursor: "pointer" }}>
+                Name{caret("name")}
+            </div>
+            <div role="columnheader" onClick={() => sortBy("size")} style={{ cursor: "pointer" }}>
+                Size{caret("size")}
+            </div>
             <div role="columnheader">Kind</div>
-            <div role="columnheader" onClick={() => sortBy("date")} style={{ cursor: "pointer" }}>Date Added{caret("date")}</div>
+            <div role="columnheader" onClick={() => sortBy("date")} style={{ cursor: "pointer" }}>
+                Date Added{caret("date")}
+            </div>
         </div>
     );
 }
@@ -796,21 +809,29 @@ function Row({
 
     const onContext = (e: React.MouseEvent) => {
         e.preventDefault();
-        const action = window.prompt(`Action for "${item.name}" (delete/rename/open/cancel):`, "delete");
+        const action = window.prompt(
+            `Action for "${item.name}" (delete/rename/open/cancel):`,
+            "delete"
+        );
         if (!action) return;
         const a = action.toLowerCase();
         if (a.startsWith("del")) onDelete();
         else if (a.startsWith("ren")) onRename();
-        else if (a.startsWith("op")) (isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank"));
+        else if (a.startsWith("op"))
+            isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank");
     };
 
     return (
         <div
             role="row"
             tabIndex={0}
-            onDoubleClick={() => (isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank"))}
+            onDoubleClick={() =>
+                isFolder ? onOpenFolder() : window.open((item as FileItem).url, "_blank")
+            }
             onContextMenu={onContext}
-            onMouseDown={(e) => { /* prevent text select on shift */ if (e.shiftKey) e.preventDefault(); }}
+            onMouseDown={(e) => {
+                if (e.shiftKey) e.preventDefault();
+            }}
             onClick={onSelect}
             style={{
                 display: "grid",
@@ -826,8 +847,15 @@ function Row({
                 <span aria-hidden="true">{isFolder ? "📁" : iconFor(item.name)}</span>
                 <span
                     title={item.name}
-                    onDoubleClick={(e) => { e.stopPropagation(); }}
-                    onClick={(e) => { if (!isFolder) { e.stopPropagation(); onRename(); } }}
+                    onDoubleClick={(e) => {
+                        e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                        if (!isFolder) {
+                            e.stopPropagation();
+                            onRename();
+                        }
+                    }}
                     style={{
                         cursor: !isFolder ? "text" : "default",
                         overflow: "hidden",
@@ -879,15 +907,21 @@ function Grid({
                     <div
                         key={it.key}
                         data-key={it.key}
-                        onDoubleClick={() => (isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank"))}
+                        onDoubleClick={() =>
+                            isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank")
+                        }
                         onContextMenu={(e) => {
                             e.preventDefault();
-                            const action = window.prompt(`Action for "${it.name}" (delete/rename/open/cancel):`, "delete");
+                            const action = window.prompt(
+                                `Action for "${it.name}" (delete/rename/open/cancel):`,
+                                "delete"
+                            );
                             if (!action) return;
                             const a = action.toLowerCase();
                             if (a.startsWith("del")) del(isFolder ? (it as FolderItem).key : file.key);
                             else if (a.startsWith("ren")) rename(it);
-                            else if (a.startsWith("op")) (isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank"));
+                            else if (a.startsWith("op"))
+                                isFolder ? open((it as FolderItem).name) : window.open(file.url, "_blank");
                         }}
                         onClick={(e) => onSelect(it.key, e)}
                         style={{
@@ -914,7 +948,9 @@ function Grid({
                             {it.name}
                         </div>
                         {it.kind === "file" && (
-                            <div style={{ fontSize: 11, color: "#8e8e93", marginTop: 4 }}>{formatBytes(file.size)}</div>
+                            <div style={{ fontSize: 11, color: "#8e8e93", marginTop: 4 }}>
+                                {formatBytes(file.size)}
+                            </div>
                         )}
                     </div>
                 );
@@ -943,19 +979,6 @@ const crumb: React.CSSProperties = {
     color: "#fff",
 };
 
-const sideTitle: React.CSSProperties = {
-    fontSize: 12,
-    color: "#8e8e93",
-    textTransform: "uppercase",
-    letterSpacing: ".4px",
-    marginBottom: 6,
-};
-const sideItem = (active: boolean): React.CSSProperties => ({
-    padding: "8px 10px",
-    borderRadius: 8,
-    background: active ? "#38383c" : "transparent",
-});
-
 function Empty() {
     return (
         <div style={{ padding: "28px 14px", color: "#8e8e93" }}>
@@ -968,7 +991,16 @@ function SkeletonList() {
     return (
         <div style={{ padding: 14 }}>
             {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} style={{ height: 18, background: "#2a2a2d", marginBottom: 10, borderRadius: 6, width: `${60 + (i % 3) * 10}%` }} />
+                <div
+                    key={i}
+                    style={{
+                        height: 18,
+                        background: "#2a2a2d",
+                        marginBottom: 10,
+                        borderRadius: 6,
+                        width: `${60 + (i % 3) * 10}%`,
+                    }}
+                />
             ))}
         </div>
     );
@@ -976,9 +1008,24 @@ function SkeletonList() {
 
 function SkeletonGrid() {
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px,1fr))", gap: 12, padding: 12 }}>
+        <div
+            style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(170px,1fr))",
+                gap: 12,
+                padding: 12,
+            }}
+        >
             {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} style={{ border: "1px solid #3a3a3f", borderRadius: 12, padding: 12, background: "#232326" }}>
+                <div
+                    key={i}
+                    style={{
+                        border: "1px solid #3a3a3f",
+                        borderRadius: 12,
+                        padding: 12,
+                        background: "#232326",
+                    }}
+                >
                     <div style={{ height: 48, background: "#2a2a2d", borderRadius: 8, marginBottom: 8 }} />
                     <div style={{ height: 12, background: "#2a2a2d", borderRadius: 6 }} />
                 </div>
@@ -989,7 +1036,8 @@ function SkeletonGrid() {
 
 function formatBytes(n: number) {
     if (!n) return "0 B";
-    const k = 1024, u = ["B", "KB", "MB", "GB", "TB"];
+    const k = 1024,
+        u = ["B", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(n) / Math.log(k));
     return `${(n / Math.pow(k, i)).toFixed(i ? 1 : 0)} ${u[i]}`;
 }
