@@ -1,8 +1,20 @@
-import AsciiText from '@features/landing/components/AsciiText';
+// app/(landing)/(home)/page.tsx
+"use client";
+
 import ContactLink from '@shared/components/ContactLink';
-import Folder from '@features/landing/components/Folder';
+import Folder from '@/components/Folder';
+import ASCIIText from '@/components/ASCIIText';
+import { signIn } from 'next-auth/react';
 
 export default function HomePage() {
+    const handleFolderLogin = () => {
+        // Option A: show provider chooser
+        signIn();
+
+        // Option B: go straight to GitHub
+        // signIn("github", { callbackUrl: "/" });
+    };
+
     return (
         <main
             style={{
@@ -12,7 +24,8 @@ export default function HomePage() {
                 placeItems: 'center',
                 paddingInline: 'clamp(1rem, 4vw, 3rem)',
                 paddingBlock: 'clamp(2rem, 6vh, 4rem)',
-                overflow: 'hidden', // prevent any shader/canvas overflow on small screens
+                overflow: 'hidden',
+                position: 'relative',
             }}
         >
             {/* Fixed bottom-left folder */}
@@ -23,11 +36,17 @@ export default function HomePage() {
                     bottom: 'clamp(4px, 1vw, 12px)',
                     zIndex: 10,
                     pointerEvents: 'auto',
-                    touchAction: 'manipulation', // better mobile tap behavior
+                    touchAction: 'manipulation',
+                    cursor: 'pointer',
                 }}
-                aria-hidden="true"
+                aria-hidden="false"
+                aria-label="Sign in"
             >
-                <Folder size={0.35} color="#5227FF" className="custom-folder" />
+                <Folder
+                    size={0.5}
+                    color="#5227FF"
+                    onClick={handleFolderLogin}   // ✅ trigger NextAuth sign-in
+                />
             </div>
 
             <section
@@ -39,21 +58,44 @@ export default function HomePage() {
                     width: '100%',
                 }}
             >
-                {/* Give the hero a predictable box for the ASCII canvas */}
                 <h1
                     style={{
-                        position: 'relative',              // anchor absolute children
+                        position: 'relative',
                         width: 'min(92vw, 1000px)',
-                        height: 'clamp(80px, 22vw, 300px)', // fluid canvas height
+                        height: 'clamp(80px, 22vw, 300px)',
                         margin: 0,
                         lineHeight: 1,
                         fontWeight: 700,
                         letterSpacing: '0.02em',
+                        userSelect: 'none',
+                        overflow: 'hidden',
                     }}
-                    aria-label="Michael Harrison"
                 >
-                    {/* No cursor-follow; just waves */}
-                    <AsciiText text="Michael Harrison" enableWaves interactive={false} />
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <ASCIIText text="Michael Harrison" enableWaves interactive={false} />
+                    </div>
+
+                    <span
+                        style={{
+                            position: 'absolute',
+                            width: 1,
+                            height: 1,
+                            padding: 0,
+                            margin: -1,
+                            overflow: 'hidden',
+                            clip: 'rect(0,0,1px,1px)',
+                            whiteSpace: 'nowrap',
+                            border: 0,
+                        }}
+                    >
+                        Michael Harrison
+                    </span>
                 </h1>
 
                 <ContactLink />

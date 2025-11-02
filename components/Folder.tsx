@@ -1,3 +1,4 @@
+// components/Folder.tsx
 import React, { useState } from 'react';
 
 interface FolderProps {
@@ -5,15 +6,13 @@ interface FolderProps {
   size?: number;
   items?: React.ReactNode[];
   className?: string;
+  onClick?: () => void;          // ✅ NEW: external click handler (e.g., signIn)
 }
 
 const darkenColor = (hex: string, percent: number): string => {
   let color = hex.startsWith('#') ? hex.slice(1) : hex;
   if (color.length === 3) {
-    color = color
-      .split('')
-      .map(c => c + c)
-      .join('');
+    color = color.split('').map(c => c + c).join('');
   }
   const num = parseInt(color, 16);
   let r = (num >> 16) & 0xff;
@@ -25,7 +24,7 @@ const darkenColor = (hex: string, percent: number): string => {
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
 };
 
-const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = [], className = '' }) => {
+const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = [], className = '', onClick }) => {
   const maxItems = 3;
   const papers = items.slice(0, maxItems);
   while (papers.length < maxItems) {
@@ -42,10 +41,18 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
   const paper2 = darkenColor('#ffffff', 0.05);
   const paper3 = '#ffffff';
 
-  const handleClick = () => {
+  const trigger = () => {
     setOpen(prev => !prev);
-    if (open) {
-      setPaperOffsets(Array.from({ length: maxItems }, () => ({ x: 0, y: 0 })));
+    if (open) setPaperOffsets(Array.from({ length: maxItems }, () => ({ x: 0, y: 0 })));
+    onClick?.(); // ✅ trigger external action (e.g., signIn)
+  };
+
+  const handleClick = () => trigger();
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      trigger();
     }
   };
 
@@ -63,7 +70,7 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
     });
   };
 
-  const handlePaperMouseLeave = (e: React.MouseEvent<HTMLDivElement, MouseEvent>, index: number) => {
+  const handlePaperMouseLeave = (_e: React.MouseEvent<HTMLDivElement, MouseEvent>, index: number) => {
     setPaperOffsets(prev => {
       const newOffsets = [...prev];
       newOffsets[index] = { x: 0, y: 0 };
@@ -91,14 +98,17 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
   return (
     <div style={scaleStyle} className={className}>
       <div
-        className={`group relative transition-all duration-200 ease-in cursor-pointer ${
-          !open ? 'hover:-translate-y-2' : ''
-        }`}
+        className={`group relative transition-all duration-200 ease-in cursor-pointer ${!open ? 'hover:-translate-y-2' : ''}`}
         style={{
           ...folderStyle,
           transform: open ? 'translateY(-8px)' : undefined
         }}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"                 // ✅ a11y
+        aria-pressed={open}
+        aria-label="Open folder / Sign in"
+        tabIndex={0}                  // ✅ keyboard focus
       >
         <div
           className="relative w-[100px] h-[80px] rounded-tl-0 rounded-tr-[10px] rounded-br-[10px] rounded-bl-[10px]"
@@ -107,7 +117,7 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
           <span
             className="absolute z-0 bottom-[98%] left-0 w-[30px] h-[10px] rounded-tl-[5px] rounded-tr-[5px] rounded-bl-0 rounded-br-0"
             style={{ backgroundColor: folderBackColor }}
-          ></span>
+          />
           {papers.map((item, i) => {
             let sizeClasses = '';
             if (i === 0) sizeClasses = open ? 'w-[70%] h-[80%]' : 'w-[70%] h-[80%]';
@@ -123,9 +133,7 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
                 key={i}
                 onMouseMove={e => handlePaperMouseMove(e, i)}
                 onMouseLeave={e => handlePaperMouseLeave(e, i)}
-                className={`absolute z-20 bottom-[10%] left-1/2 transition-all duration-300 ease-in-out ${
-                  !open ? 'transform -translate-x-1/2 translate-y-[10%] group-hover:translate-y-0' : 'hover:scale-110'
-                } ${sizeClasses}`}
+                className={`absolute z-20 bottom-[10%] left-1/2 transition-all duration-300 ease-in-out ${!open ? 'transform -translate-x-1/2 translate-y-[10%] group-hover:translate-y-0' : 'hover:scale-110'} ${sizeClasses}`}
                 style={{
                   ...(!open ? {} : { transform: transformStyle }),
                   backgroundColor: i === 0 ? paper1 : i === 1 ? paper2 : paper3,
@@ -137,25 +145,21 @@ const Folder: React.FC<FolderProps> = ({ color = '#5227FF', size = 1, items = []
             );
           })}
           <div
-            className={`absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out ${
-              !open ? 'group-hover:[transform:skew(15deg)_scaleY(0.6)]' : ''
-            }`}
+            className={`absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out ${!open ? 'group-hover:[transform:skew(15deg)_scaleY(0.6)]' : ''}`}
             style={{
               backgroundColor: color,
               borderRadius: '5px 10px 10px 10px',
               ...(open && { transform: 'skew(15deg) scaleY(0.6)' })
             }}
-          ></div>
+          />
           <div
-            className={`absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out ${
-              !open ? 'group-hover:[transform:skew(-15deg)_scaleY(0.6)]' : ''
-            }`}
+            className={`absolute z-30 w-full h-full origin-bottom transition-all duration-300 ease-in-out ${!open ? 'group-hover:[transform:skew(-15deg)_scaleY(0.6)]' : ''}`}
             style={{
               backgroundColor: color,
               borderRadius: '5px 10px 10px 10px',
               ...(open && { transform: 'skew(-15deg) scaleY(0.6)' })
             }}
-          ></div>
+          />
         </div>
       </div>
     </div>

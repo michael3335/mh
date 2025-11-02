@@ -1,7 +1,9 @@
+// app/layout.tsx
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import FaviconAnimator from '@shared/components/FaviconAnimator';
 import { Analytics } from '@vercel/analytics/react';
+import AuthProvider from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://michaelharrison.au'),
@@ -53,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Live animated favicon (pauses on reduced motion & when tab is hidden) */}
         <FaviconAnimator />
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         {/* Vercel Analytics */}
         <Analytics />
       </body>

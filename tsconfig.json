@@ -2,22 +2,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "*"
-      ],
-      "@features/*": [
-        "features/*"
-      ],
-      "@shared/*": [
-        "shared/*"
-      ]
+      "@/*": ["*"],
+      "@features/*": ["features/*"],
+      "@shared/*": ["shared/*"]
     },
     "target": "ES2022",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -40,9 +30,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "types"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
