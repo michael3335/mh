@@ -7,7 +7,7 @@ import ASCIIText from '@/components/ASCIIText';
 import { useSession } from 'next-auth/react';
 import UserStatus from '@/components/UserStatus';
 
-const AUTH_DESTINATION = "/";
+const AUTH_DESTINATION = "/finder";
 const RICK = "https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw";
 
 export default function HomePage() {
