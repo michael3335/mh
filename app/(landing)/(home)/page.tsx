@@ -6,7 +6,7 @@ import Folder from '@/components/Folder';
 import ASCIIText from '@/components/ASCIIText';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-// If you don't have this component, remove the import + <UserStatus /> below.
+import type { Route } from 'next';
 import UserStatus from '@/components/UserStatus';
 
 export default function HomePage() {
@@ -16,16 +16,14 @@ export default function HomePage() {
     const handleFolderClick = () => {
         if (status === 'loading') return;
 
-        const destination = '/dashboard'; // change to your target route (ensure it exists)
+        const destination: Route = '/dashboard';
 
         if (status === 'authenticated') {
-            // Use a plain string to avoid typed-routes union errors
-            router.push(destination as string);
+            router.push(destination);
         } else {
-            // Show NextAuth sign-in. After success, redirect to destination.
+            // After sign-in, redirect to the same destination
             signIn(undefined, { callbackUrl: destination });
-            // If you only use GitHub and want to skip the provider screen:
-            // signIn("github", { callbackUrl: destination });
+            // Or: signIn('github', { callbackUrl: destination });
         }
     };
 
@@ -42,10 +40,10 @@ export default function HomePage() {
                 position: 'relative',
             }}
         >
-            {/* Top-right user greeting (only if authenticated) */}
-            <UserStatus />
+            {/* Optional top-right greeting */}
+            {/* <UserStatus /> */}
 
-            {/* Fixed bottom-left folder */}
+            {/* Bottom-left folder */}
             <div
                 style={{
                     position: 'fixed',
@@ -61,7 +59,7 @@ export default function HomePage() {
                 <Folder
                     size={0.5}
                     color="#5227FF"
-                    onClick={handleFolderClick} // redirect or sign in
+                    onClick={handleFolderClick}
                 />
             </div>
 
