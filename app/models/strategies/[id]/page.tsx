@@ -1,3 +1,4 @@
+// app/models/strategies/[id]/page.tsx
 "use client";
 
 import ASCIIText from "@/components/ASCIIText";
@@ -9,8 +10,6 @@ import { useSession } from "next-auth/react";
 
 type KPI = { cagr?: number; sharpe?: number; mdd?: number; trades?: number };
 type PastRun = { id: string; status: "SUCCEEDED" | "FAILED" | "RUNNING"; startedAt: string; kpis?: KPI };
-
-// --- Strongly typed params ---
 type ParamsState = { rsi_len: number; rsi_buy: number; rsi_sell: number };
 const PARAM_KEYS = ["rsi_len", "rsi_buy", "rsi_sell"] as const;
 type ParamKey = typeof PARAM_KEYS[number];
@@ -20,11 +19,7 @@ export default function StrategyEditorPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
 
-    const routes = {
-        home: "/" as Route,
-        models: "/models" as Route,
-        signin: "/api/auth/signin" as Route,
-    };
+    const routes = { home: "/" as Route, models: "/models" as Route, signin: "/api/auth/signin" as Route };
 
     const strategyId = decodeURIComponent(params.id);
     const [name, setName] = useState(strategyId === "seed" ? "RSI_Band" : strategyId);
@@ -47,78 +42,67 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
     const [runs, setRuns] = useState<PastRun[]>([]);
 
     useEffect(() => {
-        const load = async () => {
+        (async () => {
             try {
                 const res = await fetch(`/api/strategies/${encodeURIComponent(name)}/runs`, { cache: "no-store" });
                 if (res.ok) {
-                    const data = await res.json();
-                    setRuns(data?.runs ?? []);
+                    const data = await res.json(); setRuns(data?.runs ?? []);
                 } else {
                     setRuns([{ id: "r_010", status: "SUCCEEDED", startedAt: "2025-01-09T10:00:00Z", kpis: { cagr: 0.37, mdd: -0.21, sharpe: 1.2, trades: 322 } }]);
                 }
-            } catch {
-                /* ignored */
-            }
-        };
-        load();
+            } catch { /* ignore */ }
+        })();
     }, [name]);
 
     const save = useCallback(async () => {
         setLoading(true);
         try {
-            await fetch("/api/strategies", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, code }),
-            });
+            await fetch("/api/strategies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, code }) });
             if (strategyId === "seed") {
-                // Use UrlObject + typed cast compatible with Next 16 RouteImpl
                 router.replace(
                     { pathname: "/models/strategies/[id]", query: { id: name } } as unknown as Parameters<typeof router.replace>[0]
                 );
             }
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     }, [name, code, router, strategyId]);
 
-    const launch = useCallback(
-        async (kind: "backtest" | "grid" | "walkforward") => {
-            setLoading(true);
-            try {
-                const payload = { strategy: name, params: paramsState, dataset };
-                const endpoint =
-                    kind === "backtest" ? "/api/jobs/backtest" : kind === "grid" ? "/api/jobs/grid" : "/api/jobs/walkforward";
-                const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-                const { jobId } = res.ok ? await res.json() : { jobId: undefined };
-
-                // If jobId exists, include it as a focus query param; otherwise plain route
-                const href =
-                    jobId
-                        ? ({ pathname: "/models/runs", query: { focus: String(jobId) } } as const)
-                        : ("/models/runs" as const);
-
-                router.push(href as unknown as Parameters<typeof router.push>[0]);
-            } finally {
-                setLoading(false);
-            }
-        },
-        [name, paramsState, dataset, router]
-    );
+    const launch = useCallback(async (kind: "backtest" | "grid" | "walkforward") => {
+        setLoading(true);
+        try {
+            const payload = { strategy: name, params: paramsState, dataset };
+            const endpoint = kind === "backtest" ? "/api/jobs/backtest" : kind === "grid" ? "/api/jobs/grid" : "/api/jobs/walkforward";
+            const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            const { jobId } = res.ok ? await res.json() : { jobId: undefined };
+            const href = jobId ? ({ pathname: "/models/runs", query: { focus: String(jobId) } } as const) : ("/models/runs" as const);
+            router.push(href as unknown as Parameters<typeof router.push>[0]);
+        } finally { setLoading(false); }
+    }, [name, paramsState, dataset, router]);
 
     const canSave = useMemo(() => name.trim().length > 0 && code.trim().length > 0, [name, code]);
 
+    const control: React.CSSProperties = {
+        width: "100%",
+        padding: "0.6rem 0.75rem",
+        border: "1px solid rgba(0,0,0,.28)",
+        borderRadius: 10,
+        background: "#fff",
+        color: "#111",
+        lineHeight: 1.2,
+        minHeight: 40,
+    };
+    const panel: React.CSSProperties = {
+        border: "1px solid rgba(0,0,0,.12)",
+        borderRadius: 12,
+        background: "#fff",
+        color: "#111",
+        boxShadow: "0 2px 10px rgba(0,0,0,.12)",
+    };
+    const chip: React.CSSProperties = {
+        fontSize: 12, fontWeight: 800, display: "inline-block", padding: "3px 10px", borderRadius: 999, background: "rgba(0,0,0,.06)", color: "#111",
+    };
+
     return (
-        <main
-            style={{
-                minHeight: "100svh",
-                width: "100%",
-                display: "grid",
-                placeItems: "center",
-                padding: "2rem",
-                textAlign: "center",
-            }}
-        >
+        <main style={{ minHeight: "100svh", width: "100%", display: "grid", placeItems: "center", padding: "2rem", textAlign: "center", background: "#111213", color: "#f4f4f5" }}>
             <section style={{ display: "grid", gap: "1.25rem", width: "min(1200px, 96vw)" }}>
                 <div style={{ width: "min(90vw, 700px)", height: "clamp(80px, 20vw, 200px)", position: "relative", margin: "0 auto" }}>
                     <ASCIIText text="Strategy" enableWaves interactive={false} />
@@ -129,16 +113,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                 {status === "unauthenticated" && (
                     <>
                         <p>You must sign in to edit strategies.</p>
-                        <Link
-                            href={routes.signin}
-                            style={{
-                                padding: "0.6rem 1.2rem",
-                                borderRadius: "6px",
-                                fontWeight: 600,
-                                border: "2px solid currentColor",
-                                textDecoration: "none",
-                            }}
-                        >
+                        <Link href={routes.signin} style={{ padding: "0.7rem 1.2rem", borderRadius: 10, fontWeight: 800, textDecoration: "none", background: "#fff", color: "#111", boxShadow: "0 2px 10px rgba(0,0,0,.18)" }}>
                             Sign In
                         </Link>
                     </>
@@ -147,236 +122,102 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                 {status === "authenticated" && (
                     <>
                         {/* Top controls */}
-                        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                            <input
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Strategy name"
-                                style={{
-                                    padding: "0.55rem 0.8rem",
-                                    border: "1px solid rgba(0,0,0,.2)",
-                                    borderRadius: 8,
-                                    width: 240,
-                                    fontWeight: 600,
-                                }}
-                            />
+                        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Strategy name" style={{ ...control, maxWidth: 260, fontWeight: 700 }} />
                             <button
                                 onClick={save}
                                 disabled={!canSave || loading}
-                                style={{
-                                    padding: "0.55rem 0.9rem",
-                                    borderRadius: 8,
-                                    border: "none",
-                                    background: "black",
-                                    color: "white",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    opacity: !canSave || loading ? 0.6 : 1,
-                                }}
+                                style={{ padding: "0.65rem 1rem", borderRadius: 10, border: "none", background: "#fff", color: "#111", fontWeight: 900, cursor: "pointer", minHeight: 40, opacity: !canSave || loading ? 0.6 : 1, boxShadow: "0 2px 10px rgba(0,0,0,.18)" }}
                             >
                                 Save
                             </button>
-                            <button
-                                onClick={() => launch("backtest")}
-                                disabled={loading}
-                                style={{
-                                    padding: "0.55rem 0.9rem",
-                                    borderRadius: 8,
-                                    border: "1px solid rgba(0,0,0,.18)",
-                                    background: "white",
-                                    cursor: "pointer",
-                                    opacity: loading ? 0.6 : 1,
-                                }}
-                            >
-                                Run Backtest
-                            </button>
-                            <button
-                                onClick={() => launch("grid")}
-                                disabled={loading}
-                                style={{
-                                    padding: "0.55rem 0.9rem",
-                                    borderRadius: 8,
-                                    border: "1px solid rgba(0,0,0,.18)",
-                                    background: "white",
-                                    cursor: "pointer",
-                                    opacity: loading ? 0.6 : 1,
-                                }}
-                            >
-                                Grid Search
-                            </button>
-                            <button
-                                onClick={() => launch("walkforward")}
-                                disabled={loading}
-                                style={{
-                                    padding: "0.55rem 0.9rem",
-                                    borderRadius: 8,
-                                    border: "1px solid rgba(0,0,0,.18)",
-                                    background: "white",
-                                    cursor: "pointer",
-                                    opacity: loading ? 0.6 : 1,
-                                }}
-                            >
-                                Walk-Forward
-                            </button>
+                            {(["backtest", "grid", "walkforward"] as const).map(k => (
+                                <button key={k}
+                                    onClick={() => launch(k)}
+                                    disabled={loading}
+                                    style={{ padding: "0.65rem 1rem", borderRadius: 10, border: "1px solid rgba(255,255,255,.4)", background: "transparent", color: "#fff", cursor: "pointer", minHeight: 40, opacity: loading ? 0.6 : 1 }}
+                                >
+                                    {k === "backtest" ? "Run Backtest" : k === "grid" ? "Grid Search" : "Walk-Forward"}
+                                </button>
+                            ))}
                         </div>
 
                         {/* Editor + Right panel */}
-                        <div
-                            style={{
-                                display: "grid",
-                                gap: "1rem",
-                                gridTemplateColumns: "1fr 1fr",
-                                alignItems: "start",
-                            }}
-                        >
-                            {/* Editor */}
-                            <div
-                                style={{
-                                    border: "1px solid rgba(0,0,0,.12)",
-                                    borderRadius: 10,
-                                    overflow: "hidden",
-                                    background: "white",
-                                }}
-                            >
-                                <div style={{ textAlign: "right", padding: "6px 10px", fontSize: 12, background: "rgba(0,0,0,.04)" }}>
-                                    Python API
-                                </div>
+                        <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
+                            <div style={{ ...panel, overflow: "hidden" }}>
+                                <div style={{ textAlign: "right", padding: "6px 10px", ...chip, background: "rgba(0,0,0,.08)" }}>Python API</div>
                                 <textarea
                                     spellCheck={false}
                                     value={code}
                                     onChange={(e) => setCode(e.target.value)}
                                     style={{
-                                        height: 520,
-                                        width: "100%",
-                                        resize: "none",
-                                        border: "none",
-                                        outline: "none",
-                                        padding: 12,
-                                        fontFamily:
-                                            "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-                                        fontSize: 13,
-                                        background: "#0b1020",
-                                        color: "white",
+                                        height: 520, width: "100%", resize: "none", border: "none", outline: "none", padding: 12,
+                                        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                                        fontSize: 13, background: "#0b1020", color: "#f7fafc",
                                     }}
                                 />
                             </div>
 
-                            {/* Parameters / Dataset / Runs */}
                             <div style={{ display: "grid", gap: "1rem" }}>
-                                {/* Params */}
-                                <div style={{ border: "1px solid rgba(0,0,0,.12)", borderRadius: 10, padding: "1rem", background: "white" }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 8 }}>Parameters</div>
+                                <div style={{ ...panel, padding: "1rem" }}>
+                                    <div style={{ fontWeight: 900, marginBottom: 8 }}>Parameters</div>
                                     <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, 1fr)" }}>
                                         {PARAM_KEYS.map((k: ParamKey) => (
                                             <div key={k} style={{ textAlign: "left" }}>
-                                                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>{k}</div>
-                                                <input
-                                                    type="number"
-                                                    value={paramsState[k]}
-                                                    onChange={(e) =>
-                                                        setParamsState((p) => ({ ...p, [k]: Number(e.target.value) } as ParamsState))
-                                                    }
-                                                    style={{
-                                                        width: "100%",
-                                                        padding: "0.45rem 0.6rem",
-                                                        border: "1px solid rgba(0,0,0,.2)",
-                                                        borderRadius: 8,
-                                                    }}
-                                                />
+                                                <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>{k}</div>
+                                                <input type="number" value={paramsState[k]} onChange={(e) => setParamsState((p) => ({ ...p, [k]: Number(e.target.value) } as ParamsState))} style={control} />
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Dataset */}
-                                <div style={{ border: "1px solid rgba(0,0,0,.12)", borderRadius: 10, padding: "1rem", background: "white" }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 8 }}>Dataset</div>
+                                <div style={{ ...panel, padding: "1rem" }}>
+                                    <div style={{ fontWeight: 900, marginBottom: 8 }}>Dataset</div>
                                     <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, 1fr)" }}>
                                         <div style={{ textAlign: "left" }}>
-                                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Exchange</div>
-                                            <select
-                                                value={dataset.exchange}
-                                                onChange={(e) => setDataset((d) => ({ ...d, exchange: e.target.value }))}
-                                                style={{ width: "100%", padding: "0.45rem 0.6rem", border: "1px solid rgba(0,0,0,.2)", borderRadius: 8 }}
-                                            >
+                                            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Exchange</div>
+                                            <select value={dataset.exchange} onChange={(e) => setDataset((d) => ({ ...d, exchange: e.target.value }))} style={{ ...control, appearance: "auto" as any }}>
                                                 <option value="binance">Binance</option>
                                                 <option value="okx">OKX</option>
                                                 <option value="bybit">Bybit</option>
                                             </select>
                                         </div>
                                         <div style={{ textAlign: "left" }}>
-                                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Timeframe</div>
-                                            <select
-                                                value={dataset.timeframe}
-                                                onChange={(e) => setDataset((d) => ({ ...d, timeframe: e.target.value }))}
-                                                style={{ width: "100%", padding: "0.45rem 0.6rem", border: "1px solid rgba(0,0,0,.2)", borderRadius: 8 }}
-                                            >
-                                                {["1m", "5m", "15m", "1h", "4h", "1d"].map((tf) => (
-                                                    <option key={tf} value={tf}>
-                                                        {tf}
-                                                    </option>
-                                                ))}
+                                            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Timeframe</div>
+                                            <select value={dataset.timeframe} onChange={(e) => setDataset((d) => ({ ...d, timeframe: e.target.value }))} style={{ ...control, appearance: "auto" as any }}>
+                                                {["1m", "5m", "15m", "1h", "4h", "1d"].map(tf => <option key={tf} value={tf}>{tf}</option>)}
                                             </select>
                                         </div>
                                         <div style={{ gridColumn: "1 / -1", textAlign: "left" }}>
-                                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Pairs (comma separated)</div>
-                                            <input
-                                                value={dataset.pairs}
-                                                onChange={(e) => setDataset((d) => ({ ...d, pairs: e.target.value }))}
-                                                style={{ width: "100%", padding: "0.45rem 0.6rem", border: "1px solid rgba(0,0,0,.2)", borderRadius: 8 }}
-                                            />
+                                            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Pairs (comma separated)</div>
+                                            <input value={dataset.pairs} onChange={(e) => setDataset((d) => ({ ...d, pairs: e.target.value }))} placeholder="e.g. BTC/USDT,ETH/USDT" style={control} />
                                         </div>
                                         <div style={{ textAlign: "left" }}>
-                                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>From</div>
-                                            <input
-                                                type="date"
-                                                value={dataset.from}
-                                                onChange={(e) => setDataset((d) => ({ ...d, from: e.target.value }))}
-                                                style={{ width: "100%", padding: "0.45rem 0.6rem", border: "1px solid rgba(0,0,0,.2)", borderRadius: 8 }}
-                                            />
+                                            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>From</div>
+                                            <input type="date" value={dataset.from} onChange={(e) => setDataset((d) => ({ ...d, from: e.target.value }))} style={control} />
                                         </div>
                                         <div style={{ textAlign: "left" }}>
-                                            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>To</div>
-                                            <input
-                                                type="date"
-                                                value={dataset.to}
-                                                onChange={(e) => setDataset((d) => ({ ...d, to: e.target.value }))}
-                                                style={{ width: "100%", padding: "0.45rem 0.6rem", border: "1px solid rgba(0,0,0,.2)", borderRadius: 8 }}
-                                            />
+                                            <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>To</div>
+                                            <input type="date" value={dataset.to} onChange={(e) => setDataset((d) => ({ ...d, to: e.target.value }))} style={control} />
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Runs List */}
-                                <div style={{ border: "1px solid rgba(0,0,0,.12)", borderRadius: 10, padding: "1rem", background: "white" }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 8 }}>Recent Runs</div>
+                                <div style={{ ...panel, padding: "1rem" }}>
+                                    <div style={{ fontWeight: 900, marginBottom: 8 }}>Recent Runs</div>
                                     <div style={{ display: "grid", gap: 10, textAlign: "left" }}>
                                         {runs.map((r) => (
                                             <div key={r.id} style={{ display: "flex", justifyContent: "space-between" }}>
                                                 <div>
-                                                    <div style={{ fontWeight: 600 }}>{r.id}</div>
-                                                    <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(r.startedAt).toLocaleString()}</div>
+                                                    <div style={{ fontWeight: 800 }}>{r.id}</div>
+                                                    <div style={{ fontSize: 12, opacity: 0.8 }}>{new Date(r.startedAt).toLocaleString()}</div>
                                                 </div>
                                                 <div style={{ textAlign: "right" }}>
-                                                    <div
-                                                        style={{
-                                                            fontSize: 12,
-                                                            fontWeight: 700,
-                                                            display: "inline-block",
-                                                            padding: "2px 8px",
-                                                            borderRadius: 999,
-                                                            background:
-                                                                r.status === "SUCCEEDED"
-                                                                    ? "rgba(16,185,129,.15)"
-                                                                    : r.status === "FAILED"
-                                                                        ? "rgba(239,68,68,.15)"
-                                                                        : "rgba(59,130,246,.15)",
-                                                        }}
-                                                    >
+                                                    <div style={{ ...chip, background: r.status === "SUCCEEDED" ? "rgba(16,185,129,.2)" : r.status === "FAILED" ? "rgba(239,68,68,.25)" : "rgba(59,130,246,.25)" }}>
                                                         {r.status}
                                                     </div>
                                                     {r.kpis && (
-                                                        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                                                        <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
                                                             {r.kpis.cagr != null ? `CAGR ${(r.kpis.cagr * 100).toFixed(1)}%` : ""}
                                                             {r.kpis.sharpe != null ? ` · Sharpe ${r.kpis.sharpe.toFixed(2)}` : ""}
                                                             {r.kpis.mdd != null ? ` · MDD ${(r.kpis.mdd * 100).toFixed(1)}%` : ""}
@@ -386,7 +227,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                                                 </div>
                                             </div>
                                         ))}
-                                        {!runs.length && <div style={{ opacity: 0.7 }}>No runs yet.</div>}
+                                        {!runs.length && <div style={{ opacity: 0.85 }}>No runs yet.</div>}
                                     </div>
                                 </div>
                             </div>
@@ -395,12 +236,8 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                 )}
 
                 <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 6 }}>
-                    <Link href={routes.models} style={{ opacity: 0.7, textDecoration: "none" }}>
-                        ← Back to models
-                    </Link>
-                    <Link href={routes.home} style={{ opacity: 0.7, textDecoration: "none" }}>
-                        ← Back to home
-                    </Link>
+                    <Link href={routes.models} style={{ opacity: 0.9, textDecoration: "none", color: "#e5e7eb" }}>← Back to models</Link>
+                    <Link href={routes.home} style={{ opacity: 0.9, textDecoration: "none", color: "#e5e7eb" }}>← Back to home</Link>
                 </div>
             </section>
         </main>
