@@ -87,19 +87,6 @@ export default function HomePage() {
                     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
                         <ASCIIText text="Michael Harrison" enableWaves interactive={false} />
                     </div>
-                    <span
-                        style={{
-                            position: 'absolute',
-                            width: 1,
-                            height: 1,
-                            padding: 0,
-                            margin: -1,
-                            whiteSpace: 'nowrap',
-                            border: 0,
-                        }}
-                    >
-                        Michael Harrison
-                    </span>
                 </h1>
             </section>
         </main>
