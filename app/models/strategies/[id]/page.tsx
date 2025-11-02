@@ -23,7 +23,6 @@ export default function StrategyEditorPage() {
     const routes = {
         home: "/" as Route,
         models: "/models" as Route,
-        runs: "/models/runs" as Route,
         signin: "/api/auth/signin" as Route,
     };
 
@@ -58,7 +57,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                     setRuns([{ id: "r_010", status: "SUCCEEDED", startedAt: "2025-01-09T10:00:00Z", kpis: { cagr: 0.37, mdd: -0.21, sharpe: 1.2, trades: 322 } }]);
                 }
             } catch {
-                /* ignore */
+                /* ignored */
             }
         };
         load();
@@ -73,11 +72,10 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                 body: JSON.stringify({ name, code }),
             });
             if (strategyId === "seed") {
-                // Use UrlObject to satisfy typed routes
-                router.replace({
-                    pathname: "/models/strategies/[id]",
-                    query: { id: name },
-                });
+                // Use UrlObject + typed cast compatible with Next 16 RouteImpl
+                router.replace(
+                    { pathname: "/models/strategies/[id]", query: { id: name } } as unknown as Parameters<typeof router.replace>[0]
+                );
             }
         } finally {
             setLoading(false);
@@ -94,16 +92,18 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                 const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
                 const { jobId } = res.ok ? await res.json() : { jobId: undefined };
 
-                // Use UrlObject; add ?focus=... only when present
-                router.push({
-                    pathname: routes.runs,
-                    ...(jobId ? { query: { focus: jobId } } : {}),
-                });
+                // If jobId exists, include it as a focus query param; otherwise plain route
+                const href =
+                    jobId
+                        ? ({ pathname: "/models/runs", query: { focus: String(jobId) } } as const)
+                        : ("/models/runs" as const);
+
+                router.push(href as unknown as Parameters<typeof router.push>[0]);
             } finally {
                 setLoading(false);
             }
         },
-        [name, paramsState, dataset, router, routes.runs]
+        [name, paramsState, dataset, router]
     );
 
     const canSave = useMemo(() => name.trim().length > 0 && code.trim().length > 0, [name, code]);
@@ -347,7 +347,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                                     </div>
                                 </div>
 
-                                {/* Recent Runs */}
+                                {/* Runs List */}
                                 <div style={{ border: "1px solid rgba(0,0,0,.12)", borderRadius: 10, padding: "1rem", background: "white" }}>
                                     <div style={{ fontWeight: 700, marginBottom: 8 }}>Recent Runs</div>
                                     <div style={{ display: "grid", gap: 10, textAlign: "left" }}>
