@@ -67,7 +67,7 @@ interface AsciiFilterOptions {
     fontFamily?: string;
     charset?: string;
     invert?: boolean;
-    interactive?: boolean; // ← NEW
+    interactive?: boolean;
 }
 
 class AsciiFilter {
@@ -87,7 +87,7 @@ class AsciiFilter {
     cols = 0;
     rows = 0;
     deg = 0;
-    interactive = false; // ← NEW
+    interactive = false;
 
     constructor(renderer: THREE.WebGLRenderer, opts: AsciiFilterOptions = {}) {
         this.renderer = renderer;
@@ -119,7 +119,6 @@ class AsciiFilter {
         if (this.ctx) this.ctx.imageSmoothingEnabled = false;
 
         this.onMouseMove = this.onMouseMove.bind(this);
-        // Only listen if interactive is enabled
         if (this.interactive) {
             document.addEventListener('mousemove', this.onMouseMove);
         }
@@ -132,6 +131,12 @@ class AsciiFilter {
         this.reset();
         this.center = { x: width / 2, y: height / 2 };
         this.mouse = { x: this.center.x, y: this.center.y };
+    }
+
+    /** allow external control of ascii font size */
+    setAsciiFontSize(px: number) {
+        this.fontSize = px;
+        this.reset();
     }
 
     reset() {
@@ -169,7 +174,6 @@ class AsciiFilter {
     get dy() { return this.mouse.y - this.center.y; }
 
     hue() {
-        // If not interactive, keep hue stable (no mouse-driven rotation)
         if (!this.interactive) return;
         const deg = (Math.atan2(this.dy, this.dx) * 180) / Math.PI;
         this.deg += (deg - this.deg) * 0.075;
@@ -244,6 +248,12 @@ class CanvasTxt {
         this.font = `600 ${this.fontSize}px ${this.fontFamily}`;
     }
 
+    setFontSize(px: number) {
+        this.fontSize = px;
+        this.font = `600 ${this.fontSize}px ${this.fontFamily}`;
+        this.resize();
+    }
+
     resize() {
         if (!this.ctx) return;
         this.ctx.font = this.font;
@@ -277,7 +287,7 @@ interface CanvAsciiOptions {
     textColor: string;
     planeBaseHeight: number;
     enableWaves: boolean;
-    interactive: boolean; // ← NEW
+    interactive: boolean;
 }
 
 class CanvAscii {
@@ -287,7 +297,7 @@ class CanvAscii {
     textColor: string;
     planeBaseHeight: number;
     enableWaves: boolean;
-    interactive: boolean; // ← NEW
+    interactive: boolean;
 
     container: HTMLElement;
     width: number;
@@ -335,7 +345,6 @@ class CanvAscii {
         this.setRenderer();
 
         this.onMouseMove = this.onMouseMove.bind(this);
-        // Only attach listeners if interactive
         if (this.interactive) {
             this.container.addEventListener('mousemove', this.onMouseMove);
             this.container.addEventListener('touchmove', this.onMouseMove as unknown as EventListener);
@@ -383,7 +392,7 @@ class CanvAscii {
             fontFamily: 'IBM Plex Mono',
             fontSize: this.asciiFontSize,
             invert: true,
-            interactive: this.interactive, // ← pass down
+            interactive: this.interactive,
         });
 
         this.container.appendChild(this.filter.domElement);
@@ -391,6 +400,25 @@ class CanvAscii {
         this.setSize(this.width, this.height);
 
         this.center = { x: this.width / 2, y: this.height / 2 };
+    }
+
+    /** update both ASCII char size and text canvas font size responsively */
+    setFontSizes(asciiPx: number, textPx: number) {
+        this.asciiFontSize = asciiPx;
+        this.textFontSize = textPx;
+        this.filter.setAsciiFontSize(asciiPx);
+        this.textCanvas.setFontSize(textPx);
+        this.textCanvas.render();
+        this.texture.needsUpdate = true;
+
+        // update plane size to text aspect (in case text canvas size changed)
+        const aspect = this.textCanvas.width / this.textCanvas.height;
+        const baseH = this.planeBaseHeight;
+        const w = baseH * aspect;
+        const h = baseH;
+        this.geometry.dispose();
+        this.geometry = new THREE.PlaneGeometry(w, h, 36, 36);
+        this.mesh.geometry = this.geometry;
     }
 
     setSize(w: number, h: number) {
@@ -432,13 +460,11 @@ class CanvAscii {
         (this.material.uniforms.uTime as THREE.IUniform).value = Math.sin(time);
 
         if (this.interactive) {
-            // Mouse-driven tilt
             const rx = map(this.mouse.y, 0, this.height, 0.5, -0.5);
             const ry = map(this.mouse.x, 0, this.width, -0.5, 0.5);
             this.mesh.rotation.x += (rx - this.mesh.rotation.x) * 0.05;
             this.mesh.rotation.y += (ry - this.mesh.rotation.y) * 0.05;
         } else {
-            // No cursor response: gently settle back to neutral
             this.mesh.rotation.x *= 0.9;
             this.mesh.rotation.y *= 0.9;
         }
@@ -493,7 +519,7 @@ interface ASCIITextProps {
     textColor?: string;
     planeBaseHeight?: number;
     enableWaves?: boolean;
-    interactive?: boolean; // ← NEW
+    interactive?: boolean;
 }
 
 export default function ASCIIText({
@@ -503,7 +529,7 @@ export default function ASCIIText({
     textColor = '#fdf9f3',
     planeBaseHeight = 8,
     enableWaves = true,
-    interactive = false, // ← default: no cursor response
+    interactive = false,
 }: ASCIITextProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const asciiRef = useRef<CanvAscii | null>(null);
@@ -512,9 +538,24 @@ export default function ASCIIText({
         const el = containerRef.current;
         if (!el) return;
 
+        const computeSizes = (w: number) => {
+            const scaledText = Math.max(60, Math.min(240, w * 0.15));
+            const scaledAscii = Math.max(6, Math.min(14, w * 0.015));
+            return { scaledText, scaledAscii };
+        };
+
         const boot = (w: number, h: number) => {
+            const { scaledText, scaledAscii } = computeSizes(w);
             asciiRef.current = new CanvAscii(
-                { text, asciiFontSize, textFontSize, textColor, planeBaseHeight, enableWaves, interactive },
+                {
+                    text,
+                    asciiFontSize: scaledAscii,
+                    textFontSize: scaledText,
+                    textColor,
+                    planeBaseHeight,
+                    enableWaves,
+                    interactive,
+                },
                 el,
                 w,
                 h
@@ -540,7 +581,11 @@ export default function ASCIIText({
             const first = entries[0];
             if (!first || !asciiRef.current) return;
             const { width: w, height: h } = first.contentRect;
-            if (w > 0 && h > 0) asciiRef.current.setSize(w, h);
+            if (w > 0 && h > 0) {
+                asciiRef.current.setSize(w, h);
+                const { scaledText, scaledAscii } = computeSizes(w);
+                asciiRef.current.setFontSizes(scaledAscii, scaledText);
+            }
         });
         ro.observe(el);
 
