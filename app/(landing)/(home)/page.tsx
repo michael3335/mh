@@ -16,6 +16,7 @@ export default function HomePage() {
     const handleFolderClick = () => {
         if (status === 'loading') return;
 
+        // Ensure you have app/dashboard/page.tsx so typed routes accept this path.
         const destination: Route = '/dashboard';
 
         if (status === 'authenticated') {
@@ -40,8 +41,8 @@ export default function HomePage() {
                 position: 'relative',
             }}
         >
-            {/* Optional top-right greeting */}
-            {/* <UserStatus /> */}
+            {/* Top-right greeting when authenticated */}
+            <UserStatus />
 
             {/* Bottom-left folder */}
             <div

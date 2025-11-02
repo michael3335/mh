@@ -1,11 +1,9 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 export default function UserStatus() {
     const { data: session, status } = useSession();
-    const router = useRouter();
 
     if (status === "loading") return null; // avoid flicker
 
@@ -38,6 +36,8 @@ export default function UserStatus() {
                         cursor: "pointer",
                         opacity: 0.8,
                     }}
+                    aria-label="Sign out"
+                    title="Sign out"
                 >
                     ✕
                 </button>
