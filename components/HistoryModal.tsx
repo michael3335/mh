@@ -9,24 +9,19 @@ type SeriesPoint = { date: string; value: number };
 type ApiPayload = {
     id: string;
     title: string;
-    unitUSD: string; // e.g., "USD/oz" or "USD"
-    fx: { audusd: number | null }; // USD per 1 AUD
-    seriesUSD: SeriesPoint[]; // ascending full history in USD
+    unitUSD: string;
+    fx: { audusd: number | null };
+    seriesUSD: SeriesPoint[];
     asof: number;
 };
 
-type Props = {
-    open: boolean;
-    onClose: () => void;
-    id: string | null; // series id
-};
+type Props = { open: boolean; onClose: () => void; id: string | null };
 
 type TimeKey = "1M" | "3M" | "6M" | "1Y" | "5Y" | "Max";
 type CurrencyKey = "USD" | "AUD";
 type ViewMode = "chart" | "table";
 
 /* ---------- Helpers ---------- */
-
 const timeframes: { key: TimeKey; days: number }[] = [
     { key: "1M", days: 30 },
     { key: "3M", days: 90 },
@@ -47,21 +42,17 @@ function formatDateDense(dISO: string) {
 function niceNumber(x: number, round = true) {
     const exp = Math.floor(Math.log10(Math.max(1e-12, Math.abs(x))));
     const f = x / Math.pow(10, exp);
-    let nf = 1;
-    if (f < 1.5) nf = 1;
-    else if (f < 3) nf = 2;
-    else if (f < 7) nf = 5;
-    else nf = 10;
+    const nf = f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10;
     const n = nf * Math.pow(10, exp);
     return round ? n : nf;
 }
 function formatNumber(v: number) {
-    if (Math.abs(v) >= 1000) return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(v);
-    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+    return new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2,
+    }).format(v);
 }
 
-/* ---------- Chart with vertical-at-cursor & horizontal-at-series snapping ---------- */
-
+/* ---------- Chart with vertical-at-cursor & horizontal-at-curve (interpolated) ---------- */
 function HistoryChart({
     data,
     unitLabel,
@@ -69,16 +60,12 @@ function HistoryChart({
     height = 340,
 }: {
     data: SeriesPoint[];
-    unitLabel: string; // e.g. "USD/oz" or "AUD"
+    unitLabel: string;
     width?: number;
     height?: number;
 }) {
     if (!data?.length) {
-        return (
-            <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>
-                No data
-            </div>
-        );
+        return <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>No data</div>;
     }
 
     // Layout
@@ -86,7 +73,7 @@ function HistoryChart({
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
-    // Theme
+    // Colors
     const gridY = "rgba(255,255,255,0.12)";
     const gridX = "rgba(255,255,255,0.10)";
     const axis = "rgba(255,255,255,0.6)";
@@ -96,25 +83,16 @@ function HistoryChart({
 
     // Domains
     const xs = useMemo(() => data.map((d) => new Date(d.date).getTime()), [data]);
-    const xMin = xs[0];
-    const xMax = xs[xs.length - 1];
-
     const ys = useMemo(() => data.map((d) => d.value), [data]);
-    const yMinRaw = Math.min(...ys);
-    const yMaxRaw = Math.max(...ys);
+    const xMin = xs[0], xMax = xs[xs.length - 1];
+
+    const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
     const pad = (yMaxRaw - yMinRaw) * 0.08 || 1;
-    const yMin = Math.max(0, yMinRaw - pad);
-    const yMax = yMaxRaw + pad;
+    const yMin = Math.max(0, yMinRaw - pad), yMax = yMaxRaw + pad;
 
     // Scales
-    const xScale = (t: number) => {
-        const r = (t - xMin) / Math.max(1, xMax - xMin);
-        return m.left + r * iw;
-    };
-    const yScale = (v: number) => {
-        const r = (v - yMin) / Math.max(1e-12, yMax - yMin);
-        return m.top + (1 - r) * ih;
-    };
+    const xScale = (t: number) => m.left + ((t - xMin) / Math.max(1, xMax - xMin)) * iw;
+    const yScale = (v: number) => m.top + (1 - (v - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
 
     // Path
     const dPath = useMemo(
@@ -136,97 +114,87 @@ function HistoryChart({
     const step = niceNumber(stepRaw);
     const yStart = Math.floor(yMin / step) * step;
     const yTicks: number[] = [];
-    for (let y = yStart; y <= yMax + 1e-9; y += step) {
-        if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
-    }
+    for (let y = yStart; y <= yMax + 1e-9; y += step) if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
 
     const xTickCount = 6;
     const xTicks: number[] = [];
-    for (let i = 0; i < xTickCount; i++) {
-        const t = xMin + ((xMax - xMin) * i) / (xTickCount - 1);
-        xTicks.push(t);
-    }
+    for (let i = 0; i < xTickCount; i++) xTicks.push(xMin + ((xMax - xMin) * i) / (xTickCount - 1));
 
-    // Change header
-    const first = ys[0];
-    const last = ys[ys.length - 1];
+    // Header change
+    const first = ys[0], last = ys[ys.length - 1];
     const pct = first ? ((last - first) / first) * 100 : 0;
 
-    /* ----- snapping + crosshair positions ----- */
+    /* ----- Cursor -> interpolate series at cursorX ----- */
     const containerRef = useRef<HTMLDivElement>(null);
-    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-    const [cursorX, setCursorX] = useState<number | null>(null); // vertical line follows cursor X (bounded)
-    const [snappedY, setSnappedY] = useState<number | null>(null); // horizontal line at series Y
-    const [tip, setTip] = useState<{ x: number; y: number; date: string; value: number } | null>(null);
+    const [cursorX, setCursorX] = useState<number | null>(null);   // vertical line (in px)
+    const [curveY, setCurveY] = useState<number | null>(null);     // horizontal line (in px) from interpolation
+    const [tip, setTip] = useState<{ x: number; y: number; labelDate: string; labelValue: number } | null>(null);
 
-    const nearestIndexFromXpx = (xPx: number) => {
-        const t = xMin + ((xMax - xMin) * (xPx - m.left)) / iw;
-        if (!Number.isFinite(t)) return null;
-        // binary search
-        let lo = 0,
-            hi = xs.length - 1;
+    const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+
+    // find surrounding indices around target time t
+    function bracketIndices(t: number) {
+        // first index with xs[i] >= t
+        let lo = 0, hi = xs.length - 1;
         while (lo < hi) {
             const mid = (lo + hi) >> 1;
             if (xs[mid] < t) lo = mid + 1;
             else hi = mid;
         }
-        const a = Math.max(0, lo - 1);
-        const b = lo;
-        return Math.abs(xs[a] - t) <= Math.abs(xs[b] - t) ? a : b;
-    };
+        const iR = lo;
+        const iL = Math.max(0, iR - 1);
+        return { iL, iR };
+    }
 
-    const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
-
-    const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    function onMove(e: React.MouseEvent<HTMLDivElement>) {
         const el = containerRef.current;
         if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const xPxContainer = e.clientX - rect.left;
-        const yPxContainer = e.clientY - rect.top;
+        const r = el.getBoundingClientRect();
+        const xPx = e.clientX - r.left;
+        const yPx = e.clientY - r.top;
 
-        // Only show crosshair inside plotting rectangle
-        const inside =
-            xPxContainer >= m.left &&
-            xPxContainer <= m.left + iw &&
-            yPxContainer >= m.top &&
-            yPxContainer <= m.top + ih;
-
+        const inside = xPx >= m.left && xPx <= m.left + iw && yPx >= m.top && yPx <= m.top + ih;
         if (!inside) {
-            setHoverIdx(null);
             setCursorX(null);
-            setSnappedY(null);
+            setCurveY(null);
             setTip(null);
             return;
         }
 
-        // Vertical line tracks cursor X (bounded to plot area)
-        const boundedX = clamp(xPxContainer, m.left, m.left + iw);
-        setCursorX(boundedX);
+        // vertical line at cursor
+        const xBound = clamp(xPx, m.left, m.left + iw);
+        setCursorX(xBound);
 
-        // Snap to nearest series point by time
-        const i = nearestIndexFromXpx(boundedX);
-        if (i == null) return;
+        // time at cursor x
+        const t = xMin + ((xMax - xMin) * (xBound - m.left)) / iw;
 
-        setHoverIdx(i);
+        // interpolate y between surrounding points
+        const { iL, iR } = bracketIndices(t);
+        const xL = xs[iL], yL = ys[iL];
+        const xR = xs[iR], yR = ys[iR];
 
-        const t = xs[i];
-        const v = ys[i];
-        const x = xScale(t);
-        const y = yScale(v);
+        let yVal: number;
+        if (iL === iR || xR === xL) {
+            yVal = yL; // degenerate / single point
+        } else {
+            const alpha = (t - xL) / (xR - xL);
+            yVal = yL + alpha * (yR - yL);
+        }
 
-        // Horizontal line follows series Y
-        setSnappedY(y);
+        const yPix = yScale(yVal);
+        setCurveY(yPix);
 
-        // Tooltip at snapped point (x,y)
-        setTip({ x, y, date: data[i].date, value: data[i].value });
-    };
+        // Tooltip: show interpolated value & cursor date (more intuitive)
+        const cursorDate = new Date(t);
+        const iso = new Date(cursorDate.getFullYear(), cursorDate.getMonth(), cursorDate.getDate()).toISOString();
+        setTip({ x: xBound, y: yPix, labelDate: iso, labelValue: yVal });
+    }
 
-    const onLeave = () => {
-        setHoverIdx(null);
+    function onLeave() {
         setCursorX(null);
-        setSnappedY(null);
+        setCurveY(null);
         setTip(null);
-    };
+    }
 
     return (
         <div
@@ -235,16 +203,14 @@ function HistoryChart({
             onMouseMove={onMove}
             onMouseLeave={onLeave}
         >
-            {/* Crosshair in controlled mode:
-          - vertical X at cursor
-          - horizontal Y snapped to nearest series */}
+            {/* Crosshair: vertical at cursor, horizontal at interpolated series y */}
             <Crosshair
                 containerRef={containerRef}
                 color="rgba(255,255,255,0.65)"
                 mode="controlled"
                 vX={cursorX}
-                hY={snappedY}
-                show={cursorX != null && snappedY != null}
+                hY={curveY}
+                show={cursorX != null && curveY != null}
             />
 
             <svg
@@ -255,29 +221,20 @@ function HistoryChart({
                 aria-label={`Price history (${unitLabel}) with axes`}
                 shapeRendering="crispEdges"
             >
-                {/* Plot background */}
                 <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" />
 
-                {/* Y grid + labels */}
                 {yTicks.map((yt, i) => {
                     const y = yScale(yt);
                     return (
                         <g key={`y-${i}`}>
                             <line x1={m.left} x2={m.left + iw} y1={y} y2={y} stroke={gridY} strokeWidth={1} />
-                            <text
-                                x={m.left - 8}
-                                y={y}
-                                textAnchor="end"
-                                dominantBaseline="middle"
-                                style={{ fontSize: 12, fill: label }}
-                            >
+                            <text x={m.left - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: 12, fill: label }}>
                                 {formatNumber(yt)}
                             </text>
                         </g>
                     );
                 })}
 
-                {/* X grid + labels */}
                 {xTicks.map((xt, i) => {
                     const x = xScale(xt);
                     return (
@@ -290,11 +247,9 @@ function HistoryChart({
                     );
                 })}
 
-                {/* Axes */}
                 <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} stroke={axis} strokeWidth={1} />
                 <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} stroke={axis} strokeWidth={1} />
 
-                {/* Axis labels */}
                 <text x={m.left + iw / 2} y={height - 6} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
                     Date
                 </text>
@@ -308,29 +263,19 @@ function HistoryChart({
                     Price ({unitLabel})
                 </text>
 
-                {/* Area + line */}
-                <path
-                    d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`}
-                    fill={area}
-                    opacity={0.12}
-                />
+                <path d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`} fill={area} opacity={0.12} />
                 <path d={dPath} fill="none" stroke={line} strokeWidth={2} vectorEffect="non-scaling-stroke" />
-
-                {/* Focus dot on snapped point */}
-                {hoverIdx != null && (
-                    <circle cx={xScale(xs[hoverIdx])} cy={yScale(ys[hoverIdx])} r={4} fill="currentColor" stroke="white" strokeWidth={1} />
-                )}
             </svg>
 
-            {/* Tooltip */}
+            {/* Tooltip shows interpolated value at cursor’s date */}
             {tip && (
                 <div
                     role="note"
                     style={{
                         position: "absolute",
-                        left: Math.min(Math.max(tip.x + 8, m.left), m.left + iw - 200),
+                        left: Math.min(Math.max(tip.x + 8, m.left), m.left + iw - 220),
                         top: Math.max(tip.y - 44, m.top + 4),
-                        width: 188,
+                        width: 208,
                         padding: "8px 10px",
                         borderRadius: 8,
                         border: "1px solid rgba(255,255,255,0.2)",
@@ -340,13 +285,15 @@ function HistoryChart({
                         pointerEvents: "none",
                     }}
                 >
-                    <div style={{ opacity: 0.85 }}>{formatDateDense(tip.date)}</div>
+                    <div style={{ opacity: 0.85 }}>
+                        {new Date(tip.labelDate).toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" })}
+                    </div>
                     <div style={{ fontWeight: 700 }}>
                         {new Intl.NumberFormat(unitLabel.startsWith("AUD") ? "en-AU" : "en-US", {
                             style: unitLabel.startsWith("USD") || unitLabel.startsWith("AUD") ? "currency" : "decimal",
                             currency: unitLabel.startsWith("AUD") ? "AUD" : unitLabel.startsWith("USD") ? "USD" : undefined,
                             maximumFractionDigits: 2,
-                        }).format(tip.value)}{" "}
+                        }).format(tip.labelValue)}{" "}
                         <span style={{ opacity: 0.7, fontWeight: 400 }}>
                             {unitLabel.replace(/^(USD|AUD)/, "").trim()}
                         </span>
@@ -380,7 +327,6 @@ function HistoryChart({
 }
 
 /* ---------- Modal Shell ---------- */
-
 function ModalShell({
     open,
     onClose,
@@ -449,14 +395,13 @@ function ModalShell({
 }
 
 /* ---------- History Modal (fetch + controls) ---------- */
-
 export default function HistoryModal({ open, onClose, id }: Props) {
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string | null>(null);
     const [payload, setPayload] = useState<ApiPayload | null>(null);
 
     const [tf, setTf] = useState<TimeKey>("6M");
-    const [ccy, setCcy] = useState<CurrencyKey>("AUD"); // default to AUD for AU users
+    const [ccy, setCcy] = useState<CurrencyKey>("AUD");
     const [view, setView] = useState<ViewMode>("chart");
 
     useEffect(() => {
@@ -473,7 +418,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                 const j = (await res.json()) as ApiPayload;
                 if (!cancelled) {
                     setPayload(j);
-                    if (!j.fx?.audusd) setCcy("USD"); // no FX → force USD
+                    if (!j.fx?.audusd) setCcy("USD");
                 }
             } catch (e: any) {
                 if (!cancelled) setErr(e?.message ?? "Failed to load history");
@@ -490,7 +435,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
     const series = useMemo<SeriesPoint[]>(() => {
         if (!payload) return [];
         if (ccy === "USD") return payload.seriesUSD;
-        const rate = payload.fx?.audusd ?? null; // USD per 1 AUD
+        const rate = payload.fx?.audusd ?? null;
         if (!rate) return [];
         return payload.seriesUSD.map((p) => ({ date: p.date, value: p.value / rate }));
     }, [payload, ccy]);
@@ -526,10 +471,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
     }, [ccy, payload?.unitUSD]);
 
     function downloadCSV() {
-        const rows = [
-            ["Date", `Price (${unitLabel})`],
-            ...filtered.map((r) => [r.date, String(r.value)]),
-        ];
+        const rows = [["Date", `Price (${unitLabel})`], ...filtered.map((r) => [r.date, String(r.value)])];
         const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
@@ -586,15 +528,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                     role="tab"
                                     aria-selected={view === "chart"}
                                     onClick={() => setView("chart")}
-                                    style={{
-                                        padding: "4px 10px",
-                                        borderRadius: 8,
-                                        border: "1px solid currentColor",
-                                        background: "transparent",
-                                        opacity: view === "chart" ? 1 : 0.7,
-                                        cursor: "pointer",
-                                        fontSize: 12,
-                                    }}
+                                    style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: view === "chart" ? 1 : 0.7, cursor: "pointer", fontSize: 12 }}
                                 >
                                     Chart
                                 </button>
@@ -602,15 +536,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                     role="tab"
                                     aria-selected={view === "table"}
                                     onClick={() => setView("table")}
-                                    style={{
-                                        padding: "4px 10px",
-                                        borderRadius: 8,
-                                        border: "1px solid currentColor",
-                                        background: "transparent",
-                                        opacity: view === "table" ? 1 : 0.7,
-                                        cursor: "pointer",
-                                        fontSize: 12,
-                                    }}
+                                    style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: view === "table" ? 1 : 0.7, cursor: "pointer", fontSize: 12 }}
                                 >
                                     Table
                                 </button>
@@ -618,51 +544,21 @@ export default function HistoryModal({ open, onClose, id }: Props) {
 
                             <div style={{ width: 8 }} />
 
-                            <button
-                                onClick={() => setCcy("USD")}
-                                disabled={ccy === "USD"}
-                                style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: "1px solid currentColor",
-                                    background: "transparent",
-                                    opacity: ccy === "USD" ? 1 : 0.8,
-                                    cursor: ccy === "USD" ? "default" : "pointer",
-                                    fontSize: 12,
-                                }}
-                            >
+                            <button onClick={() => setCcy("USD")} disabled={ccy === "USD"} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: ccy === "USD" ? 1 : 0.8, cursor: ccy === "USD" ? "default" : "pointer", fontSize: 12 }}>
                                 USD
                             </button>
                             <button
                                 onClick={() => setCcy("AUD")}
                                 disabled={!payload.fx?.audusd || ccy === "AUD"}
                                 title={!payload.fx?.audusd ? "AUD unavailable (no FX)" : ""}
-                                style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: "1px solid currentColor",
-                                    background: "transparent",
-                                    opacity: ccy === "AUD" ? 1 : payload.fx?.audusd ? 0.8 : 0.4,
-                                    cursor: !payload.fx?.audusd || ccy === "AUD" ? "default" : "pointer",
-                                    fontSize: 12,
-                                }}
+                                style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: ccy === "AUD" ? 1 : payload.fx?.audusd ? 0.8 : 0.4, cursor: !payload.fx?.audusd || ccy === "AUD" ? "default" : "pointer", fontSize: 12 }}
                             >
                                 AUD
                             </button>
 
                             <div style={{ width: 8 }} />
 
-                            <button
-                                onClick={downloadCSV}
-                                style={{
-                                    padding: "4px 10px",
-                                    borderRadius: 8,
-                                    border: "1px solid currentColor",
-                                    background: "transparent",
-                                    cursor: "pointer",
-                                    fontSize: 12,
-                                }}
-                            >
+                            <button onClick={downloadCSV} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", cursor: "pointer", fontSize: 12 }}>
                                 Download CSV
                             </button>
                         </div>
@@ -673,52 +569,14 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                         {view === "chart" ? (
                             <HistoryChart data={filtered} unitLabel={unitLabel} />
                         ) : (
-                            <div
-                                role="region"
-                                aria-label="Price history table"
-                                style={{
-                                    maxHeight: 360,
-                                    overflow: "auto",
-                                    border: "1px solid rgba(255,255,255,0.12)",
-                                    borderRadius: 8,
-                                }}
-                            >
-                                <table
-                                    style={{
-                                        width: "100%",
-                                        borderCollapse: "separate",
-                                        borderSpacing: 0,
-                                        fontVariantNumeric: "tabular-nums",
-                                    }}
-                                >
-                                    <thead
-                                        style={{
-                                            position: "sticky",
-                                            top: 0,
-                                            background: "rgba(0,0,0,0.6)",
-                                            backdropFilter: "blur(6px)",
-                                        }}
-                                    >
+                            <div role="region" aria-label="Price history table" style={{ maxHeight: 360, overflow: "auto", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8 }}>
+                                <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontVariantNumeric: "tabular-nums" }}>
+                                    <thead style={{ position: "sticky", top: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
                                         <tr>
-                                            <th
-                                                style={{
-                                                    textAlign: "left",
-                                                    padding: "10px 12px",
-                                                    borderBottom: "1px solid rgba(255,255,255,0.12)",
-                                                    position: "sticky",
-                                                    left: 0,
-                                                    background: "inherit",
-                                                }}
-                                            >
+                                            <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.12)", position: "sticky", left: 0, background: "inherit" }}>
                                                 Date
                                             </th>
-                                            <th
-                                                style={{
-                                                    textAlign: "right",
-                                                    padding: "10px 12px",
-                                                    borderBottom: "1px solid rgba(255,255,255,0.12)",
-                                                }}
-                                            >
+                                            <th style={{ textAlign: "right", padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
                                                 Price ({unitLabel})
                                             </th>
                                         </tr>
@@ -729,24 +587,10 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                             .reverse()
                                             .map((row) => (
                                                 <tr key={row.date}>
-                                                    <td
-                                                        style={{
-                                                            padding: "10px 12px",
-                                                            borderBottom: "1px solid rgba(255,255,255,0.06)",
-                                                            position: "sticky",
-                                                            left: 0,
-                                                            background: "var(--modal-bg, #0b0b0b)",
-                                                        }}
-                                                    >
+                                                    <td style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", left: 0, background: "var(--modal-bg, #0b0b0b)" }}>
                                                         {formatDateDense(row.date)}
                                                     </td>
-                                                    <td
-                                                        style={{
-                                                            padding: "10px 12px",
-                                                            textAlign: "right",
-                                                            borderBottom: "1px solid rgba(255,255,255,0.06)",
-                                                        }}
-                                                    >
+                                                    <td style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                                                         {numberFmt.format(row.value)}
                                                     </td>
                                                 </tr>
