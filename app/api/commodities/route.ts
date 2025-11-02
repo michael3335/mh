@@ -5,16 +5,16 @@ export const runtime = "nodejs";
 export const revalidate = 0;
 
 /**
- * Yahoo Finance JSON endpoints (undocumented).
- * - Quotes: https://query1.finance.yahoo.com/v7/finance/quote?symbols=...
- * - Chart:  https://query1.finance.yahoo.com/v8/finance/chart/:symbol?range=5d&interval=1h
+ * Yahoo JSON endpoints (undocumented).
+ * - Quotes: {host}/v7/finance/quote?symbols=...
+ * - Chart:  {host}/v8/finance/chart/:symbol?range=5d&interval=1h
  */
 
 type SymbolMap = {
   id: string;
   symbol: string;
   name: string;
-  unitHint?: string; // display hint if Yahoo omits currency
+  unitHint?: string;
 };
 
 /** Core USD commodities (we'll convert to AUD for UI) */
@@ -25,67 +25,113 @@ const COMMODITY_SYMBOLS: SymbolMap[] = [
   { id: "brent", symbol: "BZ=F", name: "Brent Crude", unitHint: "USD/bbl" },
   { id: "copper", symbol: "HG=F", name: "Copper", unitHint: "USD/lb" },
   { id: "natgas", symbol: "NG=F", name: "Natural Gas", unitHint: "USD/MMBtu" },
-  { id: "wheat", symbol: "ZW=F", name: "Wheat", unitHint: "USD/bu" }, // ✅ USD/bu (not ¢/bu)
+  { id: "wheat", symbol: "ZW=F", name: "Wheat", unitHint: "USD/bu" }, // correct
   { id: "iron", symbol: "TIO=F", name: "Iron Ore (62%)", unitHint: "USD/t" },
 ];
 
-/** AU-centric proxies (quoted in AUD on Yahoo via .AX) */
+/** AU-centric proxies (mostly quoted in AUD on Yahoo via .AX) */
 const AU_SYMBOLS: SymbolMap[] = [
-  // Iron ore proxies
   { id: "bhp", symbol: "BHP.AX", name: "BHP Group" },
   { id: "rio", symbol: "RIO.AX", name: "Rio Tinto" },
   { id: "fmg", symbol: "FMG.AX", name: "Fortescue" },
-
-  // Energy proxies (oil/LNG)
   { id: "wds", symbol: "WDS.AX", name: "Woodside Energy" },
   { id: "sto", symbol: "STO.AX", name: "Santos" },
   { id: "fuel", symbol: "FUEL.AX", name: "Global Energy ETF (Hedged)" },
-
-  // You can add SGX iron ore & JKM here when you pick exact tickers on Yahoo:
-  // e.g. { id: "sgx_fe62", symbol: "XXXX.SI", name: "SGX Iron Ore 62%" }
-  // e.g. { id: "jkm",      symbol: "XXXX",    name: "LNG JKM Index" }
+  // add SGX iron ore / JKM once you pick exact Yahoo symbols
 ];
 
 const FX_SYMBOL = "AUDUSD=X"; // USD per 1 AUD
 
-const host = process.env.Y_QUERY_HOST ?? "https://query1.finance.yahoo.com";
-const QUOTE_URL = (symbols: string[]) =>
-  `${host}/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(","))}`;
+/* ---------- Robust Yahoo fetch helpers ---------- */
 
-const CHART_URL = (symbol: string) =>
-  `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=5d&interval=1h`;
+const HOSTS = [
+  process.env.Y_QUERY_HOST || "https://query1.finance.yahoo.com",
+  "https://query2.finance.yahoo.com",
+];
 
 const REQ_HEADERS: HeadersInit = {
+  // Browser-y headers reduce 401/403 risk on serverless providers
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
   Accept: "application/json,text/*;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-AU,en;q=0.9",
+  Referer: "https://finance.yahoo.com/",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
 };
 
-async function fetchJSON<T>(url: string): Promise<T> {
+function quoteURL(host: string, symbols: string[]) {
+  return `${host}/v7/finance/quote?symbols=${encodeURIComponent(
+    symbols.join(",")
+  )}`;
+}
+function chartURL(host: string, symbol: string) {
+  return `${host}/v8/finance/chart/${encodeURIComponent(
+    symbol
+  )}?range=5d&interval=1h`;
+}
+
+async function fetchJSON<T>(url: string, abortMs = 12_000): Promise<T> {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 12_000);
+  const timer = setTimeout(() => controller.abort(), abortMs);
   try {
     const res = await fetch(url, {
       cache: "no-store",
       headers: REQ_HEADERS,
       signal: controller.signal,
     });
-    if (!res.ok)
-      throw new Error(`Fetch failed: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `Fetch failed: ${res.status} ${res.statusText}${
+          text ? ` — ${text.slice(0, 140)}` : ""
+        }`
+      );
+    }
     return (await res.json()) as T;
   } finally {
-    clearTimeout(t);
+    clearTimeout(timer);
   }
 }
 
-// Convert USD amount -> AUD using AUDUSD (USD per 1 AUD).
-// AUD = USD / AUDUSD
+// Retry across hosts; small backoff; treat 401/403 specially
+async function fetchWithFallback<T>(
+  makeUrl: (host: string) => string,
+  attempts = 4,
+  baseDelay = 250
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    for (const host of HOSTS) {
+      try {
+        const url = makeUrl(host);
+        return await fetchJSON<T>(url);
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message || "");
+        // If it looks like a hard block, try next host immediately
+        if (msg.includes("401") || msg.includes("403")) {
+          continue;
+        }
+      }
+    }
+    await new Promise((r) => setTimeout(r, baseDelay * Math.pow(2, i))); // backoff
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Fetch failed");
+}
+
+// Yahoo sometimes 401s many-symbol queries; batch them.
+function chunk<T>(arr: T[], size: number) {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// USD -> AUD using AUDUSD (USD per 1 AUD). AUD = USD / AUDUSD
 const usdToAud = (usd: number | null, audusd: number | null) =>
   usd != null && audusd && audusd > 0 ? usd / audusd : null;
 
-// Decide whether to convert:
-// - Convert if Yahoo says currency === "USD" OR unit hint starts with USD/
-// - For equities on ASX (currency "AUD"), don't convert.
+// Convert only when needed: if Yahoo says currency USD or unitHint starts with USD/
 function maybeConvertToAud(
   value: number | null,
   qCurrency: string | null | undefined,
@@ -98,21 +144,30 @@ function maybeConvertToAud(
   return shouldConvert ? usdToAud(value, audusd ?? null) : value;
 }
 
+/* ---------- Handler ---------- */
+
 export async function GET() {
   try {
-    const allSymbolGroups = [
+    const groups = [
       { key: "commodities", list: COMMODITY_SYMBOLS },
       { key: "auWatch", list: AU_SYMBOLS },
     ];
 
-    const symbols = allSymbolGroups.flatMap((g) => g.list.map((s) => s.symbol));
+    const symbols = groups.flatMap((g) => g.list.map((s) => s.symbol));
     const allQuoteSymbols = [...symbols, FX_SYMBOL];
 
-    // 1) Quotes
-    const quoteJson = await fetchJSON<any>(QUOTE_URL(allQuoteSymbols));
+    // 1) QUOTES (batched + fallback)
+    const batches = chunk(allQuoteSymbols, 8); // keep small to avoid 401
+    const batchResults = await Promise.all(
+      batches.map((batch) =>
+        fetchWithFallback<any>((host) => quoteURL(host, batch))
+      )
+    );
     const quoteBySymbol: Record<string, any> = {};
-    for (const q of quoteJson?.quoteResponse?.result ?? []) {
-      quoteBySymbol[q.symbol] = q;
+    for (const b of batchResults) {
+      for (const q of b?.quoteResponse?.result ?? []) {
+        quoteBySymbol[q.symbol] = q;
+      }
     }
 
     const audusd =
@@ -121,24 +176,24 @@ export async function GET() {
       quoteBySymbol[FX_SYMBOL]?.preMarketPrice ??
       null;
 
-    // 2) Charts (parallel; we’ll convert series only if its currency is USD)
+    // 2) CHARTS (parallel + fallback; convert series only if USD)
     const chartResults = await Promise.allSettled(
       symbols.map(async (sym) => {
-        const chart = await fetchJSON<any>(CHART_URL(sym));
+        const data = await fetchWithFallback<any>((host) =>
+          chartURL(host, sym)
+        );
         const closeSeries: number[] =
-          chart?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(
+          data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(
             (n: number | null) => typeof n === "number"
           ) ?? [];
         const q = quoteBySymbol[sym];
         const currency: string | undefined = q?.currency;
-
         const series =
           currency?.toUpperCase?.() === "USD"
             ? audusd
               ? closeSeries.map((n) => usdToAud(n, audusd)!)
               : closeSeries
             : closeSeries;
-
         return { symbol: sym, series };
       })
     );
@@ -149,15 +204,13 @@ export async function GET() {
         seriesBySymbol[r.value.symbol] = r.value.series;
     }
 
-    // 3) Build groups
-    const groupPayload: Record<string, any[]> = {};
-
-    for (const group of allSymbolGroups) {
-      groupPayload[group.key] = group.list.map((meta) => {
+    // 3) NORMALISE (AUD base; only convert USD quotes)
+    const payload: Record<string, any[]> = {};
+    for (const g of groups) {
+      payload[g.key] = g.list.map((meta) => {
         const q = quoteBySymbol[meta.symbol] ?? {};
         const currency: string | undefined = q.currency;
 
-        // Prefer regular → post → pre
         const priceRaw =
           q.regularMarketPrice ?? q.postMarketPrice ?? q.preMarketPrice ?? null;
         const prevRaw = q.regularMarketPreviousClose ?? null;
@@ -170,7 +223,6 @@ export async function GET() {
             ? ((priceRaw - prevRaw) / prevRaw) * 100
             : null);
 
-        // Only convert when appropriate
         const price = maybeConvertToAud(
           priceRaw,
           currency,
@@ -191,8 +243,6 @@ export async function GET() {
         );
 
         const name = meta.name ?? q.shortName ?? q.longName ?? meta.symbol;
-
-        // Flip USD/* -> AUD/* for commodities we convert; otherwise keep unit
         const unit =
           currency?.toUpperCase?.() === "USD" ||
           meta.unitHint?.startsWith("USD/")
@@ -218,8 +268,8 @@ export async function GET() {
         asof: Date.now(),
         base: "AUD",
         fx: { audusd },
-        items: groupPayload.commodities, // backward-compatible
-        auItems: groupPayload.auWatch, // NEW
+        items: payload.commodities, // backward-compat for your UI
+        auItems: payload.auWatch, // AU proxies
       },
       { status: 200 }
     );

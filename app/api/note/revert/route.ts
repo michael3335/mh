@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { s3 } from "@/lib/s3";
 import { CopyObjectCommand } from "@aws-sdk/client-s3";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic"; // optional, avoids caching surprises
 
 const BUCKET = process.env.S3_BUCKET!;
 const NOTE_KEY = process.env.NOTE_KEY || "notes/quicknote.html";

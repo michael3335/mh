@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { s3 } from "@/lib/s3";
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic"; // optional, avoids caching surprises
 
 const BUCKET = process.env.S3_BUCKET!;
 const VERSIONS_PREFIX = process.env.NOTE_VERSIONS_PREFIX || "notes/versions/";
