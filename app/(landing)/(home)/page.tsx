@@ -40,7 +40,6 @@ export default function HomePage() {
         >
             {/* Top-right: Hello if authed, Sign in link if not */}
             <UserStatus />
-            <ContactLink />
 
             {/* Bottom-left folder */}
             <div
@@ -56,7 +55,7 @@ export default function HomePage() {
                 aria-label="Open folder"
             >
                 <Folder
-                    size={0.5}
+                    size={0.4}
                     color="#5227FF"
                     onClick={handleFolderClick}
                 />
@@ -88,6 +87,7 @@ export default function HomePage() {
                         <ASCIIText text="Michael Harrison" enableWaves interactive={false} />
                     </div>
                 </h1>
+                <ContactLink />
             </section>
         </main>
     );

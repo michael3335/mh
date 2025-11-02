@@ -35,9 +35,9 @@ export default function UserStatus() {
                         cursor: "pointer",
                     }}
                     aria-label="Sign in"
-                    title="Sign in"
+                    title="Authorise"
                 >
-                    Sign in
+                    Authorise
                 </button>
             )}
         </div>
