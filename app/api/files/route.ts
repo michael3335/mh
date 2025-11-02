@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { s3, BUCKET, userPrefix } from "@/lib/s3";
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
-
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {

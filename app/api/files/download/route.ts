@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { s3, BUCKET } from "@/lib/s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
-
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {

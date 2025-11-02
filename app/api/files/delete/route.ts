@@ -9,7 +9,7 @@ import {
   type ListObjectsV2CommandOutput,
   type _Object,
 } from "@aws-sdk/client-s3";
-
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
