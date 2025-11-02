@@ -213,7 +213,12 @@ function HistoryChart({
             onMouseLeave={onLeave}
         >
             {/* Crosshair bounded to this container */}
-            <Crosshair containerRef={containerRef} color="rgba(255,255,255,0.65)" />
+            {/* Type cast to satisfy Crosshair's RefObject<HTMLElement> prop shape */}
+            <Crosshair
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                containerRef={containerRef as unknown as React.RefObject<HTMLElement>}
+                color="rgba(255,255,255,0.65)"
+            />
 
             <svg
                 width="100%"
