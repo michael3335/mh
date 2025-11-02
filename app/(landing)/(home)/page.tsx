@@ -4,15 +4,29 @@
 import ContactLink from '@shared/components/ContactLink';
 import Folder from '@/components/Folder';
 import ASCIIText from '@/components/ASCIIText';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+// If you don't have this component, remove the import + <UserStatus /> below.
+import UserStatus from '@/components/UserStatus';
 
 export default function HomePage() {
-    const handleFolderLogin = () => {
-        // Option A: show provider chooser
-        signIn();
+    const { status } = useSession(); // 'loading' | 'unauthenticated' | 'authenticated'
+    const router = useRouter();
 
-        // Option B: go straight to GitHub
-        // signIn("github", { callbackUrl: "/" });
+    const handleFolderClick = () => {
+        if (status === 'loading') return;
+
+        const destination = '/dashboard'; // change to your target route (ensure it exists)
+
+        if (status === 'authenticated') {
+            // Use a plain string to avoid typed-routes union errors
+            router.push(destination as string);
+        } else {
+            // Show NextAuth sign-in. After success, redirect to destination.
+            signIn(undefined, { callbackUrl: destination });
+            // If you only use GitHub and want to skip the provider screen:
+            // signIn("github", { callbackUrl: destination });
+        }
     };
 
     return (
@@ -28,6 +42,9 @@ export default function HomePage() {
                 position: 'relative',
             }}
         >
+            {/* Top-right user greeting (only if authenticated) */}
+            <UserStatus />
+
             {/* Fixed bottom-left folder */}
             <div
                 style={{
@@ -37,15 +54,14 @@ export default function HomePage() {
                     zIndex: 10,
                     pointerEvents: 'auto',
                     touchAction: 'manipulation',
-                    cursor: 'pointer',
+                    cursor: status === 'loading' ? 'wait' : 'pointer',
                 }}
-                aria-hidden="false"
-                aria-label="Sign in"
+                aria-label="Open folder"
             >
                 <Folder
                     size={0.5}
                     color="#5227FF"
-                    onClick={handleFolderLogin}   // ✅ trigger NextAuth sign-in
+                    onClick={handleFolderClick} // redirect or sign in
                 />
             </div>
 
@@ -71,16 +87,9 @@ export default function HomePage() {
                         overflow: 'hidden',
                     }}
                 >
-                    <div
-                        style={{
-                            position: 'absolute',
-                            inset: 0,
-                            pointerEvents: 'none',
-                        }}
-                    >
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
                         <ASCIIText text="Michael Harrison" enableWaves interactive={false} />
                     </div>
-
                     <span
                         style={{
                             position: 'absolute',
