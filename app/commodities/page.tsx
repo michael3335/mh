@@ -38,7 +38,7 @@ function Sparkline({ points, positive, width = 120, height = 32 }: { points: num
     );
 }
 
-/* Metric card unchanged … */
+/* Metric card unchanged structurally; value/Δ come from caller */
 function MetricCard({
     title, value, delta, deltaPct, series,
 }: { title: string; value: string; delta: number | null; deltaPct: number | null; series: number[]; }) {
@@ -80,12 +80,15 @@ type Item = {
 export default function CommoditiesPage() {
     const { status } = useSession();
 
-    const [items, setItems] = useState<Item[] | null>(null);     // commodities (AUD)
-    const [auItems, setAuItems] = useState<Item[] | null>(null); // AU proxies (mostly AUD)
+    const [items, setItems] = useState<Item[] | null>(null);     // commodities (AUD or USD)
+    const [auItems, setAuItems] = useState<Item[] | null>(null); // AU proxies (AUD or USD)
     const [error, setError] = useState<string | null>(null);
     const [asof, setAsof] = useState<number | null>(null);
+    const [base, setBase] = useState<"AUD" | "USD">("AUD");
 
     const audFmt = useMemo(() => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 2 }), []);
+    const usdFmt = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }), []);
+    const fmt = base === "AUD" ? audFmt : usdFmt;
 
     useEffect(() => {
         if (status !== "authenticated") return;
@@ -101,6 +104,7 @@ export default function CommoditiesPage() {
                     setItems(json.items as Item[]);
                     setAuItems((json.auItems as Item[]) ?? null);
                     setAsof(json.asof as number);
+                    setBase((json.base as "AUD" | "USD") ?? "AUD");
                 }
             } catch (e: any) {
                 if (!cancelled) setError(e?.message ?? "Failed to load data");
@@ -108,7 +112,8 @@ export default function CommoditiesPage() {
         }
 
         load();
-        const id = setInterval(load, 60_000);
+        // Poll less frequently to reduce rate limits and writes (5 minutes)
+        const id = setInterval(load, 300_000);
         return () => { cancelled = true; clearInterval(id); };
     }, [status]);
 
@@ -124,7 +129,7 @@ export default function CommoditiesPage() {
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center", flexWrap: "wrap", opacity: 0.85 }}>
                     <Badge>Live snapshot</Badge>
                     <Badge>AV + FRED/Nasdaq</Badge>
-                    <Badge>AUD base</Badge>
+                    <Badge>{base} base</Badge>
                     {asof && <Badge>{new Date(asof).toLocaleTimeString("en-AU")}</Badge>}
                 </div>
             </header>
@@ -169,35 +174,36 @@ export default function CommoditiesPage() {
                                     </div>
                                 );
                             }
-                            const value = c.price == null ? "—" : `${audFmt.format(c.price)} ${c.unit.replace("AUD/", "")}`;
+                            const value = c.price == null ? "—" : `${fmt.format(c.price)} ${c.unit.replace(`${base}/`, "")}`;
                             return (
                                 <MetricCard key={c.id} title={`${c.name} • ${c.unit}`} value={value} delta={c.change} deltaPct={c.changePct} series={c.series} />
                             );
                         })}
                     </section>
 
-                    {/* Watchlist: Global commodities (AUD) */}
+                    {/* Watchlist: Global commodities (AUD or USD) */}
                     <section aria-label="Watchlist" style={{ border: "1px solid var(--table-border, rgba(255,255,255,0.08))", borderRadius: 12, overflow: "hidden", opacity: items ? 1 : 0.6 }}>
                         <div role="table" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
                             <div role="row" style={{ display: "contents", fontSize: 12, opacity: 0.7 }}>
                                 <div role="columnheader" style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Ticker</div>
-                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Last (AUD)</div>
-                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Δ (AUD)</div>
+                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Last ({base})</div>
+                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Δ ({base})</div>
                                 <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Δ%</div>
                             </div>
 
                             {(items ?? []).map((c) => {
                                 const up = (c.change ?? 0) >= 0;
+                                const absDelta = c.change == null ? null : Math.abs(c.change);
                                 return (
                                     <div role="row" key={`row-${c.id}`} style={{ display: "contents", fontVariantNumeric: "tabular-nums" }}>
                                         <div role="cell" style={{ padding: "12px", textAlign: "left" }}>
                                             <strong>{c.name}</strong> <span style={{ opacity: 0.6, fontSize: 12 }}>({c.unit})</span>
                                         </div>
                                         <div role="cell" style={{ padding: "12px", textAlign: "right" }}>
-                                            {c.price == null ? "—" : audFmt.format(c.price)}
+                                            {c.price == null ? "—" : fmt.format(c.price)}
                                         </div>
                                         <div role="cell" style={{ padding: "12px", textAlign: "right", color: up ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)" }}>
-                                            {c.change == null ? "—" : `${up ? "+" : ""}${audFmt.format(Math.abs(c.change)).replace("$", "")}`}
+                                            {absDelta == null ? "—" : `${up ? "+" : ""}${absDelta.toFixed(2)}`}
                                         </div>
                                         <div role="cell" style={{ padding: "12px", textAlign: "right", color: up ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)" }}>
                                             {c.changePct == null ? "—" : `${up ? "+" : ""}${c.changePct.toFixed(2)}%`}
@@ -208,31 +214,32 @@ export default function CommoditiesPage() {
                         </div>
                     </section>
 
-                    {/* NEW: AU Watchlist (proxies) */}
+                    {/* AU Watchlist (proxies) */}
                     <section aria-label="AU Watchlist" style={{ border: "1px solid var(--table-border, rgba(255,255,255,0.08))", borderRadius: 12, overflow: "hidden", opacity: auItems ? 1 : 0.6 }}>
                         <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)", fontWeight: 600, opacity: 0.9 }}>
                             AU Watchlist (proxies)
                         </div>
                         <div role="table" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
                             <div role="row" style={{ display: "contents", fontSize: 12, opacity: 0.7 }}>
-                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Ticker</div>
-                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Last (AUD)</div>
-                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Δ (AUD)</div>
+                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Name (Symbol)</div>
+                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Last ({base})</div>
+                                <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Δ ({base})</div>
                                 <div role="columnheader" style={{ padding: "10px 12px", textAlign: "right", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>Δ%</div>
                             </div>
 
                             {(auItems ?? []).map((c) => {
                                 const up = (c.change ?? 0) >= 0;
+                                const absDelta = c.change == null ? null : Math.abs(c.change);
                                 return (
                                     <div role="row" key={`row-au-${c.id}`} style={{ display: "contents", fontVariantNumeric: "tabular-nums" }}>
                                         <div role="cell" style={{ padding: "12px", textAlign: "left" }}>
                                             <strong>{c.name}</strong> <span style={{ opacity: 0.6, fontSize: 12 }}>({c.symbol})</span>
                                         </div>
                                         <div role="cell" style={{ padding: "12px", textAlign: "right" }}>
-                                            {c.price == null ? "—" : audFmt.format(c.price)}
+                                            {c.price == null ? "—" : fmt.format(c.price)}
                                         </div>
                                         <div role="cell" style={{ padding: "12px", textAlign: "right", color: up ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)" }}>
-                                            {c.change == null ? "—" : `${up ? "+" : ""}${audFmt.format(Math.abs(c.change)).replace("$", "")}`}
+                                            {absDelta == null ? "—" : `${up ? "+" : ""}${absDelta.toFixed(2)}`}
                                         </div>
                                         <div role="cell" style={{ padding: "12px", textAlign: "right", color: up ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)" }}>
                                             {c.changePct == null ? "—" : `${up ? "+" : ""}${c.changePct.toFixed(2)}%`}
@@ -263,7 +270,7 @@ export default function CommoditiesPage() {
                             Briefing Notes
                         </h2>
                         <ul style={{ margin: 0, paddingLeft: 18 }}>
-                            <li>Gold (AUD) tracks USD & real yields; AUDUSD moves can amplify local price swings.</li>
+                            <li>Gold (AUD) tracks USD &amp; real yields; AUDUSD moves can amplify local price swings.</li>
                             <li>Energy proxies (WDS/STO/FUEL.AX) reflect crude + LNG sentiment and local basis.</li>
                             <li>Iron ore proxies (BHP/RIO/FMG) capture China steel demand and freight.</li>
                             <li>Watch FX — a weak AUD lifts local commodity prices even if USD prices are flat.</li>

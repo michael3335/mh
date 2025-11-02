@@ -9,16 +9,18 @@ import {
 
 /**
  * This endpoint:
- * - Loads history for commodities + AU proxies from S3
+ * - Loads USD-only history for commodities + AU proxies from S3
  * - Fetches fresh data from APIs (Alpha Vantage → FRED → Nasdaq Data Link)
- * - Updates S3 (append/repair)
- * - Returns AUD-based items & auItems (with sparkline + Δ/Δ%)
+ * - Updates S3 (append/repair; USD-only)
+ * - Returns items & auItems, converting to AUD on-the-fly if AUDUSD is available
  *
  * Robustness:
  * - FX fallback: AV realtime → FRED DEXUSAL (USD per 1 AUD)
  * - Gold & others: AV → FRED → Nasdaq Data Link
- * - AU watchlist: US tickers (BHP/RIO/WDS/FSUGY/STOSF/XLE) + USD→AUD
+ * - AU watchlist: US tickers (BHP/RIO/WDS/FSUGY/STOSF/XLE); store USD; present AUD if FX is known
  * - S3 completeness check: min points + freshness window
+ * - In-process caching to reduce API calls
+ * - Write to S3 only if data changed
  */
 
 export const runtime = "nodejs";
@@ -36,7 +38,8 @@ const S3_PREFIX = (process.env.AWS_S3_PREFIX || "commodities").replace(
   /\/+$/,
   ""
 );
-const S3_KEY = `${S3_PREFIX}/history.json`;
+// Store USD-only history to avoid mixed bases
+const S3_KEY_USD = `${S3_PREFIX}/history_usd.json`;
 
 const s3 = new S3Client({ region: S3_REGION });
 
@@ -155,7 +158,10 @@ function computeDelta(values: number[]) {
   const last = values.at(-1) ?? null;
   const prev = values.length >= 2 ? values.at(-2)! : null;
   const change = last != null && prev != null ? last - prev : null;
-  const changePct = last != null && prev ? ((last - prev) / prev) * 100 : null;
+  const changePct =
+    last != null && prev != null && prev !== 0
+      ? ((last - prev) / prev) * 100
+      : null;
   return { last, prev, change, changePct };
 }
 
@@ -196,6 +202,13 @@ async function putS3JSON(Key: string, obj: any) {
 }
 
 /* -------------------- Providers -------------------- */
+
+// Simple in-process caches per request to reduce API calls
+const usdSeriesCache = new Map<string, SeriesPoint[]>();
+const usQuoteCache = new Map<
+  string,
+  { priceUSD: number | null; prevUSD: number | null; seriesUSD: SeriesPoint[] }
+>();
 
 async function avJson(params: Record<string, string>) {
   if (!AV_KEY) throw new Error("Missing ALPHA_VANTAGE_KEY");
@@ -322,6 +335,12 @@ async function loadCommodityUSD(c: CSpec): Promise<SeriesPoint[]> {
   }
   return [];
 }
+async function getUSDSeries(c: CSpec): Promise<SeriesPoint[]> {
+  if (!usdSeriesCache.has(c.id)) {
+    usdSeriesCache.set(c.id, await loadCommodityUSD(c));
+  }
+  return usdSeriesCache.get(c.id)!;
+}
 
 async function loadUSQuoteAndSeries(symbol: string) {
   try {
@@ -344,6 +363,12 @@ async function loadUSQuoteAndSeries(symbol: string) {
   } catch {
     return { priceUSD: null, prevUSD: null, seriesUSD: [] as SeriesPoint[] };
   }
+}
+async function getUSQuote(sym: string) {
+  if (!usQuoteCache.has(sym)) {
+    usQuoteCache.set(sym, await loadUSQuoteAndSeries(sym));
+  }
+  return usQuoteCache.get(sym)!;
 }
 
 /* -------------------- Completeness checks -------------------- */
@@ -377,79 +402,74 @@ export async function GET() {
       );
     }
 
-    // Load existing S3 history (or empty)
-    const history: History = await getS3JSON<History>(S3_KEY, {});
+    // Load existing S3 USD history (or empty)
+    const historyUSD: History = await getS3JSON<History>(S3_KEY_USD, {});
+    const origSerialized = JSON.stringify(historyUSD);
     const today = toISODate();
 
     // FX (USD per 1 AUD)
     const audusd = await getAUDUSD();
 
-    /* ---------- Commodities (USD → AUD, then store) ---------- */
+    /* ---------- Commodities (store USD only) ---------- */
     for (const c of COMMODITIES) {
-      const current = history[c.id] || [];
+      const current = historyUSD[c.id] || [];
       const ok = isComplete(current, today);
       if (!ok) {
-        // seed/repair from providers
-        const usd = await loadCommodityUSD(c);
-        // keep provider series if FX missing (so we still have sparkline in USD)
-        const provider = usd
-          .map((p) => ({
-            date: p.date,
-            value: audusd ? (usdToAud(p.value, audusd) as number) : p.value,
-          }))
-          .filter((p) => isFiniteNum(p.value));
-
-        // replace or merge with S3
-        const merged = [...provider]; // provider is authoritative when (re)seeding
-        history[c.id] = merged;
+        // seed/repair from providers (USD series)
+        const usdSeries = await getUSDSeries(c);
+        historyUSD[c.id] = usdSeries.filter((p) => isFiniteNum(p.value));
       }
 
-      // Always append today's value if we can
+      // Always append today's USD value if we can
       try {
-        const usdSeries = await loadCommodityUSD(c);
+        const usdSeries = await getUSDSeries(c);
         const lastUSD = usdSeries.at(-1)?.value ?? null;
-        const lastConverted = audusd ? usdToAud(lastUSD, audusd) : lastUSD;
-        appendHistory(history, c.id, today, lastConverted);
+        appendHistory(historyUSD, c.id, today, lastUSD);
       } catch {
         // ignore
       }
     }
 
-    /* ---------- AU Watchlist via US proxies (USD → AUD) ---------- */
+    /* ---------- AU Watchlist via US proxies (store USD only) ---------- */
     for (const p of AU_PROXIES) {
-      const current = history[p.id] || [];
+      const current = historyUSD[p.id] || [];
       const ok = isComplete(current, today);
       if (!ok) {
-        const { seriesUSD } = await loadUSQuoteAndSeries(p.symbol);
-        const provider = seriesUSD
-          .map((sp) => ({
-            date: sp.date,
-            value: audusd ? (usdToAud(sp.value, audusd) as number) : sp.value,
-          }))
-          .filter((x) => isFiniteNum(x.value));
-        history[p.id] = provider;
+        const { seriesUSD } = await getUSQuote(p.symbol);
+        historyUSD[p.id] = seriesUSD.filter((x) => isFiniteNum(x.value));
       }
 
-      // append today's value
+      // append today's USD price
       try {
-        const { priceUSD } = await loadUSQuoteAndSeries(p.symbol);
-        const priceAUD = audusd ? usdToAud(priceUSD, audusd) : priceUSD ?? null;
-        appendHistory(history, p.id, today, priceAUD);
+        const { priceUSD } = await getUSQuote(p.symbol);
+        appendHistory(historyUSD, p.id, today, priceUSD ?? null);
       } catch {
         // ignore
       }
     }
 
-    // Persist updates
-    await putS3JSON(S3_KEY, history);
+    // Persist updates only if changed
+    const newSerialized = JSON.stringify(historyUSD);
+    if (newSerialized !== origSerialized) {
+      await putS3JSON(S3_KEY_USD, historyUSD);
+    }
 
-    /* ---------- Build response payloads ---------- */
+    /* ---------- Build response payloads (convert to AUD on-the-fly if possible) ---------- */
+
+    const base = audusd ? ("AUD" as const) : ("USD" as const);
 
     const items = COMMODITIES.map((c) => {
-      const seriesArr = pickEffectiveSeries(history[c.id], undefined);
-      const values = seriesArr.map((p) => p.value).slice(-30);
-      const { last, prev, change, changePct } = computeDelta(values);
-      const unit = audusd ? c.unitUSD.replace("USD/", "AUD/") : c.unitUSD;
+      // Use stored USD series, convert to AUD for presentation if FX known
+      const seriesArrUSD = pickEffectiveSeries(historyUSD[c.id], undefined);
+      const seriesUSD = seriesArrUSD.map((p) => p.value).slice(-30);
+      const seriesOut = audusd
+        ? seriesUSD.map((v) => usdToAud(v, audusd)!)
+        : seriesUSD;
+
+      const { last, prev, change, changePct } = computeDelta(seriesOut);
+      const unit =
+        base === "AUD" ? c.unitUSD.replace("USD/", "AUD/") : c.unitUSD;
+
       return {
         id: c.id,
         symbol: c.id.toUpperCase(),
@@ -459,20 +479,24 @@ export async function GET() {
         prev,
         change,
         changePct,
-        series: values,
+        series: seriesOut,
       };
     });
 
     const auItems = await Promise.all(
       AU_PROXIES.map(async (p) => {
-        const seriesArr = pickEffectiveSeries(history[p.id], undefined);
-        const values = seriesArr.map((x) => x.value).slice(-30);
+        const seriesArrUSD = pickEffectiveSeries(historyUSD[p.id], undefined);
+        const valuesUSD = seriesArrUSD.map((x) => x.value).slice(-30);
+        const valuesOut = audusd
+          ? valuesUSD.map((v) => usdToAud(v, audusd)!)
+          : valuesUSD;
+
         // Try to refine last/prev with a live quote (does not affect stored history—already appended)
-        let last = values.at(-1) ?? null;
-        let prev = values.length >= 2 ? values.at(-2)! : null;
+        let last = valuesOut.at(-1) ?? null;
+        let prev = valuesOut.length >= 2 ? valuesOut.at(-2)! : null;
 
         try {
-          const { priceUSD, prevUSD } = await loadUSQuoteAndSeries(p.symbol);
+          const { priceUSD, prevUSD } = await getUSQuote(p.symbol);
           const price = audusd ? usdToAud(priceUSD, audusd) : priceUSD ?? null;
           const prevLive = audusd ? usdToAud(prevUSD, audusd) : prevUSD ?? null;
           if (isFiniteNum(price)) last = price!;
@@ -483,18 +507,20 @@ export async function GET() {
 
         const change = last != null && prev != null ? last - prev : null;
         const changePct =
-          last != null && prev ? ((last - prev) / prev) * 100 : null;
+          last != null && prev != null && prev !== 0
+            ? ((last - prev) / prev) * 100
+            : null;
 
         return {
           id: p.id,
           symbol: p.symbol,
           name: p.name,
-          unit: audusd ? "AUD" : "USD",
+          unit: base, // display unit label (AUD or USD)
           price: last ?? null,
           prev,
           change,
           changePct,
-          series: values,
+          series: valuesOut,
         };
       })
     );
@@ -502,7 +528,7 @@ export async function GET() {
     return NextResponse.json(
       {
         asof: Date.now(),
-        base: audusd ? "AUD" : "USD",
+        base, // "AUD" when FX is present, else "USD"
         fx: { audusd }, // USD per 1 AUD (null if unavailable)
         items,
         auItems,
