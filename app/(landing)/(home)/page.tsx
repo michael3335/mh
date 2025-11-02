@@ -81,7 +81,6 @@ export default function HomePage() {
                         fontWeight: 700,
                         letterSpacing: '0.02em',
                         userSelect: 'none',
-                        overflow: 'hidden',
                     }}
                 >
                     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
@@ -94,8 +93,6 @@ export default function HomePage() {
                             height: 1,
                             padding: 0,
                             margin: -1,
-                            overflow: 'hidden',
-                            clip: 'rect(0,0,1px,1px)',
                             whiteSpace: 'nowrap',
                             border: 0,
                         }}
