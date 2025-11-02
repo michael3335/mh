@@ -4,27 +4,24 @@
 import ContactLink from '@shared/components/ContactLink';
 import Folder from '@/components/Folder';
 import ASCIIText from '@/components/ASCIIText';
-import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import type { Route } from 'next';
+import { useSession } from 'next-auth/react';
 import UserStatus from '@/components/UserStatus';
+
+const DESTINATION = '/dashboard'; // change to your authed target path
+const RICK = 'https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw';
 
 export default function HomePage() {
     const { status } = useSession(); // 'loading' | 'unauthenticated' | 'authenticated'
-    const router = useRouter();
 
     const handleFolderClick = () => {
         if (status === 'loading') return;
 
-        // Ensure you have app/dashboard/page.tsx so typed routes accept this path.
-        const destination: Route = '/dashboard';
-
         if (status === 'authenticated') {
-            router.push(destination);
+            // Use browser navigation to avoid typed-routes type checks on router.push
+            window.location.assign(DESTINATION);
         } else {
-            // After sign-in, redirect to the same destination
-            signIn(undefined, { callbackUrl: destination });
-            // Or: signIn('github', { callbackUrl: destination });
+            // Open the YouTube link in a new tab (click handler avoids popup blockers)
+            window.open(RICK, '_blank', 'noopener,noreferrer');
         }
     };
 
@@ -41,7 +38,7 @@ export default function HomePage() {
                 position: 'relative',
             }}
         >
-            {/* Top-right greeting when authenticated */}
+            {/* Top-right: Hello if authed, Sign in link if not */}
             <UserStatus />
 
             {/* Bottom-left folder */}
@@ -64,6 +61,7 @@ export default function HomePage() {
                 />
             </div>
 
+            {/* Center hero */}
             <section
                 style={{
                     display: 'grid',

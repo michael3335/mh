@@ -1,49 +1,49 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+
+const DESTINATION = "/dashboard";
 
 export default function UserStatus() {
     const { data: session, status } = useSession();
 
-    if (status === "loading") return null; // avoid flicker
+    if (status === "loading") return null;
 
-    if (status === "authenticated") {
-        return (
-            <div
-                style={{
-                    position: "fixed",
-                    top: "1rem",
-                    right: "1rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    fontSize: "0.875rem",
-                    background: "rgba(0,0,0,0.2)",
-                    padding: "0.4rem 0.75rem",
-                    borderRadius: "8px",
-                    backdropFilter: "blur(6px)",
-                }}
-            >
-                <span>Hello, {session.user?.name?.split(" ")[0] ?? "User"} 👋</span>
-
-                {/* mini sign-out */}
+    return (
+        <div
+            style={{
+                position: "fixed",
+                top: "1rem",
+                right: "1rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                fontSize: "0.875rem",
+                background: "rgba(0,0,0,0.2)",
+                padding: "0.4rem 0.75rem",
+                borderRadius: "8px",
+                backdropFilter: "blur(6px)",
+            }}
+        >
+            {status === "authenticated" ? (
+                <span>Hello, {session.user?.name?.split(" ")[0] ?? "there"} 👋</span>
+            ) : (
                 <button
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => signIn(undefined, { callbackUrl: DESTINATION })}
                     style={{
-                        fontSize: "0.75rem",
+                        fontSize: "0.875rem",
                         background: "transparent",
-                        border: "none",
+                        border: "1px solid rgba(255,255,255,0.4)",
+                        borderRadius: 6,
+                        padding: "0.25rem 0.5rem",
                         cursor: "pointer",
-                        opacity: 0.8,
                     }}
-                    aria-label="Sign out"
-                    title="Sign out"
+                    aria-label="Sign in"
+                    title="Sign in"
                 >
-                    ✕
+                    Sign in
                 </button>
-            </div>
-        );
-    }
-
-    return null;
+            )}
+        </div>
+    );
 }
