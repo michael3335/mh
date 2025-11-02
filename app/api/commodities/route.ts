@@ -100,7 +100,6 @@ const COMMODITIES: CSpec[] = [
     name: "Wheat",
     unitUSD: "USD/bu",
     av: { func: "WHEAT", interval: "daily" },
-    // FRED global wheat price is USD/mt monthly (PWWTUSDM); keeping AV primary here
   },
   {
     id: "iron",
@@ -429,11 +428,18 @@ export async function GET() {
         );
       }
 
-      // Always append today's USD value if we can
+      // Append the provider's *latest dated* point (avoid "today" duplicates that zero out Δ)
       try {
         const usdSeries = await getUSDSeries(c);
-        const lastUSD = usdSeries.at(-1)?.value ?? null;
-        appendHistory(historyUSD, c.id, today, lastUSD);
+        const providerLast = usdSeries.at(-1);
+        if (providerLast) {
+          appendHistory(
+            historyUSD,
+            c.id,
+            providerLast.date,
+            providerLast.value
+          );
+        }
       } catch {
         // ignore
       }
@@ -450,10 +456,16 @@ export async function GET() {
         );
       }
 
-      // append today's USD price
+      // Prefer live quote when available; otherwise append last series date/value
       try {
-        const { priceUSD } = await getUSQuote(p.symbol);
-        appendHistory(historyUSD, p.id, today, priceUSD ?? null);
+        const { priceUSD, seriesUSD } = await getUSQuote(p.symbol);
+        if (isFiniteNum(priceUSD)) {
+          appendHistory(historyUSD, p.id, today, priceUSD!);
+        } else {
+          const lastPt = seriesUSD.at(-1);
+          if (lastPt)
+            appendHistory(historyUSD, p.id, lastPt.date, lastPt.value);
+        }
       } catch {
         // ignore
       }
