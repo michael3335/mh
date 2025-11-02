@@ -15,7 +15,7 @@ function getErrorMessage(errorParam: string | string[] | undefined) {
 
     switch (error) {
         case "AccessDenied":
-            return "This site is restricted to a single authorised GitHub account.";
+            return "This site is restricted to a authorised GitHub accounts.";
         case "OAuthAccountNotLinked":
             return "This GitHub account is not linked to an authorised user.";
         case "Configuration":
@@ -25,7 +25,7 @@ function getErrorMessage(errorParam: string | string[] | undefined) {
         case "Default":
         case undefined:
         default:
-            return `Sign-in failed${error ? `: ${error}` : ""}.`;
+            return `This site is restricted${error ? `: ${error}` : ""}.`;
     }
 }
 
