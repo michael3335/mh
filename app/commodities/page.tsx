@@ -123,7 +123,7 @@ export default function CommoditiesPage() {
                 </div>
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center", flexWrap: "wrap", opacity: 0.85 }}>
                     <Badge>Live snapshot</Badge>
-                    <Badge>Yahoo Finance</Badge>
+                    <Badge>Alpha Vantage</Badge>
                     <Badge>AUD base</Badge>
                     {asof && <Badge>{new Date(asof).toLocaleTimeString("en-AU")}</Badge>}
                 </div>
