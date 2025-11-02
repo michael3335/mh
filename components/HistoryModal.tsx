@@ -50,7 +50,7 @@ function formatNumber(v: number) {
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2 }).format(v);
 }
 
-/* ---------- Chart matching your cursor rules ---------- */
+/* ---------- Chart (snap crosshair to nearest point) ---------- */
 function HistoryChart({
     data,
     unitLabel,
@@ -71,11 +71,12 @@ function HistoryChart({
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
-    // Theme
+    // Colors
     const gridY = "rgba(255,255,255,0.12)";
     const gridX = "rgba(255,255,255,0.10)";
     const axis = "rgba(255,255,255,0.6)";
-    const label = "rgba(255,255,255,0.9)";
+    const label = "rgba(255,255,255,0.92)";
+    const neutral = "rgba(255,255,255,0.9)"; // crosshair/text color
 
     // Domains
     const xs = useMemo(() => data.map((d) => new Date(d.date).getTime()), [data]);
@@ -93,12 +94,12 @@ function HistoryChart({
     const xScale = (t: number) => m.left + ((t - xMin) / Math.max(1, xMax - xMin)) * iw;
     const yScale = (v: number) => m.top + (1 - (v - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
 
-    // Trend color
+    // Trend color for series only
     const firstVal = ys[0];
     const lastVal = ys[ys.length - 1];
     const delta = lastVal - firstVal;
-    const chartColor =
-        delta > 0 ? "var(--pos, #22c55e)" : delta < 0 ? "var(--neg, #ef4444)" : "rgba(255,255,255,0.9)";
+    const seriesColor =
+        delta > 0 ? "var(--pos, #22c55e)" : delta < 0 ? "var(--neg, #ef4444)" : "rgba(255,255,255,0.7)";
 
     // Path
     const dPath = useMemo(
@@ -129,16 +130,9 @@ function HistoryChart({
     // Header change
     const pct = firstVal ? ((lastVal - firstVal) / firstVal) * 100 : 0;
 
-    /* ----- Cursor state (your rules) ----- */
-    // Ref must be HTMLElement to match Crosshair prop
+    /* ----- Snap crosshair to nearest actual point ----- */
     const containerRef = useRef<HTMLElement | null>(null);
-
-    // vertical line: cursor X
-    const [cursorX, setCursorX] = useState<number | null>(null);
-    // horizontal line + tooltip: cursor Y
-    const [cursorY, setCursorY] = useState<number | null>(null);
-    // snapped dot: nearest actual point by time to cursor X
-    const [snapIdx, setSnapIdx] = useState<number | null>(null);
+    const [snapIdx, setSnapIdx] = useState<number | null>(null); // index of nearest datum
 
     const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
@@ -166,45 +160,44 @@ function HistoryChart({
 
         const inside = xPx >= m.left && xPx <= m.left + iw && yPx >= m.top && yPx <= m.top + ih;
         if (!inside) {
-            setCursorX(null);
-            setCursorY(null);
             setSnapIdx(null);
             return;
         }
 
         const xBound = clamp(xPx, m.left, m.left + iw);
-        const yBound = clamp(yPx, m.top, m.top + ih);
-
-        setCursorX(xBound); // vertical
-        setCursorY(yBound); // horizontal + tooltip
-
-        setSnapIdx(nearestIndexFromXpx(xBound));
+        const idx = nearestIndexFromXpx(xBound);
+        setSnapIdx(idx);
     }
 
     function onLeave() {
-        setCursorX(null);
-        setCursorY(null);
         setSnapIdx(null);
     }
 
+    const snapX = snapIdx != null ? xScale(xs[snapIdx]) : null;
+    const snapY = snapIdx != null ? yScale(ys[snapIdx]) : null;
+
     return (
         <div
-            // callback ref MUST return void
             ref={(el: HTMLDivElement | null) => {
                 containerRef.current = el;
             }}
-            style={{ position: "relative", width: "100%", height, overflow: "hidden", color: chartColor }}
+            style={{
+                position: "relative",
+                width: "100%",
+                height,
+                overflow: "hidden",
+            }}
             onMouseMove={onMove}
             onMouseLeave={onLeave}
         >
-            {/* Crosshair: vX = cursorX, hY = cursorY (follows mouse) */}
+            {/* Crosshair: snap both X & Y to the nearest real point, colored neutral */}
             <Crosshair
                 containerRef={containerRef}
-                color="currentColor"
+                color={neutral}
                 mode="controlled"
-                vX={cursorX}
-                hY={cursorY}
-                show={cursorX != null && cursorY != null}
+                vX={snapX}
+                hY={snapY}
+                show={snapX != null && snapY != null}
             />
 
             <svg
@@ -224,7 +217,13 @@ function HistoryChart({
                     return (
                         <g key={`y-${i}`}>
                             <line x1={m.left} x2={m.left + iw} y1={y} y2={y} stroke={gridY} strokeWidth={1} />
-                            <text x={m.left - 8} y={y} textAnchor="end" dominantBaseline="middle" style={{ fontSize: 12, fill: label }}>
+                            <text
+                                x={m.left - 8}
+                                y={y}
+                                textAnchor="end"
+                                dominantBaseline="middle"
+                                style={{ fontSize: 12, fill: label }}
+                            >
                                 {formatNumber(yt)}
                             </text>
                         </g>
@@ -237,7 +236,12 @@ function HistoryChart({
                     return (
                         <g key={`x-${i}`}>
                             <line x1={x} x2={x} y1={m.top} y2={m.top + ih} stroke={gridX} strokeWidth={1} />
-                            <text x={x} y={m.top + ih + 18} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
+                            <text
+                                x={x}
+                                y={m.top + ih + 18}
+                                textAnchor="middle"
+                                style={{ fontSize: 12, fill: label }}
+                            >
                                 {formatDate(new Date(xt).toISOString())}
                             </text>
                         </g>
@@ -262,36 +266,43 @@ function HistoryChart({
                     Price ({unitLabel})
                 </text>
 
-                {/* Area + line (inherit chartColor via currentColor) */}
-                <path d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`} fill="currentColor" opacity={0.12} />
-                <path d={dPath} fill="none" stroke="currentColor" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                {/* Area + line: color only here (seriesColor) */}
+                <g style={{ color: seriesColor }}>
+                    <path
+                        d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`}
+                        fill="currentColor"
+                        opacity={0.12}
+                    />
+                    <path d={dPath} fill="none" stroke="currentColor" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                </g>
 
-                {/* Snapped dot at nearest REAL point */}
+                {/* Snapped dot at nearest REAL point (neutral outline) */}
                 {snapIdx != null && (
                     <circle
-                        cx={xScale(xs[snapIdx])}
-                        cy={yScale(ys[snapIdx])}
+                        cx={snapX!}
+                        cy={snapY!}
                         r={4}
-                        fill="currentColor"
+                        fill={neutral}
                         stroke="white"
                         strokeWidth={1}
                     />
                 )}
             </svg>
 
-            {/* Tooltip follows cursor Y, but shows snapped point data */}
-            {cursorX != null && cursorY != null && snapIdx != null && (
+            {/* Tooltip near snapped point; neutral text */}
+            {snapIdx != null && (
                 <div
                     role="note"
                     style={{
                         position: "absolute",
-                        left: Math.min(Math.max(cursorX + 8, m.left), m.left + iw - 220),
-                        top: Math.max(cursorY - 44, m.top + 4),
+                        left: Math.min(Math.max((snapX ?? 0) + 8, m.left), m.left + iw - 220),
+                        top: Math.max((snapY ?? 0) - 44, m.top + 4),
                         width: 208,
                         padding: "8px 10px",
                         borderRadius: 8,
                         border: "1px solid rgba(255,255,255,0.2)",
-                        background: "rgba(0,0,0,0.8)",
+                        background: "rgba(0,0,0,0.85)",
+                        color: "#fff",
                         fontSize: 12,
                         lineHeight: 1.4,
                         pointerEvents: "none",
@@ -311,7 +322,7 @@ function HistoryChart({
                 </div>
             )}
 
-            {/* Header: change over visible range */}
+            {/* Header (neutral) */}
             <div
                 style={{
                     position: "absolute",
@@ -323,11 +334,11 @@ function HistoryChart({
                     padding: "0 4px 8px 4px",
                     fontVariantNumeric: "tabular-nums",
                     pointerEvents: "none",
-                    color: "inherit",
+                    color: label,
                 }}
             >
                 <div>
-                    Change: {formatNumber(lastVal)} vs {formatNumber(firstVal)} ({pct.toFixed(2)}%)
+                    Change: {formatNumber(lastVal)} vs {formatNumber(firstVal)} ({(firstVal ? ((lastVal - firstVal) / firstVal) * 100 : 0).toFixed(2)}%)
                 </div>
                 <div>
                     {formatDateDense(data[0].date)} → {formatDateDense(data[data.length - 1].date)}
@@ -394,6 +405,7 @@ function ModalShell({
                             borderRadius: 8,
                             padding: "6px 10px",
                             cursor: "pointer",
+                            color: "#fff",
                         }}
                     >
                         ✕
