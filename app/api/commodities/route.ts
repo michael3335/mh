@@ -153,7 +153,7 @@ function upsertSeriesWithProvider(
 ): boolean {
   const clean = providerAsc
     .filter((p) => isFiniteNum(p.value))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
   const curr = history[id] ?? [];
   // Seed or upgrade if provider has more coverage (earlier start or longer length)
   if (
@@ -280,13 +280,13 @@ function fromAVCommodity(j: any): SeriesPoint[] {
       })
     )
     .filter((p: SeriesPoint) => isFiniteNum(p.value))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
 }
 function fromFRED(j: any): SeriesPoint[] {
   return (j.observations as any[])
     .map((o): SeriesPoint => ({ date: String(o.date), value: Number(o.value) }))
     .filter((p: SeriesPoint) => isFiniteNum(p.value))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
 }
 function fromNADL(j: any, column?: string): SeriesPoint[] {
   const cols: string[] = j.dataset.column_names || [];
@@ -303,7 +303,7 @@ function fromNADL(j: any, column?: string): SeriesPoint[] {
       (row): SeriesPoint => ({ date: String(row[0]), value: Number(row[idx]) })
     )
     .filter((p: SeriesPoint) => isFiniteNum(p.value))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
 }
 
 /* -------------------- Merge helpers (use ALL providers for EVERY commodity) -------------------- */
@@ -318,7 +318,7 @@ function mergeByDatePriority(sources: SeriesPoint[][]): SeriesPoint[] {
   }
   return Array.from(map.entries())
     .map(([date, value]) => ({ date, value }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
 }
 
 async function loadCommodityUSDAll(c: CSpec): Promise<SeriesPoint[]> {
@@ -380,10 +380,10 @@ async function loadUSQuoteAndSeries(symbol: string) {
       ? Number(g["08. previous close"])
       : null;
     const ts = (t?.["Time Series (Daily)"] || {}) as Record<string, any>;
-    const seriesUSD: SeriesPoint[] = Object.entries(ts)
-      .map(([date, o]) => ({ date, value: Number((o as any)["4. close"]) }))
+    const seriesUSD: SeriesPoint[] = (Object.entries(ts) as [string, any][])
+      .map(([date, o]) => ({ date, value: Number(o["4. close"]) }))
       .filter((p) => isFiniteNum(p.value))
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
     return { priceUSD, prevUSD, seriesUSD };
   } catch {
     return { priceUSD: null, prevUSD: null, seriesUSD: [] as SeriesPoint[] };
