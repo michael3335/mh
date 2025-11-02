@@ -282,13 +282,13 @@ function fromAVCommodity(j: any): SeriesPoint[] {
   const arr = j?.data ?? [];
   return arr
     .map((d: any) => ({ date: String(d.date), value: Number(d.value) }))
-    .filter((x) => isFiniteNum(x.value));
+    .filter(({ value }) => isFiniteNum(value));
 }
 
 function fromFRED(j: any): SeriesPoint[] {
   return (j.observations as any[])
     .map((o) => ({ date: o.date as string, value: Number(o.value) }))
-    .filter((x) => isFiniteNum(x.value));
+    .filter(({ value }) => isFiniteNum(value));
 }
 
 function fromNADL(j: any, column?: string): SeriesPoint[] {
@@ -303,7 +303,7 @@ function fromNADL(j: any, column?: string): SeriesPoint[] {
   }
   return data
     .map((row) => ({ date: row[0], value: Number(row[idx]) }))
-    .filter((x) => isFiniteNum(x.value));
+    .filter(({ value }) => isFiniteNum(value));
 }
 
 /* -------------------- Loaders -------------------- */
@@ -356,7 +356,7 @@ async function loadUSQuoteAndSeries(symbol: string) {
     const ts = t?.["Time Series (Daily)"] || {};
     const seriesUSD = Object.entries(ts)
       .map(([date, o]: any) => ({ date, value: Number(o["4. close"]) }))
-      .filter((x) => isFiniteNum(x.value))
+      .filter(({ value }) => isFiniteNum(value))
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-60);
     return { priceUSD, prevUSD, seriesUSD };
@@ -417,7 +417,7 @@ export async function GET() {
       if (!ok) {
         // seed/repair from providers (USD series)
         const usdSeries = await getUSDSeries(c);
-        historyUSD[c.id] = usdSeries.filter((p) => isFiniteNum(p.value));
+        historyUSD[c.id] = usdSeries.filter(({ value }) => isFiniteNum(value));
       }
 
       // Always append today's USD value if we can
@@ -436,7 +436,7 @@ export async function GET() {
       const ok = isComplete(current, today);
       if (!ok) {
         const { seriesUSD } = await getUSQuote(p.symbol);
-        historyUSD[p.id] = seriesUSD.filter((x) => isFiniteNum(x.value));
+        historyUSD[p.id] = seriesUSD.filter(({ value }) => isFiniteNum(value));
       }
 
       // append today's USD price
