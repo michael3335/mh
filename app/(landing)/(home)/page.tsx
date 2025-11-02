@@ -21,7 +21,7 @@ export default function HomePage() {
             window.location.assign(AUTH_DESTINATION);
         } else {
             // ✅ Rickroll for unauthenticated users
-            window.open(RICK, "_blank", "noopener,noreferrer");
+            window.open(RICK, "noopener,noreferrer");
         }
     };
 
