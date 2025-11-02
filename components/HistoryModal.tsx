@@ -47,12 +47,10 @@ function niceNumber(x: number, round = true) {
     return round ? n : nf;
 }
 function formatNumber(v: number) {
-    return new Intl.NumberFormat("en-US", {
-        maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2,
-    }).format(v);
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2 }).format(v);
 }
 
-/* ---------- Chart with your cursor rules ---------- */
+/* ---------- Chart matching your cursor rules ---------- */
 function HistoryChart({
     data,
     unitLabel,
@@ -95,7 +93,7 @@ function HistoryChart({
     const xScale = (t: number) => m.left + ((t - xMin) / Math.max(1, xMax - xMin)) * iw;
     const yScale = (v: number) => m.top + (1 - (v - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
 
-    // Trend color: green / red / gray
+    // Trend color
     const firstVal = ys[0];
     const lastVal = ys[ys.length - 1];
     const delta = lastVal - firstVal;
@@ -131,16 +129,15 @@ function HistoryChart({
     // Header change
     const pct = firstVal ? ((lastVal - firstVal) / firstVal) * 100 : 0;
 
-    /* ----- Cursor state following your rules ----- */
+    /* ----- Cursor state (your rules) ----- */
+    // Ref must be HTMLElement to match Crosshair prop
     const containerRef = useRef<HTMLElement | null>(null);
 
-    // vertical line: cursor X (px inside container)
+    // vertical line: cursor X
     const [cursorX, setCursorX] = useState<number | null>(null);
-
-    // horizontal line + tooltip: cursor Y (px inside container)
+    // horizontal line + tooltip: cursor Y
     const [cursorY, setCursorY] = useState<number | null>(null);
-
-    // snapped dot + data: nearest ACTUAL point by time to cursor X
+    // snapped dot: nearest actual point by time to cursor X
     const [snapIdx, setSnapIdx] = useState<number | null>(null);
 
     const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
@@ -161,7 +158,7 @@ function HistoryChart({
     };
 
     function onMove(e: React.MouseEvent<HTMLDivElement>) {
-        const el = containerRef.current;
+        const el = containerRef.current as HTMLDivElement | null;
         if (!el) return;
         const r = el.getBoundingClientRect();
         const xPx = e.clientX - r.left;
@@ -178,11 +175,10 @@ function HistoryChart({
         const xBound = clamp(xPx, m.left, m.left + iw);
         const yBound = clamp(yPx, m.top, m.top + ih);
 
-        setCursorX(xBound); // vertical line → cursor X
-        setCursorY(yBound); // horizontal line + tooltip → cursor Y
+        setCursorX(xBound); // vertical
+        setCursorY(yBound); // horizontal + tooltip
 
-        const idx = nearestIndexFromXpx(xBound);
-        setSnapIdx(idx);
+        setSnapIdx(nearestIndexFromXpx(xBound));
     }
 
     function onLeave() {
@@ -193,7 +189,10 @@ function HistoryChart({
 
     return (
         <div
-            ref={(el) => (containerRef.current = el)}
+            // callback ref MUST return void
+            ref={(el: HTMLDivElement | null) => {
+                containerRef.current = el;
+            }}
             style={{ position: "relative", width: "100%", height, overflow: "hidden", color: chartColor }}
             onMouseMove={onMove}
             onMouseLeave={onLeave}
@@ -280,7 +279,7 @@ function HistoryChart({
                 )}
             </svg>
 
-            {/* Tooltip follows cursor Y, shows data from snapped index */}
+            {/* Tooltip follows cursor Y, but shows snapped point data */}
             {cursorX != null && cursorY != null && snapIdx != null && (
                 <div
                     role="note"
