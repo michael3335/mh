@@ -19,9 +19,7 @@ export default function UserStatus() {
                 alignItems: "center",
                 gap: "0.5rem",
                 fontSize: "0.875rem",
-                background: "rgba(0,0,0,0.2)",
                 padding: "0.4rem 0.75rem",
-                borderRadius: "8px",
                 backdropFilter: "blur(6px)",
             }}
         >
@@ -33,8 +31,6 @@ export default function UserStatus() {
                     style={{
                         fontSize: "0.875rem",
                         background: "transparent",
-                        border: "1px solid rgba(255,255,255,0.4)",
-                        borderRadius: 6,
                         padding: "0.25rem 0.5rem",
                         cursor: "pointer",
                     }}

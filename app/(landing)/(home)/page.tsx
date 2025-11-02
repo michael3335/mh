@@ -40,6 +40,7 @@ export default function HomePage() {
         >
             {/* Top-right: Hello if authed, Sign in link if not */}
             <UserStatus />
+            <ContactLink />
 
             {/* Bottom-left folder */}
             <div
@@ -100,8 +101,6 @@ export default function HomePage() {
                         Michael Harrison
                     </span>
                 </h1>
-
-                <ContactLink />
             </section>
         </main>
     );
