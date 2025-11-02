@@ -2,7 +2,7 @@
 
 import { useSession, signIn } from "next-auth/react";
 
-const HOME = "/"; // ✅ redirect here after successful sign in
+const CALLBACK = "/";
 
 export default function UserStatus() {
     const { data: session, status } = useSession();
@@ -27,15 +27,15 @@ export default function UserStatus() {
                 <span>Hello, {session.user?.name?.split(" ")[0] ?? "there"} 👋</span>
             ) : (
                 <button
-                    onClick={() => signIn(undefined, { callbackUrl: HOME })} // ✅ updated
+                    onClick={() => signIn("github", { callbackUrl: CALLBACK })}
                     style={{
                         fontSize: "0.875rem",
                         background: "transparent",
                         padding: "0.25rem 0.5rem",
                         cursor: "pointer",
                     }}
-                    aria-label="Sign in"
-                    title="Authorise"
+                    aria-label="Sign in with GitHub"
+                    title="Authorise with GitHub"
                 >
                     Authorise
                 </button>
