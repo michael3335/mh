@@ -593,21 +593,6 @@ export default function Finder() {
                         <Dot c="#28c840" title="Zoom (inactive)" />
                     </div>
                     <strong style={{ marginLeft: 8 }}>Files</strong>
-                    <Link
-                        href="/"
-                        style={{
-                            marginLeft: "auto",
-                            textDecoration: "none",
-                            padding: "4px 10px",
-                            borderRadius: 999,
-                            border: "1px solid #3a3a3f",
-                            background: "#2a2a2e",
-                            color: "#fff",
-                        }}
-                        aria-label="Back to Home"
-                    >
-                        Home →
-                    </Link>
                 </div>
 
                 {/* toolbar */}
