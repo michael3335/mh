@@ -37,48 +37,209 @@ const timeframes: { key: TimeKey; days: number }[] = [
 const usdToAud = (v: number, audusd: number | null) =>
     audusd && audusd > 0 ? v / audusd : null;
 
+/* ---------- Formatting helpers ---------- */
+
+function formatDate(dISO: string) {
+    // keep it short and locale-safe (AU)
+    const d = new Date(dISO);
+    return d.toLocaleDateString("en-AU", { month: "short", year: "2-digit" });
+}
+function formatDateDense(dISO: string) {
+    const d = new Date(dISO);
+    return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
+}
+function niceNumber(x: number, round = true) {
+    // simple 'nice' algorithm for tick step selection
+    const exp = Math.floor(Math.log10(Math.max(1e-12, Math.abs(x))));
+    const f = x / Math.pow(10, exp);
+    let nf = 1;
+    if (f < 1.5) nf = 1;
+    else if (f < 3) nf = 2;
+    else if (f < 7) nf = 5;
+    else nf = 10;
+    const n = nf * Math.pow(10, exp);
+    return round ? n : nf;
+}
+function formatNumber(v: number) {
+    // compact-ish without losing precision for commodity prices
+    if (Math.abs(v) >= 1000) {
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(v);
+    }
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
+}
+
 /* ---------- Chart ---------- */
 
 function HistoryChart({
-    data, width = 700, height = 300,
-}: { data: SeriesPoint[]; width?: number; height?: number }) {
+    data,
+    unitLabel,
+    width = 760,
+    height = 340,
+}: {
+    data: SeriesPoint[];
+    unitLabel: string; // e.g. "USD/oz" or "AUD"
+    width?: number;
+    height?: number;
+}) {
     if (!data?.length) {
         return <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>No data</div>;
     }
-    const values = data.map((d) => d.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const padY = (max - min) * 0.1 || 1;
-    const yMin = min - padY;
-    const yMax = max + padY;
 
-    const stepX = width / Math.max(1, data.length - 1);
-    const toY = (v: number) => {
-        const t = (v - yMin) / Math.max(1e-9, yMax - yMin);
-        return height - t * (height - 24) - 8;
+    // Layout
+    const m = { top: 16, right: 16, bottom: 44, left: 64 }; // room for axes & labels
+    const iw = Math.max(10, width - m.left - m.right);
+    const ih = Math.max(10, height - m.top - m.bottom);
+
+    // Domains
+    const xDates = data.map((d) => new Date(d.date).getTime());
+    const xMin = xDates[0];
+    const xMax = xDates[xDates.length - 1];
+
+    const yVals = data.map((d) => d.value);
+    const yMinRaw = Math.min(...yVals);
+    const yMaxRaw = Math.max(...yVals);
+    const pad = (yMaxRaw - yMinRaw) * 0.08 || 1;
+    const yMin = Math.max(0, yMinRaw - pad);
+    const yMax = yMaxRaw + pad;
+
+    // Scales
+    const xScale = (t: number) => {
+        const r = (t - xMin) / Math.max(1, xMax - xMin);
+        return m.left + r * iw;
+    };
+    const yScale = (v: number) => {
+        const r = (v - yMin) / Math.max(1e-12, yMax - yMin);
+        return m.top + (1 - r) * ih;
     };
 
-    const dPath = data.map((d, i) => {
-        const x = i * stepX;
-        const y = toY(d.value);
-        return `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    }).join(" ");
+    // Line path
+    const dPath = data
+        .map((d, i) => {
+            const x = xScale(new Date(d.date).getTime());
+            const y = yScale(d.value);
+            return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+        })
+        .join(" ");
 
-    const first = values[0];
-    const last = values[values.length - 1];
-    const pct = first ? ((last - first) / first) * 100 : 0;
+    // Y ticks (5–6 nice ticks)
+    const yTickCount = 6;
+    const stepRaw = (yMax - yMin) / (yTickCount - 1);
+    const step = niceNumber(stepRaw);
+    const yStart = Math.floor(yMin / step) * step;
+    const yTicks: number[] = [];
+    for (let y = yStart; y <= yMax + 1e-9; y += step) {
+        if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
+    }
+
+    // X ticks (6 evenly spaced)
+    const xTickCount = 6;
+    const xTicks: number[] = [];
+    for (let i = 0; i < xTickCount; i++) {
+        const t = xMin + ((xMax - xMin) * i) / (xTickCount - 1);
+        xTicks.push(t);
+    }
+
+    const first = yVals[0];
+    const last = yVals[yVals.length - 1];
+    const absChange = last - first;
+    const pct = first ? (absChange / first) * 100 : 0;
 
     return (
         <div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>
-                <div>Change: {last.toFixed(2)} vs {first.toFixed(2)} ({pct.toFixed(2)}%)</div>
-                <div>{data[0].date} → {data[data.length - 1].date}</div>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    fontVariantNumeric: "tabular-nums",
+                }}
+            >
+                <div>
+                    Change:&nbsp;
+                    {formatNumber(last)} vs {formatNumber(first)} ({pct.toFixed(2)}%)
+                </div>
+                <div>
+                    {formatDateDense(data[0].date)} → {formatDateDense(data[data.length - 1].date)}
+                </div>
             </div>
-            <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Price history">
-                <rect x="0" y="0" width={width} height={height} fill="none" />
-                <line x1="0" x2={width} y1={height - 8} y2={height - 8} opacity={0.15} />
-                <path d={`${dPath} L ${width} ${height - 8} L 0 ${height - 8} Z`} fill="currentColor" opacity={0.12} />
-                <path d={dPath} fill="none" stroke="currentColor" strokeWidth="2" />
+
+            <svg
+                width="100%"
+                height={height}
+                viewBox={`0 0 ${width} ${height}`}
+                role="img"
+                aria-label={`Price history (${unitLabel}) with axes`}
+            >
+                {/* Plot background */}
+                <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" opacity={0.06} />
+
+                {/* Y grid + ticks + labels */}
+                {yTicks.map((yt, i) => {
+                    const y = yScale(yt);
+                    return (
+                        <g key={`y-${i}`}>
+                            <line x1={m.left} x2={m.left + iw} y1={y} y2={y} opacity={0.12} />
+                            <text
+                                x={m.left - 8}
+                                y={y}
+                                textAnchor="end"
+                                dominantBaseline="middle"
+                                style={{ fontSize: 12, opacity: 0.8 }}
+                            >
+                                {formatNumber(yt)}
+                            </text>
+                        </g>
+                    );
+                })}
+
+                {/* X grid + ticks + labels */}
+                {xTicks.map((xt, i) => {
+                    const x = xScale(xt);
+                    return (
+                        <g key={`x-${i}`}>
+                            <line x1={x} x2={x} y1={m.top} y2={m.top + ih} opacity={0.08} />
+                            <text
+                                x={x}
+                                y={m.top + ih + 18}
+                                textAnchor="middle"
+                                style={{ fontSize: 12, opacity: 0.8 }}
+                            >
+                                {formatDate(new Date(xt).toISOString())}
+                            </text>
+                        </g>
+                    );
+                })}
+
+                {/* Axes lines */}
+                <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} opacity={0.5} />
+                <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} opacity={0.5} />
+
+                {/* Axis labels */}
+                <text
+                    x={m.left + iw / 2}
+                    y={height - 6}
+                    textAnchor="middle"
+                    style={{ fontSize: 12, opacity: 0.9 }}
+                >
+                    Date
+                </text>
+                <text
+                    x={12}
+                    y={m.top + ih / 2}
+                    transform={`rotate(-90, 12, ${m.top + ih / 2})`}
+                    textAnchor="middle"
+                    style={{ fontSize: 12, opacity: 0.9 }}
+                >
+                    Price ({unitLabel})
+                </text>
+
+                {/* Area + line */}
+                <path
+                    d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`}
+                    fill="currentColor"
+                    opacity={0.12}
+                />
+                <path d={dPath} fill="none" stroke="currentColor" strokeWidth={2} />
             </svg>
         </div>
     );
@@ -87,8 +248,18 @@ function HistoryChart({
 /* ---------- Modal Shell ---------- */
 
 function ModalShell({
-    open, onClose, title, subtitle, children,
-}: { open: boolean; onClose: () => void; title: string; subtitle?: string; children: React.ReactNode }) {
+    open,
+    onClose,
+    title,
+    subtitle,
+    children,
+}: {
+    open: boolean;
+    onClose: () => void;
+    title: string;
+    subtitle?: string;
+    children: React.ReactNode;
+}) {
     if (!open) return null;
     return (
         <div
@@ -97,8 +268,13 @@ function ModalShell({
             aria-label={title}
             onClick={onClose}
             style={{
-                position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-                display: "grid", placeItems: "center", zIndex: 1000, padding: 16
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                display: "grid",
+                placeItems: "center",
+                zIndex: 1000,
+                padding: 16,
             }}
         >
             <div
@@ -110,15 +286,34 @@ function ModalShell({
                     borderRadius: 12,
                     padding: 16,
                     display: "grid",
-                    gap: 12
+                    gap: 12,
                 }}
             >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12 }}>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "start",
+                        gap: 12,
+                    }}
+                >
                     <div>
                         <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
                         {subtitle && <div style={{ opacity: 0.7, fontSize: 12 }}>{subtitle}</div>}
                     </div>
-                    <button onClick={onClose} aria-label="Close" style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 10px", cursor: "pointer" }}>✕</button>
+                    <button
+                        onClick={onClose}
+                        aria-label="Close"
+                        style={{
+                            background: "transparent",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: 8,
+                            padding: "6px 10px",
+                            cursor: "pointer",
+                        }}
+                    >
+                        ✕
+                    </button>
                 </div>
                 {children}
             </div>
@@ -145,7 +340,9 @@ export default function HistoryModal({ open, onClose, id }: Props) {
 
         (async () => {
             try {
-                const res = await fetch(`/api/commodities/${encodeURIComponent(id)}`, { cache: "no-store" });
+                const res = await fetch(`/api/commodities/${encodeURIComponent(id)}`, {
+                    cache: "no-store",
+                });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const j = (await res.json()) as ApiPayload;
                 if (!cancelled) {
@@ -160,7 +357,9 @@ export default function HistoryModal({ open, onClose, id }: Props) {
             }
         })();
 
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [open, id]);
 
     const series = useMemo<SeriesPoint[]>(() => {
@@ -169,7 +368,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
         // AUD
         const rate = payload.fx?.audusd ?? null; // USD per 1 AUD
         if (!rate) return []; // no FX → cannot show AUD
-        return payload.seriesUSD.map((p) => ({ date: p.date, value: (p.value / rate) }));
+        return payload.seriesUSD.map((p) => ({ date: p.date, value: p.value / rate }));
     }, [payload, ccy]);
 
     const filtered = useMemo(() => {
@@ -180,11 +379,15 @@ export default function HistoryModal({ open, onClose, id }: Props) {
         return series.filter((p) => new Date(p.date) >= cutoff);
     }, [series, tf]);
 
+    const unitLabel = useMemo(() => {
+        if (!payload) return "";
+        return ccy === "USD" ? payload.unitUSD : payload.unitUSD.replace("USD", "AUD");
+    }, [payload, ccy]);
+
     const subtitle = useMemo(() => {
         if (!payload) return undefined;
-        const unit = ccy === "USD" ? payload.unitUSD : payload.unitUSD.replace("USD", "AUD");
-        return `${unit} • ${new Date(payload.asof).toLocaleString("en-AU")}`;
-    }, [payload, ccy]);
+        return `${unitLabel} • ${new Date(payload.asof).toLocaleString("en-AU")}`;
+    }, [payload, unitLabel]);
 
     return (
         <ModalShell
@@ -195,13 +398,28 @@ export default function HistoryModal({ open, onClose, id }: Props) {
         >
             {loading && <div style={{ padding: 16, opacity: 0.8 }}>Loading…</div>}
             {err && (
-                <div style={{ padding: 16, color: "rgba(255,120,120,0.95)", border: "1px solid rgba(255,0,0,0.25)", borderRadius: 8 }}>
+                <div
+                    style={{
+                        padding: 16,
+                        color: "rgba(255,120,120,0.95)",
+                        border: "1px solid rgba(255,0,0,0.25)",
+                        borderRadius: 8,
+                    }}
+                >
                     {err}
                 </div>
             )}
             {!loading && !err && payload && (
                 <>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 8,
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                        }}
+                    >
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             {timeframes.map((t) => (
                                 <button
@@ -214,7 +432,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                         opacity: tf === t.key ? 1 : 0.7,
                                         background: "transparent",
                                         cursor: "pointer",
-                                        fontSize: 12
+                                        fontSize: 12,
                                     }}
                                 >
                                     {t.key}
@@ -226,7 +444,15 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                             <button
                                 onClick={() => setCcy("USD")}
                                 disabled={ccy === "USD"}
-                                style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: ccy === "USD" ? 1 : 0.8, cursor: ccy === "USD" ? "default" : "pointer", fontSize: 12 }}
+                                style={{
+                                    padding: "4px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid currentColor",
+                                    background: "transparent",
+                                    opacity: ccy === "USD" ? 1 : 0.8,
+                                    cursor: ccy === "USD" ? "default" : "pointer",
+                                    fontSize: 12,
+                                }}
                             >
                                 USD
                             </button>
@@ -234,7 +460,16 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                 onClick={() => setCcy("AUD")}
                                 disabled={!payload.fx?.audusd || ccy === "AUD"}
                                 title={!payload.fx?.audusd ? "AUD unavailable (no FX)" : ""}
-                                style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid currentColor", background: "transparent", opacity: ccy === "AUD" ? 1 : (payload.fx?.audusd ? 0.8 : 0.4), cursor: !payload.fx?.audusd || ccy === "AUD" ? "default" : "pointer", fontSize: 12 }}
+                                style={{
+                                    padding: "4px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid currentColor",
+                                    background: "transparent",
+                                    opacity: ccy === "AUD" ? 1 : payload.fx?.audusd ? 0.8 : 0.4,
+                                    cursor:
+                                        !payload.fx?.audusd || ccy === "AUD" ? "default" : "pointer",
+                                    fontSize: 12,
+                                }}
                             >
                                 AUD
                             </button>
@@ -242,7 +477,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                     </div>
 
                     <div style={{ marginTop: 8 }}>
-                        <HistoryChart data={filtered} />
+                        <HistoryChart data={filtered} unitLabel={unitLabel} />
                     </div>
                 </>
             )}
