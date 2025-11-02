@@ -1,6 +1,5 @@
 // app/auth/error/page.tsx
 import type { Metadata } from "next";
-import AuthActions from "./AuthActions";
 
 export const metadata: Metadata = {
     title: "Access denied",
