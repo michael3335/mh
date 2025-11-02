@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/commodities/[id]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 /**
@@ -129,7 +129,11 @@ function findMeta(id: string) {
   return null;
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+/** Next.js 16: context.params is a Promise. */
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     if (!S3_BUCKET) {
       return NextResponse.json(
@@ -137,24 +141,26 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         { status: 500 }
       );
     }
-    const id = params.id?.toLowerCase();
-    const meta = findMeta(id);
+
+    const { id } = await context.params; // <- important change
+    const seriesId = id?.toLowerCase();
+    const meta = findMeta(seriesId);
     if (!meta) {
       return NextResponse.json(
-        { error: `Unknown series id "${id}"` },
+        { error: `Unknown series id "${seriesId}"` },
         { status: 404 }
       );
     }
 
     const historyUSD: History = await getS3JSON<History>(S3_KEY_USD, {});
-    const seriesUSD = (historyUSD[id] ?? []).filter((p) =>
+    const seriesUSD = (historyUSD[seriesId] ?? []).filter((p) =>
       isFiniteNum(p.value)
     );
 
     const audusd = await getAUDUSD(); // USD per 1 AUD (null if unavailable)
 
     return NextResponse.json({
-      id,
+      id: seriesId,
       title: meta.title,
       unitUSD: meta.unitUSD,
       fx: { audusd },
