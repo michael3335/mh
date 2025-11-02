@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next';
 import FaviconAnimator from '@shared/components/FaviconAnimator';
 import { Analytics } from '@vercel/analytics/react';
 import AuthProvider from "@/components/AuthProvider";
+import BottomLeftControls from "@/components/BottomLeftControls";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://michaelharrison.au'),
@@ -55,7 +56,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Live animated favicon (pauses on reduced motion & when tab is hidden) */}
         <FaviconAnimator />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>{children}
+          <BottomLeftControls />
+        </AuthProvider>
         {/* Vercel Analytics */}
         <Analytics />
       </body>
