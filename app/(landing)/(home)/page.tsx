@@ -7,50 +7,50 @@ import ASCIIText from '@/components/ASCIIText';
 import { useSession } from 'next-auth/react';
 import UserStatus from '@/components/UserStatus';
 
-const DESTINATION = '/dashboard'; // change to your authed target path
-const RICK = 'https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw';
+const AUTH_DESTINATION = "/";
+const RICK = "https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw";
 
 export default function HomePage() {
     const { status } = useSession(); // 'loading' | 'unauthenticated' | 'authenticated'
 
     const handleFolderClick = () => {
-        if (status === 'loading') return;
+        if (status === "loading") return;
 
-        if (status === 'authenticated') {
-            // Use browser navigation to avoid typed-routes type checks on router.push
-            window.location.assign(DESTINATION);
+        if (status === "authenticated") {
+            // ✅ stay on home page
+            window.location.assign(AUTH_DESTINATION);
         } else {
-            // Open the YouTube link in a new tab (click handler avoids popup blockers)
-            window.open(RICK, '_blank', 'noopener,noreferrer');
+            // ✅ Rickroll for unauthenticated users
+            window.open(RICK, "_blank", "noopener,noreferrer");
         }
     };
 
     return (
         <main
             style={{
-                minHeight: '100svh',
-                width: '100%',
-                display: 'grid',
-                placeItems: 'center',
-                paddingInline: 'clamp(1rem, 4vw, 3rem)',
-                paddingBlock: 'clamp(2rem, 6vh, 4rem)',
-                overflow: 'hidden',
-                position: 'relative',
+                minHeight: "100svh",
+                width: "100%",
+                display: "grid",
+                placeItems: "center",
+                paddingInline: "clamp(1rem, 4vw, 3rem)",
+                paddingBlock: "clamp(2rem, 6vh, 4rem)",
+                overflow: "hidden",
+                position: "relative",
             }}
         >
-            {/* Top-right: Hello if authed, Sign in link if not */}
+            {/* Top-right status */}
             <UserStatus />
 
             {/* Bottom-left folder */}
             <div
                 style={{
-                    position: 'fixed',
-                    left: 'clamp(4px, 1vw, 12px)',
-                    bottom: 'clamp(4px, 1vw, 12px)',
+                    position: "fixed",
+                    left: "clamp(4px, 1vw, 12px)",
+                    bottom: "clamp(4px, 1vw, 12px)",
                     zIndex: 10,
-                    pointerEvents: 'auto',
-                    touchAction: 'manipulation',
-                    cursor: status === 'loading' ? 'wait' : 'pointer',
+                    pointerEvents: "auto",
+                    touchAction: "manipulation",
+                    cursor: status === "loading" ? "wait" : "pointer",
                 }}
                 aria-label="Open folder"
             >
@@ -64,29 +64,30 @@ export default function HomePage() {
             {/* Center hero */}
             <section
                 style={{
-                    display: 'grid',
-                    gap: '1.25rem',
-                    justifyItems: 'center',
-                    textAlign: 'center',
-                    width: '100%',
+                    display: "grid",
+                    gap: "1.25rem",
+                    justifyItems: "center",
+                    textAlign: "center",
+                    width: "100%",
                 }}
             >
                 <h1
                     style={{
-                        position: 'relative',
-                        width: 'min(92vw, 1000px)',
-                        height: 'clamp(80px, 22vw, 300px)',
+                        position: "relative",
+                        width: "min(92vw, 1000px)",
+                        height: "clamp(80px, 22vw, 300px)",
                         margin: 0,
                         lineHeight: 1,
                         fontWeight: 700,
-                        letterSpacing: '0.02em',
-                        userSelect: 'none',
+                        letterSpacing: "0.02em",
+                        userSelect: "none",
                     }}
                 >
-                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
                         <ASCIIText text="Michael Harrison" enableWaves interactive={false} />
                     </div>
                 </h1>
+
                 <ContactLink />
             </section>
         </main>

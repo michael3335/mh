@@ -2,7 +2,7 @@
 
 import { useSession, signIn } from "next-auth/react";
 
-const DESTINATION = "/dashboard";
+const HOME = "/"; // ✅ redirect here after successful sign in
 
 export default function UserStatus() {
     const { data: session, status } = useSession();
@@ -27,7 +27,7 @@ export default function UserStatus() {
                 <span>Hello, {session.user?.name?.split(" ")[0] ?? "there"} 👋</span>
             ) : (
                 <button
-                    onClick={() => signIn(undefined, { callbackUrl: DESTINATION })}
+                    onClick={() => signIn(undefined, { callbackUrl: HOME })} // ✅ updated
                     style={{
                         fontSize: "0.875rem",
                         background: "transparent",
