@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, RefObject } from 'react';
-import { gsap } from 'gsap';
+"use client";
+
+import React, { useEffect, useRef, RefObject } from "react";
+import { gsap } from "gsap";
 
 const lerp = (a: number, b: number, n: number): number => (1 - n) * a + n * b;
 
@@ -15,24 +17,63 @@ const getMousePos = (e: Event, container?: HTMLElement | null): { x: number; y: 
   return { x: mouseEvent.clientX, y: mouseEvent.clientY };
 };
 
+type Mode = "free" | "controlled";
+
 interface CrosshairProps {
   color?: string;
-  containerRef?: RefObject<HTMLElement>;
+  /** If provided, crosshair is clipped to this container. */
+  containerRef?: RefObject<HTMLElement | null>;
+  /** If "controlled", we don't listen to mouse; we position at `pos`. Defaults to "free". */
+  mode?: Mode;
+  /** In "controlled" mode, position (in container coordinates). If null/undefined, crosshair is hidden. */
+  pos?: { x: number; y: number } | null;
+  /** Optional external visibility toggle (only used in controlled mode). */
+  show?: boolean;
 }
 
-const Crosshair: React.FC<CrosshairProps> = ({ color = 'white', containerRef = null }) => {
+const Crosshair: React.FC<CrosshairProps> = ({
+  color = "white",
+  containerRef = null,
+  mode = "free",
+  pos = null,
+  show,
+}) => {
   const cursorRef = useRef<HTMLDivElement>(null);
   const lineHorizontalRef = useRef<HTMLDivElement>(null);
   const lineVerticalRef = useRef<HTMLDivElement>(null);
   const filterXRef = useRef<SVGFETurbulenceElement>(null);
   const filterYRef = useRef<SVGFETurbulenceElement>(null);
 
-  let mouse = { x: 0, y: 0 };
-
+  // ---- Controlled mode: position from props ----
   useEffect(() => {
+    if (mode !== "controlled") return;
+
+    const lines = [lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean) as HTMLDivElement[];
+
+    if (!pos) {
+      gsap.to(lines, { opacity: 0, duration: 0.15, overwrite: true });
+      return;
+    }
+
+    // show can override opacity; otherwise default to visible when pos exists
+    const visible = show ?? true;
+
+    // position lines at supplied coordinates
+    gsap.set(lineVerticalRef.current, { x: pos.x });
+    gsap.set(lineHorizontalRef.current, { y: pos.y });
+
+    gsap.to(lines, { opacity: visible ? 1 : 0, duration: 0.15, ease: "power3.out", overwrite: true });
+  }, [mode, pos, show]);
+
+  // ---- Free mode: preserve original behavior ----
+  useEffect(() => {
+    if (mode !== "free") return;
+
+    let mouse = { x: 0, y: 0 };
+
     const handleMouseMove = (ev: Event) => {
       const mouseEvent = ev as MouseEvent;
-      mouse = getMousePos(mouseEvent, containerRef?.current);
+      mouse = getMousePos(mouseEvent, containerRef?.current ?? null);
       if (containerRef?.current) {
         const bounds = containerRef.current.getBoundingClientRect();
         if (
@@ -49,13 +90,13 @@ const Crosshair: React.FC<CrosshairProps> = ({ color = 'white', containerRef = n
     };
 
     const target: HTMLElement | Window = containerRef?.current || window;
-    target.addEventListener('mousemove', handleMouseMove);
+    target.addEventListener("mousemove", handleMouseMove);
 
     const renderedStyles: {
       [key: string]: { previous: number; current: number; amt: number };
     } = {
       tx: { previous: 0, current: 0, amt: 0.15 },
-      ty: { previous: 0, current: 0, amt: 0.15 }
+      ty: { previous: 0, current: 0, amt: 0.15 },
     };
 
     gsap.set([lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean), { opacity: 0 });
@@ -66,16 +107,16 @@ const Crosshair: React.FC<CrosshairProps> = ({ color = 'white', containerRef = n
 
       gsap.to([lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean), {
         duration: 0.9,
-        ease: 'Power3.easeOut',
-        opacity: 1
+        ease: "Power3.easeOut",
+        opacity: 1,
       });
 
       requestAnimationFrame(render);
 
-      target.removeEventListener('mousemove', onMouseMove);
+      target.removeEventListener("mousemove", onMouseMove);
     };
 
-    target.addEventListener('mousemove', onMouseMove);
+    target.addEventListener("mousemove", onMouseMove);
 
     const primitiveValues = { turbulence: 0 };
 
@@ -84,30 +125,30 @@ const Crosshair: React.FC<CrosshairProps> = ({ color = 'white', containerRef = n
         paused: true,
         onStart: () => {
           if (lineHorizontalRef.current) {
-            lineHorizontalRef.current.style.filter = 'url(#filter-noise-x)';
+            lineHorizontalRef.current.style.filter = "url(#filter-noise-x)";
           }
           if (lineVerticalRef.current) {
-            lineVerticalRef.current.style.filter = 'url(#filter-noise-y)';
+            lineVerticalRef.current.style.filter = "url(#filter-noise-y)";
           }
         },
         onUpdate: () => {
           if (filterXRef.current && filterYRef.current) {
-            filterXRef.current.setAttribute('baseFrequency', primitiveValues.turbulence.toString());
-            filterYRef.current.setAttribute('baseFrequency', primitiveValues.turbulence.toString());
+            filterXRef.current.setAttribute("baseFrequency", primitiveValues.turbulence.toString());
+            filterYRef.current.setAttribute("baseFrequency", primitiveValues.turbulence.toString());
           }
         },
         onComplete: () => {
           if (lineHorizontalRef.current && lineVerticalRef.current) {
-            lineHorizontalRef.current.style.filter = 'none';
-            lineVerticalRef.current.style.filter = 'none';
+            lineHorizontalRef.current.style.filter = "none";
+            lineVerticalRef.current.style.filter = "none";
           }
-        }
+        },
       })
       .to(primitiveValues, {
         duration: 0.5,
-        ease: 'power1',
+        ease: "power1",
         startAt: { turbulence: 1 },
-        turbulence: 0
+        turbulence: 0,
       });
 
     const enter = () => tl.restart();
@@ -133,28 +174,28 @@ const Crosshair: React.FC<CrosshairProps> = ({ color = 'white', containerRef = n
     };
 
     const links: NodeListOf<HTMLAnchorElement> = containerRef?.current
-      ? containerRef.current.querySelectorAll('a')
-      : document.querySelectorAll('a');
+      ? containerRef.current.querySelectorAll("a")
+      : document.querySelectorAll("a");
 
-    links.forEach(link => {
-      link.addEventListener('mouseenter', enter);
-      link.addEventListener('mouseleave', leave);
+    links.forEach((link) => {
+      link.addEventListener("mouseenter", enter);
+      link.addEventListener("mouseleave", leave);
     });
 
     return () => {
-      target.removeEventListener('mousemove', handleMouseMove);
-      target.removeEventListener('mousemove', onMouseMove);
-      links.forEach(link => {
-        link.removeEventListener('mouseenter', enter);
-        link.removeEventListener('mouseleave', leave);
+      target.removeEventListener("mousemove", handleMouseMove);
+      target.removeEventListener("mousemove", onMouseMove);
+      links.forEach((link) => {
+        link.removeEventListener("mouseenter", enter);
+        link.removeEventListener("mouseleave", leave);
       });
     };
-  }, [containerRef]);
+  }, [containerRef, mode]);
 
   return (
     <div
       ref={cursorRef}
-      className={`${containerRef ? 'absolute' : 'fixed'} top-0 left-0 w-full h-full pointer-events-none z-[10000]`}
+      className={`${containerRef ? "absolute" : "fixed"} top-0 left-0 w-full h-full pointer-events-none z-[10000]`}
     >
       <svg className="absolute top-0 left-0 w-full h-full">
         <defs>
@@ -172,12 +213,12 @@ const Crosshair: React.FC<CrosshairProps> = ({ color = 'white', containerRef = n
         ref={lineHorizontalRef}
         className={`absolute w-full h-px pointer-events-none opacity-0 transform translate-y-1/2`}
         style={{ background: color }}
-      ></div>
+      />
       <div
         ref={lineVerticalRef}
         className={`absolute h-full w-px pointer-events-none opacity-0 transform translate-x-1/2`}
         style={{ background: color }}
-      ></div>
+      />
     </div>
   );
 };

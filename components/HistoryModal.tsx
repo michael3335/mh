@@ -71,7 +71,7 @@ function formatNumber(v: number) {
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
 
-/* ---------- Chart with crosshair + tooltip ---------- */
+/* ---------- Chart with snapping crosshair + tooltip ---------- */
 
 function HistoryChart({
     data,
@@ -97,7 +97,7 @@ function HistoryChart({
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
-    // Theme colors (visible on dark/light)
+    // Theme colors
     const gridY = "rgba(255,255,255,0.12)";
     const gridX = "rgba(255,255,255,0.10)";
     const axis = "rgba(255,255,255,0.6)";
@@ -161,10 +161,9 @@ function HistoryChart({
 
     const first = ys[0];
     const last = ys[ys.length - 1];
-    const absChange = last - first;
-    const pct = first ? (absChange / first) * 100 : 0;
+    const pct = first ? ((last - first) / first) * 100 : 0;
 
-    /* ----- Crosshair + tooltip (snap to nearest point) ----- */
+    /* ----- Snapping + tooltip ----- */
     const containerRef = useRef<HTMLDivElement>(null);
     const [hoverIdx, setHoverIdx] = useState<number | null>(null);
     const [tip, setTip] = useState<{ x: number; y: number; date: string; value: number } | null>(null);
@@ -195,15 +194,21 @@ function HistoryChart({
         setHoverIdx(i);
         const t = xs[i];
         const v = ys[i];
-        const x = xScale(t);
-        const y = yScale(v);
-        setTip({ x, y, date: data[i].date, value: data[i].value });
+        setTip({
+            x: xScale(t),
+            y: yScale(v),
+            date: data[i].date,
+            value: data[i].value,
+        });
     };
 
     const onLeave = () => {
         setHoverIdx(null);
         setTip(null);
     };
+
+    // Precompute snapped pos for crosshair
+    const snappedPos = hoverIdx == null ? null : { x: xScale(xs[hoverIdx]), y: yScale(ys[hoverIdx]) };
 
     return (
         <div
@@ -212,12 +217,13 @@ function HistoryChart({
             onMouseMove={onMove}
             onMouseLeave={onLeave}
         >
-            {/* Crosshair bounded to this container */}
-            {/* Type cast to satisfy Crosshair's RefObject<HTMLElement> prop shape */}
+            {/* Crosshair in controlled mode: snaps to the series point */}
             <Crosshair
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                containerRef={containerRef as unknown as React.RefObject<HTMLElement>}
+                containerRef={containerRef}
                 color="rgba(255,255,255,0.65)"
+                mode="controlled"
+                pos={snappedPos}
+                show={hoverIdx != null}
             />
 
             <svg
@@ -228,7 +234,7 @@ function HistoryChart({
                 aria-label={`Price history (${unitLabel}) with axes`}
                 shapeRendering="crispEdges"
             >
-                {/* Plot background (invisible box) */}
+                {/* Plot background */}
                 <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" />
 
                 {/* Y grid + ticks + labels */}
@@ -236,13 +242,13 @@ function HistoryChart({
                     const y = yScale(yt);
                     return (
                         <g key={`y-${i}`}>
-                            <line x1={m.left} x2={m.left + iw} y1={y} y2={y} stroke={gridY} strokeWidth={1} />
+                            <line x1={m.left} x2={m.left + iw} y1={y} y2={y} stroke={"rgba(255,255,255,0.12)"} strokeWidth={1} />
                             <text
                                 x={m.left - 8}
                                 y={y}
                                 textAnchor="end"
                                 dominantBaseline="middle"
-                                style={{ fontSize: 12, fill: label }}
+                                style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
                             >
                                 {formatNumber(yt)}
                             </text>
@@ -255,8 +261,13 @@ function HistoryChart({
                     const x = xScale(xt);
                     return (
                         <g key={`x-${i}`}>
-                            <line x1={x} x2={x} y1={m.top} y2={m.top + ih} stroke={gridX} strokeWidth={1} />
-                            <text x={x} y={m.top + ih + 18} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
+                            <line x1={x} x2={x} y1={m.top} y2={m.top + ih} stroke={"rgba(255,255,255,0.10)"} strokeWidth={1} />
+                            <text
+                                x={x}
+                                y={m.top + ih + 18}
+                                textAnchor="middle"
+                                style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
+                            >
                                 {formatDate(new Date(xt).toISOString())}
                             </text>
                         </g>
@@ -264,11 +275,16 @@ function HistoryChart({
                 })}
 
                 {/* Axes */}
-                <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} stroke={axis} strokeWidth={1} />
-                <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} stroke={axis} strokeWidth={1} />
+                <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} stroke={"rgba(255,255,255,0.6)"} strokeWidth={1} />
+                <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} stroke={"rgba(255,255,255,0.6)"} strokeWidth={1} />
 
                 {/* Axis labels */}
-                <text x={m.left + iw / 2} y={height - 6} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
+                <text
+                    x={m.left + iw / 2}
+                    y={height - 6}
+                    textAnchor="middle"
+                    style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
+                >
                     Date
                 </text>
                 <text
@@ -276,7 +292,7 @@ function HistoryChart({
                     y={m.top + ih / 2}
                     transform={`rotate(-90, 12, ${m.top + ih / 2})`}
                     textAnchor="middle"
-                    style={{ fontSize: 12, fill: label }}
+                    style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
                 >
                     Price ({unitLabel})
                 </text>
@@ -302,7 +318,7 @@ function HistoryChart({
                 )}
             </svg>
 
-            {/* Tooltip showing date + price (follows snapped point) */}
+            {/* Tooltip */}
             {tip && (
                 <div
                     role="note"
