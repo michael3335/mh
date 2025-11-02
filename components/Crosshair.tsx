@@ -11,7 +11,7 @@ const getMousePos = (e: Event, container?: HTMLElement | null): { x: number; y: 
     const bounds = container.getBoundingClientRect();
     return {
       x: mouseEvent.clientX - bounds.left,
-      y: mouseEvent.clientY - bounds.top
+      y: mouseEvent.clientY - bounds.top,
     };
   }
   return { x: mouseEvent.clientX, y: mouseEvent.clientY };
@@ -23,20 +23,32 @@ interface CrosshairProps {
   color?: string;
   /** If provided, crosshair is clipped to this container. */
   containerRef?: RefObject<HTMLElement | null>;
-  /** If "controlled", we don't listen to mouse; we position at `pos`. Defaults to "free". */
+  /** "controlled" lets parent set positions; "free" listens to mouse. */
   mode?: Mode;
-  /** In "controlled" mode, position (in container coordinates). If null/undefined, crosshair is hidden. */
-  pos?: { x: number; y: number } | null;
-  /** Optional external visibility toggle (only used in controlled mode). */
+
+  /**
+   * Controlled positions (container coordinates):
+   * - vX: X position for the vertical line (follows cursor)
+   * - hY: Y position for the horizontal line (snapped to series)
+   */
+  vX?: number | null;
+  hY?: number | null;
+
+  /** Overall visibility toggle in controlled mode. */
   show?: boolean;
+
+  /** Legacy (kept for compatibility): if provided, both lines go to this point. */
+  pos?: { x: number; y: number } | null;
 }
 
 const Crosshair: React.FC<CrosshairProps> = ({
   color = "white",
   containerRef = null,
   mode = "free",
-  pos = null,
+  vX = null,
+  hY = null,
   show,
+  pos = null,
 }) => {
   const cursorRef = useRef<HTMLDivElement>(null);
   const lineHorizontalRef = useRef<HTMLDivElement>(null);
@@ -44,28 +56,28 @@ const Crosshair: React.FC<CrosshairProps> = ({
   const filterXRef = useRef<SVGFETurbulenceElement>(null);
   const filterYRef = useRef<SVGFETurbulenceElement>(null);
 
-  // ---- Controlled mode: position from props ----
+  /* ---------------- Controlled mode ---------------- */
   useEffect(() => {
     if (mode !== "controlled") return;
 
-    const lines = [lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean) as HTMLDivElement[];
+    const vEl = lineVerticalRef.current;
+    const hEl = lineHorizontalRef.current;
 
-    if (!pos) {
-      gsap.to(lines, { opacity: 0, duration: 0.15, overwrite: true });
-      return;
-    }
+    // Back-compat: if pos is provided, it overrides vX/hY
+    const vx = pos ? pos.x : vX;
+    const hy = pos ? pos.y : hY;
 
-    // show can override opacity; otherwise default to visible when pos exists
-    const visible = show ?? true;
+    if (vEl) gsap.set(vEl, { x: vx ?? -9999 }); // move offscreen if null
+    if (hEl) gsap.set(hEl, { y: hy ?? -9999 });
 
-    // position lines at supplied coordinates
-    gsap.set(lineVerticalRef.current, { x: pos.x });
-    gsap.set(lineHorizontalRef.current, { y: pos.y });
+    const vVisible = (show ?? true) && vx != null;
+    const hVisible = (show ?? true) && hy != null;
 
-    gsap.to(lines, { opacity: visible ? 1 : 0, duration: 0.15, ease: "power3.out", overwrite: true });
-  }, [mode, pos, show]);
+    if (vEl) gsap.to(vEl, { opacity: vVisible ? 1 : 0, duration: 0.12, ease: "power3.out", overwrite: true });
+    if (hEl) gsap.to(hEl, { opacity: hVisible ? 1 : 0, duration: 0.12, ease: "power3.out", overwrite: true });
+  }, [mode, vX, hY, show, pos]);
 
-  // ---- Free mode: preserve original behavior ----
+  /* ---------------- Free mode (original behavior) ---------------- */
   useEffect(() => {
     if (mode !== "free") return;
 
@@ -76,16 +88,13 @@ const Crosshair: React.FC<CrosshairProps> = ({
       mouse = getMousePos(mouseEvent, containerRef?.current ?? null);
       if (containerRef?.current) {
         const bounds = containerRef.current.getBoundingClientRect();
-        if (
-          mouseEvent.clientX < bounds.left ||
-          mouseEvent.clientX > bounds.right ||
-          mouseEvent.clientY < bounds.top ||
-          mouseEvent.clientY > bounds.bottom
-        ) {
-          gsap.to([lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean), { opacity: 0 });
-        } else {
-          gsap.to([lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean), { opacity: 1 });
-        }
+        const inside =
+          mouseEvent.clientX >= bounds.left &&
+          mouseEvent.clientX <= bounds.right &&
+          mouseEvent.clientY >= bounds.top &&
+          mouseEvent.clientY <= bounds.bottom;
+
+        gsap.to([lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean), { opacity: inside ? 1 : 0 });
       }
     };
 

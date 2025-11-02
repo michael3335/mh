@@ -36,22 +36,13 @@ const timeframes: { key: TimeKey; days: number }[] = [
     { key: "Max", days: Infinity },
 ];
 
-const usdToAud = (v: number, audusd: number | null) =>
-    audusd && audusd > 0 ? v / audusd : null;
-
-/* ---------- Formatting helpers ---------- */
-
 function formatDate(dISO: string) {
     const d = new Date(dISO);
     return d.toLocaleDateString("en-AU", { month: "short", year: "2-digit" });
 }
 function formatDateDense(dISO: string) {
     const d = new Date(dISO);
-    return d.toLocaleDateString("en-AU", {
-        day: "2-digit",
-        month: "short",
-        year: "2-digit",
-    });
+    return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "2-digit" });
 }
 function niceNumber(x: number, round = true) {
     const exp = Math.floor(Math.log10(Math.max(1e-12, Math.abs(x))));
@@ -65,13 +56,11 @@ function niceNumber(x: number, round = true) {
     return round ? n : nf;
 }
 function formatNumber(v: number) {
-    if (Math.abs(v) >= 1000) {
-        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(v);
-    }
+    if (Math.abs(v) >= 1000) return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(v);
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(v);
 }
 
-/* ---------- Chart with snapping crosshair + tooltip ---------- */
+/* ---------- Chart with vertical-at-cursor & horizontal-at-series snapping ---------- */
 
 function HistoryChart({
     data,
@@ -97,7 +86,7 @@ function HistoryChart({
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
-    // Theme colors
+    // Theme
     const gridY = "rgba(255,255,255,0.12)";
     const gridX = "rgba(255,255,255,0.10)";
     const axis = "rgba(255,255,255,0.6)";
@@ -127,7 +116,7 @@ function HistoryChart({
         return m.top + (1 - r) * ih;
     };
 
-    // Line path
+    // Path
     const dPath = useMemo(
         () =>
             data
@@ -141,7 +130,7 @@ function HistoryChart({
         [data, xMin, xMax, yMin, yMax, iw, ih]
     );
 
-    // Y ticks
+    // Ticks
     const yTickCount = 6;
     const stepRaw = (yMax - yMin) / (yTickCount - 1);
     const step = niceNumber(stepRaw);
@@ -151,7 +140,6 @@ function HistoryChart({
         if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
     }
 
-    // X ticks
     const xTickCount = 6;
     const xTicks: number[] = [];
     for (let i = 0; i < xTickCount; i++) {
@@ -159,20 +147,19 @@ function HistoryChart({
         xTicks.push(t);
     }
 
+    // Change header
     const first = ys[0];
     const last = ys[ys.length - 1];
     const pct = first ? ((last - first) / first) * 100 : 0;
 
-    /* ----- Snapping + tooltip ----- */
+    /* ----- snapping + crosshair positions ----- */
     const containerRef = useRef<HTMLDivElement>(null);
     const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+    const [cursorX, setCursorX] = useState<number | null>(null); // vertical line follows cursor X (bounded)
+    const [snappedY, setSnappedY] = useState<number | null>(null); // horizontal line at series Y
     const [tip, setTip] = useState<{ x: number; y: number; date: string; value: number } | null>(null);
 
-    const nearestIndexFromClientX = (clientX: number) => {
-        const el = containerRef.current;
-        if (!el) return null;
-        const box = el.getBoundingClientRect();
-        const xPx = clientX - box.left; // within container
+    const nearestIndexFromXpx = (xPx: number) => {
         const t = xMin + ((xMax - xMin) * (xPx - m.left)) / iw;
         if (!Number.isFinite(t)) return null;
         // binary search
@@ -188,27 +175,58 @@ function HistoryChart({
         return Math.abs(xs[a] - t) <= Math.abs(xs[b] - t) ? a : b;
     };
 
+    const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+
     const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        const i = nearestIndexFromClientX(e.clientX);
+        const el = containerRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const xPxContainer = e.clientX - rect.left;
+        const yPxContainer = e.clientY - rect.top;
+
+        // Only show crosshair inside plotting rectangle
+        const inside =
+            xPxContainer >= m.left &&
+            xPxContainer <= m.left + iw &&
+            yPxContainer >= m.top &&
+            yPxContainer <= m.top + ih;
+
+        if (!inside) {
+            setHoverIdx(null);
+            setCursorX(null);
+            setSnappedY(null);
+            setTip(null);
+            return;
+        }
+
+        // Vertical line tracks cursor X (bounded to plot area)
+        const boundedX = clamp(xPxContainer, m.left, m.left + iw);
+        setCursorX(boundedX);
+
+        // Snap to nearest series point by time
+        const i = nearestIndexFromXpx(boundedX);
         if (i == null) return;
+
         setHoverIdx(i);
+
         const t = xs[i];
         const v = ys[i];
-        setTip({
-            x: xScale(t),
-            y: yScale(v),
-            date: data[i].date,
-            value: data[i].value,
-        });
+        const x = xScale(t);
+        const y = yScale(v);
+
+        // Horizontal line follows series Y
+        setSnappedY(y);
+
+        // Tooltip at snapped point (x,y)
+        setTip({ x, y, date: data[i].date, value: data[i].value });
     };
 
     const onLeave = () => {
         setHoverIdx(null);
+        setCursorX(null);
+        setSnappedY(null);
         setTip(null);
     };
-
-    // Precompute snapped pos for crosshair
-    const snappedPos = hoverIdx == null ? null : { x: xScale(xs[hoverIdx]), y: yScale(ys[hoverIdx]) };
 
     return (
         <div
@@ -217,13 +235,16 @@ function HistoryChart({
             onMouseMove={onMove}
             onMouseLeave={onLeave}
         >
-            {/* Crosshair in controlled mode: snaps to the series point */}
+            {/* Crosshair in controlled mode:
+          - vertical X at cursor
+          - horizontal Y snapped to nearest series */}
             <Crosshair
                 containerRef={containerRef}
                 color="rgba(255,255,255,0.65)"
                 mode="controlled"
-                pos={snappedPos}
-                show={hoverIdx != null}
+                vX={cursorX}
+                hY={snappedY}
+                show={cursorX != null && snappedY != null}
             />
 
             <svg
@@ -237,18 +258,18 @@ function HistoryChart({
                 {/* Plot background */}
                 <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" />
 
-                {/* Y grid + ticks + labels */}
+                {/* Y grid + labels */}
                 {yTicks.map((yt, i) => {
                     const y = yScale(yt);
                     return (
                         <g key={`y-${i}`}>
-                            <line x1={m.left} x2={m.left + iw} y1={y} y2={y} stroke={"rgba(255,255,255,0.12)"} strokeWidth={1} />
+                            <line x1={m.left} x2={m.left + iw} y1={y} y2={y} stroke={gridY} strokeWidth={1} />
                             <text
                                 x={m.left - 8}
                                 y={y}
                                 textAnchor="end"
                                 dominantBaseline="middle"
-                                style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
+                                style={{ fontSize: 12, fill: label }}
                             >
                                 {formatNumber(yt)}
                             </text>
@@ -256,18 +277,13 @@ function HistoryChart({
                     );
                 })}
 
-                {/* X grid + ticks + labels */}
+                {/* X grid + labels */}
                 {xTicks.map((xt, i) => {
                     const x = xScale(xt);
                     return (
                         <g key={`x-${i}`}>
-                            <line x1={x} x2={x} y1={m.top} y2={m.top + ih} stroke={"rgba(255,255,255,0.10)"} strokeWidth={1} />
-                            <text
-                                x={x}
-                                y={m.top + ih + 18}
-                                textAnchor="middle"
-                                style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
-                            >
+                            <line x1={x} x2={x} y1={m.top} y2={m.top + ih} stroke={gridX} strokeWidth={1} />
+                            <text x={x} y={m.top + ih + 18} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
                                 {formatDate(new Date(xt).toISOString())}
                             </text>
                         </g>
@@ -275,16 +291,11 @@ function HistoryChart({
                 })}
 
                 {/* Axes */}
-                <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} stroke={"rgba(255,255,255,0.6)"} strokeWidth={1} />
-                <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} stroke={"rgba(255,255,255,0.6)"} strokeWidth={1} />
+                <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} stroke={axis} strokeWidth={1} />
+                <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} stroke={axis} strokeWidth={1} />
 
                 {/* Axis labels */}
-                <text
-                    x={m.left + iw / 2}
-                    y={height - 6}
-                    textAnchor="middle"
-                    style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
-                >
+                <text x={m.left + iw / 2} y={height - 6} textAnchor="middle" style={{ fontSize: 12, fill: label }}>
                     Date
                 </text>
                 <text
@@ -292,7 +303,7 @@ function HistoryChart({
                     y={m.top + ih / 2}
                     transform={`rotate(-90, 12, ${m.top + ih / 2})`}
                     textAnchor="middle"
-                    style={{ fontSize: 12, fill: "rgba(255,255,255,0.9)" }}
+                    style={{ fontSize: 12, fill: label }}
                 >
                     Price ({unitLabel})
                 </text>
@@ -305,16 +316,9 @@ function HistoryChart({
                 />
                 <path d={dPath} fill="none" stroke={line} strokeWidth={2} vectorEffect="non-scaling-stroke" />
 
-                {/* Focus dot on nearest point */}
+                {/* Focus dot on snapped point */}
                 {hoverIdx != null && (
-                    <circle
-                        cx={xScale(xs[hoverIdx])}
-                        cy={yScale(ys[hoverIdx])}
-                        r={4}
-                        fill="currentColor"
-                        stroke="white"
-                        strokeWidth={1}
-                    />
+                    <circle cx={xScale(xs[hoverIdx])} cy={yScale(ys[hoverIdx])} r={4} fill="currentColor" stroke="white" strokeWidth={1} />
                 )}
             </svg>
 
@@ -419,14 +423,7 @@ function ModalShell({
                     gap: 12,
                 }}
             >
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "start",
-                        gap: 12,
-                    }}
-                >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12 }}>
                     <div>
                         <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
                         {subtitle && <div style={{ opacity: 0.7, fontSize: 12 }}>{subtitle}</div>}
@@ -471,9 +468,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
 
         (async () => {
             try {
-                const res = await fetch(`/api/commodities/${encodeURIComponent(id)}`, {
-                    cache: "no-store",
-                });
+                const res = await fetch(`/api/commodities/${encodeURIComponent(id)}`, { cache: "no-store" });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const j = (await res.json()) as ApiPayload;
                 if (!cancelled) {
@@ -520,7 +515,6 @@ export default function HistoryModal({ open, onClose, id }: Props) {
 
     const numberFmt = useMemo(() => {
         const currency = ccy;
-        // If the unit has a suffix like "USD/oz", show currency symbol in table
         const hasCurrency = payload?.unitUSD?.startsWith("USD");
         return hasCurrency
             ? new Intl.NumberFormat(currency === "AUD" ? "en-AU" : "en-US", {
@@ -536,9 +530,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
             ["Date", `Price (${unitLabel})`],
             ...filtered.map((r) => [r.date, String(r.value)]),
         ];
-        const csv = rows
-            .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-            .join("\n");
+        const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -549,22 +541,10 @@ export default function HistoryModal({ open, onClose, id }: Props) {
     }
 
     return (
-        <ModalShell
-            open={open}
-            onClose={onClose}
-            title={payload?.title ?? (id ? `Loading ${id}…` : "History")}
-            subtitle={subtitle}
-        >
+        <ModalShell open={open} onClose={onClose} title={payload?.title ?? (id ? `Loading ${id}…` : "History")} subtitle={subtitle}>
             {loading && <div style={{ padding: 16, opacity: 0.8 }}>Loading…</div>}
             {err && (
-                <div
-                    style={{
-                        padding: 16,
-                        color: "rgba(255,120,120,0.95)",
-                        border: "1px solid rgba(255,0,0,0.25)",
-                        borderRadius: 8,
-                    }}
-                >
+                <div style={{ padding: 16, color: "rgba(255,120,120,0.95)", border: "1px solid rgba(255,0,0,0.25)", borderRadius: 8 }}>
                     {err}
                 </div>
             )}
@@ -746,7 +726,7 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                     <tbody>
                                         {filtered
                                             .slice()
-                                            .reverse() /* show most-recent first */
+                                            .reverse()
                                             .map((row) => (
                                                 <tr key={row.date}>
                                                     <td
