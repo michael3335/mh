@@ -2,30 +2,35 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/auth/error", "/api/auth"]; // allowed unauthenticated
-
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ✅ Allow public paths
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // ✅ Public routes that anyone can access
+  if (
+    pathname === "/" || // Home
+    pathname.startsWith("/auth/error") || // Auth error page
+    pathname.startsWith("/api/auth") // NextAuth internals
+  ) {
     return NextResponse.next();
   }
 
-  // ✅ Check if user is authenticated
+  // ✅ Check if authenticated
   const token = await getToken({ req });
 
+  // ❌ If NOT authenticated → always redirect to error page
   if (!token) {
-    // Not authenticated → redirect to error page
     const url = new URL("/auth/error", req.url);
     url.searchParams.set("error", "AccessDenied");
     return NextResponse.redirect(url);
   }
 
-  // ✅ Authenticated → allow access
+  // ✅ Authenticated → allow
   return NextResponse.next();
 }
 
+// Matcher that catches EVERYTHING except internal Next.js assets
 export const config = {
-  matcher: ["/((?!_next|static|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.jpeg).*)",
+  ],
 };
