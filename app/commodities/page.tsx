@@ -5,8 +5,9 @@ import ASCIIText from "@/components/ASCIIText";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import HistoryModal from "@/components/HistoryModal";
 
-/* Sparkline component unchanged … (keep your version) */
+/* Sparkline (unchanged) */
 function Sparkline({ points, positive, width = 120, height = 32 }: { points: number[]; positive: boolean; width?: number; height?: number; }) {
     if (!points?.length) {
         return (
@@ -38,13 +39,28 @@ function Sparkline({ points, positive, width = 120, height = 32 }: { points: num
     );
 }
 
-/* Metric card unchanged structurally; value/Δ come from caller */
+/* Metric card — clickable */
 function MetricCard({
-    title, value, delta, deltaPct, series,
-}: { title: string; value: string; delta: number | null; deltaPct: number | null; series: number[]; }) {
+    title, value, delta, deltaPct, series, onClick,
+}: { title: string; value: string; delta: number | null; deltaPct: number | null; series: number[]; onClick?: () => void; }) {
     const isUp = (delta ?? 0) >= 0;
     return (
-        <div style={{ border: "1px solid var(--card-border, rgba(255,255,255,0.08))", borderRadius: 12, padding: "12px 14px", display: "grid", gap: 8, minWidth: 0 }}>
+        <button
+            type="button"
+            onClick={onClick}
+            style={{
+                border: "1px solid var(--card-border, rgba(255,255,255,0.08))",
+                borderRadius: 12,
+                padding: "12px 14px",
+                display: "grid",
+                gap: 8,
+                minWidth: 0,
+                width: "100%",
+                textAlign: "left",
+                background: "transparent",
+                cursor: "pointer",
+            }}
+        >
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
                 <span style={{ fontSize: 12, opacity: 0.7 }}>{title}</span>
                 <span style={{ fontSize: 12, fontVariantNumeric: "tabular-nums", color: isUp ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)" }}>
@@ -55,7 +71,7 @@ function MetricCard({
             <div style={{ color: isUp ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)" }}>
                 <Sparkline points={series} positive={isUp} />
             </div>
-        </div>
+        </button>
     );
 }
 
@@ -80,11 +96,14 @@ type Item = {
 export default function CommoditiesPage() {
     const { status } = useSession();
 
-    const [items, setItems] = useState<Item[] | null>(null);     // commodities (AUD or USD)
-    const [auItems, setAuItems] = useState<Item[] | null>(null); // AU proxies (AUD or USD)
+    const [items, setItems] = useState<Item[] | null>(null);
+    const [auItems, setAuItems] = useState<Item[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [asof, setAsof] = useState<number | null>(null);
     const [base, setBase] = useState<"AUD" | "USD">("AUD");
+
+    const [historyOpen, setHistoryOpen] = useState(false);
+    const [historyId, setHistoryId] = useState<string | null>(null);
 
     const audFmt = useMemo(() => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 2 }), []);
     const usdFmt = useMemo(() => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }), []);
@@ -112,12 +131,16 @@ export default function CommoditiesPage() {
         }
 
         load();
-        // Poll less frequently to reduce rate limits and writes (5 minutes)
         const id = setInterval(load, 300_000);
         return () => { cancelled = true; clearInterval(id); };
     }, [status]);
 
     const top = useMemo(() => (items ? items.slice(0, 4) : []), [items]);
+
+    const openHistory = (id: string) => {
+        setHistoryId(id);
+        setHistoryOpen(true);
+    };
 
     return (
         <main style={{ minHeight: "100svh", width: "100%", display: "grid", padding: "clamp(16px, 4vw, 32px)", gap: "clamp(16px, 4vw, 28px)" }}>
@@ -176,12 +199,20 @@ export default function CommoditiesPage() {
                             }
                             const value = c.price == null ? "—" : `${fmt.format(c.price)} ${c.unit.replace(`${base}/`, "")}`;
                             return (
-                                <MetricCard key={c.id} title={`${c.name} • ${c.unit}`} value={value} delta={c.change} deltaPct={c.changePct} series={c.series} />
+                                <MetricCard
+                                    key={c.id}
+                                    title={`${c.name} • ${c.unit}`}
+                                    value={value}
+                                    delta={c.change}
+                                    deltaPct={c.changePct}
+                                    series={c.series}
+                                    onClick={() => openHistory(c.id)}
+                                />
                             );
                         })}
                     </section>
 
-                    {/* Watchlist: Global commodities (AUD or USD) */}
+                    {/* Watchlist: Global commodities */}
                     <section aria-label="Watchlist" style={{ border: "1px solid var(--table-border, rgba(255,255,255,0.08))", borderRadius: 12, overflow: "hidden", opacity: items ? 1 : 0.6 }}>
                         <div role="table" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr" }}>
                             <div role="row" style={{ display: "contents", fontSize: 12, opacity: 0.7 }}>
@@ -195,7 +226,12 @@ export default function CommoditiesPage() {
                                 const up = (c.change ?? 0) >= 0;
                                 const absDelta = c.change == null ? null : Math.abs(c.change);
                                 return (
-                                    <div role="row" key={`row-${c.id}`} style={{ display: "contents", fontVariantNumeric: "tabular-nums" }}>
+                                    <div
+                                        role="row"
+                                        key={`row-${c.id}`}
+                                        style={{ display: "contents", fontVariantNumeric: "tabular-nums", cursor: "pointer" }}
+                                        onClick={() => openHistory(c.id)}
+                                    >
                                         <div role="cell" style={{ padding: "12px", textAlign: "left" }}>
                                             <strong>{c.name}</strong> <span style={{ opacity: 0.6, fontSize: 12 }}>({c.unit})</span>
                                         </div>
@@ -231,7 +267,12 @@ export default function CommoditiesPage() {
                                 const up = (c.change ?? 0) >= 0;
                                 const absDelta = c.change == null ? null : Math.abs(c.change);
                                 return (
-                                    <div role="row" key={`row-au-${c.id}`} style={{ display: "contents", fontVariantNumeric: "tabular-nums" }}>
+                                    <div
+                                        role="row"
+                                        key={`row-au-${c.id}`}
+                                        style={{ display: "contents", fontVariantNumeric: "tabular-nums", cursor: "pointer" }}
+                                        onClick={() => openHistory(c.id)}
+                                    >
                                         <div role="cell" style={{ padding: "12px", textAlign: "left" }}>
                                             <strong>{c.name}</strong> <span style={{ opacity: 0.6, fontSize: 12 }}>({c.symbol})</span>
                                         </div>
@@ -247,20 +288,6 @@ export default function CommoditiesPage() {
                                     </div>
                                 );
                             })}
-
-                            {!auItems && (
-                                <>
-                                    {Array.from({ length: 5 }).map((_, i) => (
-                                        <div key={`srow-au-${i}`} role="row" style={{ display: "contents" }}>
-                                            {Array.from({ length: 4 }).map((__, j) => (
-                                                <div key={`scell-au-${i}-${j}`} role="cell" style={{ padding: "12px" }}>
-                                                    <div style={{ height: 16, width: j === 0 ? "60%" : "40%", background: "rgba(255,255,255,0.06)" }} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </>
-                            )}
                         </div>
                     </section>
 
@@ -284,6 +311,13 @@ export default function CommoditiesPage() {
                     </div>
                 </>
             )}
+
+            {/* History modal */}
+            <HistoryModal
+                open={historyOpen}
+                onClose={() => { setHistoryOpen(false); setHistoryId(null); }}
+                id={historyId}
+            />
         </main>
     );
 }

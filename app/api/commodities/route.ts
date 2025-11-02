@@ -9,11 +9,12 @@ import {
 
 /**
  * Behavior:
- * - For each commodity, fetch **all** available history from all configured providers (AV → FRED → NADL),
- *   merge them with AV > FRED > NADL priority per date, and store USD-only to S3.
- * - On later runs, **append only new dates** (or upgrade if provider history extends further back).
+ * - For each commodity, fetch **all** available history from all configured providers, merge by date
+ *   with priority AV > FRED > NADL, and store USD-only to S3 (full history).
+ * - On later runs, **append only new dates** (or upgrade if a provider extends history further back).
  * - AU proxy tickers use AV TIME_SERIES_DAILY (full) for history; live quotes refine the response only.
  * - Response converts to AUD on-the-fly when an AUDUSD rate is available.
+ * - GOLD: extended fallback chain (AV GOLD AM → FRED AM → FRED PM → NADL AM → NADL PM).
  */
 
 export const runtime = "nodejs";
@@ -35,7 +36,7 @@ const S3_KEY_USD = `${S3_PREFIX}/history_usd.json`;
 
 const s3 = new S3Client({ region: S3_REGION });
 
-// history completeness settings (used only for sanity checks)
+// sanity thresholds (not used to block writes; just for health checks)
 const MIN_POINTS = 30;
 const FRESHNESS_DAYS = 10;
 
@@ -55,9 +56,9 @@ const COMMODITIES: CSpec[] = [
     id: "gold",
     name: "Gold (LBMA)",
     unitUSD: "USD/oz",
-    av: { func: "GOLD", interval: "daily" },
-    fred: { id: "GOLDAMGBD228NLBM" },
-    nadl: { dataset: "LBMA/GOLD", column: "USD (AM)" },
+    av: { func: "GOLD", interval: "daily" }, // AV: LBMA gold (AM)
+    fred: { id: "GOLDAMGBD228NLBM" }, // FRED: LBMA AM fix
+    nadl: { dataset: "LBMA/GOLD", column: "USD (AM)" }, // Nasdaq: AM column
   },
   {
     id: "wti",
@@ -78,14 +79,14 @@ const COMMODITIES: CSpec[] = [
     name: "Natural Gas",
     unitUSD: "USD/MMBtu",
     av: { func: "NATURAL_GAS", interval: "daily" },
-    fred: { id: "DHHNGSP" },
+    fred: { id: "DHHNGSP" }, // Henry Hub spot
   },
   {
     id: "copper",
     name: "Copper",
     unitUSD: "USD/mt",
     av: { func: "COPPER", interval: "monthly" },
-    fred: { id: "PCOPPUSDM" },
+    fred: { id: "PCOPPUSDM" }, // monthly USD/mt
   },
   {
     id: "wheat",
@@ -97,8 +98,8 @@ const COMMODITIES: CSpec[] = [
     id: "iron",
     name: "Iron Ore (62%)",
     unitUSD: "USD/t",
-    fred: { id: "PIORECRUSDM" },
-  }, // note: FRED series is USD/dmtu; we keep raw values + label
+    fred: { id: "PIORECRUSDM" }, // note: USD/dmtu in FRED; we keep raw values + label as-is
+  },
 ];
 
 const AU_PROXIES = [
@@ -154,8 +155,9 @@ function upsertSeriesWithProvider(
   const clean = providerAsc
     .filter((p) => isFiniteNum(p.value))
     .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
+
   const curr = history[id] ?? [];
-  // Seed or upgrade if provider has more coverage (earlier start or longer length)
+  // Seed/upgrade if provider has earlier start or longer length
   if (
     curr.length === 0 ||
     clean.length > curr.length ||
@@ -202,7 +204,7 @@ async function putS3JSON(Key: string, obj: any) {
   );
 }
 
-/* -------------------- Providers (with per-request caches) -------------------- */
+/* -------------------- Providers (per-request caches) -------------------- */
 
 const usdSeriesCache = new Map<string, SeriesPoint[]>(); // commodities by id (merged full)
 const usQuoteCache = new Map<
@@ -291,12 +293,21 @@ function fromFRED(j: any): SeriesPoint[] {
 function fromNADL(j: any, column?: string): SeriesPoint[] {
   const cols: string[] = j.dataset.column_names || [];
   const data: any[][] = j.dataset.data || [];
+  // pick column by case-insensitive exact match; fallback to 1st numeric col if not found
   let idx = 1;
   if (column) {
     const found = cols.findIndex(
       (c) => c.toLowerCase() === column.toLowerCase()
     );
     if (found > 0) idx = found;
+  }
+  // If still non-numeric, try to locate first numeric column beyond date
+  const firstRow = data[0] ?? [];
+  if (firstRow.length > 2 && !Number.isFinite(Number(firstRow[idx]))) {
+    const alt = firstRow.findIndex(
+      (v, i) => i > 0 && Number.isFinite(Number(v))
+    );
+    if (alt > 0) idx = alt;
   }
   return data
     .map(
@@ -306,10 +317,10 @@ function fromNADL(j: any, column?: string): SeriesPoint[] {
     .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
 }
 
-/* -------------------- Merge helpers (use ALL providers for EVERY commodity) -------------------- */
+/* -------------------- Merge helpers -------------------- */
 
 function mergeByDatePriority(sources: SeriesPoint[][]): SeriesPoint[] {
-  // Priority: index order (0 highest). We’ll pass [AV, FRED, NADL]
+  // Priority is array order (index 0 highest)
   const map = new Map<string, number>();
   for (const src of sources) {
     for (const p of src) {
@@ -321,7 +332,61 @@ function mergeByDatePriority(sources: SeriesPoint[][]): SeriesPoint[] {
     .sort((a: SeriesPoint, b: SeriesPoint) => a.date.localeCompare(b.date));
 }
 
+/** Load ALL available history for a commodity, merging AV > FRED > NADL.
+ *  Special case: GOLD adds extra fallbacks (FRED PM and NADL PM). */
 async function loadCommodityUSDAll(c: CSpec): Promise<SeriesPoint[]> {
+  if (c.id === "gold") {
+    const [avAm, fredAm, fredPm, nadlAm, nadlPm] = await Promise.all([
+      (async () => {
+        if (!c.av) return [] as SeriesPoint[];
+        try {
+          const j = await avJson({
+            function: c.av.func,
+            interval: c.av.interval,
+          });
+          return fromAVCommodity(j);
+        } catch {
+          return [];
+        }
+      })(),
+      (async () => {
+        try {
+          const j = await fredJson("GOLDAMGBD228NLBM");
+          return fromFRED(j);
+        } catch {
+          return [];
+        }
+      })(),
+      (async () => {
+        try {
+          const j = await fredJson("GOLDPMGBD228NLBM");
+          return fromFRED(j);
+        } catch {
+          return [];
+        }
+      })(),
+      (async () => {
+        try {
+          const j = await nadlJson("LBMA/GOLD");
+          return fromNADL(j, "USD (AM)");
+        } catch {
+          return [];
+        }
+      })(),
+      (async () => {
+        try {
+          const j = await nadlJson("LBMA/GOLD");
+          return fromNADL(j, "USD (PM)");
+        } catch {
+          return [];
+        }
+      })(),
+    ]);
+    // Priority: AV AM > FRED AM > FRED PM > NADL AM > NADL PM
+    return mergeByDatePriority([avAm, fredAm, fredPm, nadlAm, nadlPm]);
+  }
+
+  // Default (non-gold): use configured providers
   const [av, fred, nadl] = await Promise.all([
     (async () => {
       if (!c.av) return [] as SeriesPoint[];
@@ -354,11 +419,11 @@ async function loadCommodityUSDAll(c: CSpec): Promise<SeriesPoint[]> {
       }
     })(),
   ]);
-  // Priority AV > FRED > NADL
+
   return mergeByDatePriority([av, fred, nadl]);
 }
 
-/* Cache the merged full history per commodity within the request */
+/* cache the merged full history per commodity within the request */
 async function getUSDSeriesMerged(c: CSpec): Promise<SeriesPoint[]> {
   if (!usdSeriesCache.has(c.id)) {
     usdSeriesCache.set(c.id, await loadCommodityUSDAll(c));
@@ -374,7 +439,7 @@ async function loadUSQuoteAndSeries(symbol: string) {
       avJson({ function: "GLOBAL_QUOTE", symbol }),
       avJson({ function: "TIME_SERIES_DAILY", symbol, outputsize: "full" }),
     ]);
-    const g = q?.["Global Quote"] ?? {};
+    const g = (q?.["Global Quote"] ?? {}) as Record<string, any>;
     const priceUSD = g["05. price"] ? Number(g["05. price"]) : null;
     const prevUSD = g["08. previous close"]
       ? Number(g["08. previous close"])
@@ -410,22 +475,21 @@ export async function GET() {
     // Load existing S3 USD history (or empty)
     const historyUSD: History = await getS3JSON<History>(S3_KEY_USD, {});
     const origSerialized = JSON.stringify(historyUSD);
-    const today = toISODate();
+    const today = toISODate(); // used for freshness checks only
 
     // FX (USD per 1 AUD)
     const audusd = await getAUDUSD();
 
-    /* ---------- Commodities: FULL merged history for ALL, then append-only ---------- */
+    /* ---------- Commodities: FULL merged history (incl. GOLD extra fallbacks), then append-only ---------- */
     for (const c of COMMODITIES) {
-      const mergedFull = await getUSDSeriesMerged(c); // AV ∪ FRED ∪ NADL
+      const mergedFull = await getUSDSeriesMerged(c);
       upsertSeriesWithProvider(historyUSD, c.id, mergedFull);
     }
 
     /* ---------- AU proxies: full equity history (AV), then append-only ---------- */
     for (const p of AU_PROXIES) {
-      const { seriesUSD } = await getUSQuote(p.symbol); // full history asc
+      const { seriesUSD } = await getUSQuote(p.symbol);
       upsertSeriesWithProvider(historyUSD, p.id, seriesUSD);
-      // We do not store live quote rows with 'today' unless they exist in the time series.
     }
 
     // Persist updates only if changed
