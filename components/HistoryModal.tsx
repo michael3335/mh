@@ -98,6 +98,14 @@ function HistoryChart({
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
 
+    // Theme colors (visible on dark/light)
+    const gridY = "rgba(255,255,255,0.12)";
+    const gridX = "rgba(255,255,255,0.10)";
+    const axis = "rgba(255,255,255,0.6)";
+    const label = "rgba(255,255,255,0.9)";
+    const area = "currentColor";
+    const line = "currentColor";
+
     // Domains
     const xDates = data.map((d) => new Date(d.date).getTime());
     const xMin = xDates[0];
@@ -178,22 +186,30 @@ function HistoryChart({
                 viewBox={`0 0 ${width} ${height}`}
                 role="img"
                 aria-label={`Price history (${unitLabel}) with axes`}
+                shapeRendering="crispEdges"
             >
-                {/* Plot background */}
-                <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" opacity={0.06} />
+                {/* Plot background (invisible box) */}
+                <rect x={m.left} y={m.top} width={iw} height={ih} fill="none" />
 
                 {/* Y grid + ticks + labels */}
                 {yTicks.map((yt, i) => {
                     const y = yScale(yt);
                     return (
                         <g key={`y-${i}`}>
-                            <line x1={m.left} x2={m.left + iw} y1={y} y2={y} opacity={0.12} />
+                            <line
+                                x1={m.left}
+                                x2={m.left + iw}
+                                y1={y}
+                                y2={y}
+                                stroke={gridY}
+                                strokeWidth={1}
+                            />
                             <text
                                 x={m.left - 8}
                                 y={y}
                                 textAnchor="end"
                                 dominantBaseline="middle"
-                                style={{ fontSize: 12, opacity: 0.8 }}
+                                style={{ fontSize: 12, fill: label }}
                             >
                                 {formatNumber(yt)}
                             </text>
@@ -206,12 +222,19 @@ function HistoryChart({
                     const x = xScale(xt);
                     return (
                         <g key={`x-${i}`}>
-                            <line x1={x} x2={x} y1={m.top} y2={m.top + ih} opacity={0.08} />
+                            <line
+                                x1={x}
+                                x2={x}
+                                y1={m.top}
+                                y2={m.top + ih}
+                                stroke={gridX}
+                                strokeWidth={1}
+                            />
                             <text
                                 x={x}
                                 y={m.top + ih + 18}
                                 textAnchor="middle"
-                                style={{ fontSize: 12, opacity: 0.8 }}
+                                style={{ fontSize: 12, fill: label }}
                             >
                                 {formatDate(new Date(xt).toISOString())}
                             </text>
@@ -220,15 +243,29 @@ function HistoryChart({
                 })}
 
                 {/* Axes */}
-                <line x1={m.left} x2={m.left} y1={m.top} y2={m.top + ih} opacity={0.5} />
-                <line x1={m.left} x2={m.left + iw} y1={m.top + ih} y2={m.top + ih} opacity={0.5} />
+                <line
+                    x1={m.left}
+                    x2={m.left}
+                    y1={m.top}
+                    y2={m.top + ih}
+                    stroke={axis}
+                    strokeWidth={1}
+                />
+                <line
+                    x1={m.left}
+                    x2={m.left + iw}
+                    y1={m.top + ih}
+                    y2={m.top + ih}
+                    stroke={axis}
+                    strokeWidth={1}
+                />
 
                 {/* Axis labels */}
                 <text
                     x={m.left + iw / 2}
                     y={height - 6}
                     textAnchor="middle"
-                    style={{ fontSize: 12, opacity: 0.9 }}
+                    style={{ fontSize: 12, fill: label }}
                 >
                     Date
                 </text>
@@ -237,7 +274,7 @@ function HistoryChart({
                     y={m.top + ih / 2}
                     transform={`rotate(-90, 12, ${m.top + ih / 2})`}
                     textAnchor="middle"
-                    style={{ fontSize: 12, opacity: 0.9 }}
+                    style={{ fontSize: 12, fill: label }}
                 >
                     Price ({unitLabel})
                 </text>
@@ -245,10 +282,16 @@ function HistoryChart({
                 {/* Area + line */}
                 <path
                     d={`${dPath} L ${m.left + iw} ${m.top + ih} L ${m.left} ${m.top + ih} Z`}
-                    fill="currentColor"
+                    fill={area}
                     opacity={0.12}
                 />
-                <path d={dPath} fill="none" stroke="currentColor" strokeWidth={2} />
+                <path
+                    d={dPath}
+                    fill="none"
+                    stroke={line}
+                    strokeWidth={2}
+                    vectorEffect="non-scaling-stroke"
+                />
             </svg>
         </div>
     );
@@ -415,7 +458,9 @@ export default function HistoryModal({ open, onClose, id }: Props) {
             ["Date", `Price (${unitLabel})`],
             ...filtered.map((r) => [r.date, String(r.value)]),
         ];
-        const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const csv = rows
+            .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+            .join("\n");
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -622,33 +667,30 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filtered
-                                            .slice()
-                                            .reverse() /* show most-recent first */
-                                            .map((row) => (
-                                                <tr key={row.date}>
-                                                    <td
-                                                        style={{
-                                                            padding: "10px 12px",
-                                                            borderBottom: "1px solid rgba(255,255,255,0.06)",
-                                                            position: "sticky",
-                                                            left: 0,
-                                                            background: "var(--modal-bg, #0b0b0b)",
-                                                        }}
-                                                    >
-                                                        {formatDateDense(row.date)}
-                                                    </td>
-                                                    <td
-                                                        style={{
-                                                            padding: "10px 12px",
-                                                            textAlign: "right",
-                                                            borderBottom: "1px solid rgba(255,255,255,0.06)",
-                                                        }}
-                                                    >
-                                                        {numberFmt.format(row.value)}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                        {filtered.slice().reverse() /* show most-recent first */ .map((row) => (
+                                            <tr key={row.date}>
+                                                <td
+                                                    style={{
+                                                        padding: "10px 12px",
+                                                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                                                        position: "sticky",
+                                                        left: 0,
+                                                        background: "var(--modal-bg, #0b0b0b)",
+                                                    }}
+                                                >
+                                                    {formatDateDense(row.date)}
+                                                </td>
+                                                <td
+                                                    style={{
+                                                        padding: "10px 12px",
+                                                        textAlign: "right",
+                                                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                                                    }}
+                                                >
+                                                    {numberFmt.format(row.value)}
+                                                </td>
+                                            </tr>
+                                        ))}
                                         {filtered.length === 0 && (
                                             <tr>
                                                 <td colSpan={2} style={{ padding: 12, opacity: 0.8 }}>
