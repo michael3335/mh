@@ -82,7 +82,12 @@ export default function BottomLeftControls() {
 
             {/* Coaster: /models if authed; Rick otherwise */}
             {status === "authenticated" ? (
-                <Link href={AUTH_DESTINATION_COASTER} aria-label="Open models" className="coasterBtn iconBox" prefetch>
+                <Link
+                    href={AUTH_DESTINATION_COASTER}
+                    aria-label="Open models"
+                    className="coasterBtn iconBox"
+                    prefetch
+                >
                     <RollerCoaster size={28} />
                 </Link>
             ) : (
@@ -99,7 +104,7 @@ export default function BottomLeftControls() {
                 </button>
             )}
 
-            {/* NEW: Sticky Note (between coaster and folder) */}
+            {/* UPDATED: Sticky Note (between coaster and folder) */}
             {status === "authenticated" ? (
                 <Link
                     href={AUTH_DESTINATION_NOTE}
@@ -107,7 +112,7 @@ export default function BottomLeftControls() {
                     className="noteBtn iconBox"
                     prefetch
                 >
-                    <StickyNoteSVG size={28} />
+                    <StickyNoteSVG size={36} />
                 </Link>
             ) : (
                 <button
@@ -119,7 +124,7 @@ export default function BottomLeftControls() {
                         if (e.key === "Enter" || e.key === " ") handleUnauthedRick(e);
                     }}
                 >
-                    <StickyNoteSVG size={28} />
+                    <StickyNoteSVG size={36} />
                 </button>
             )}
 
@@ -159,8 +164,15 @@ export default function BottomLeftControls() {
           padding: 0;
         }
 
+        /* Make ONLY the sticky note's hitbox a tad larger */
+        .noteBtn.iconBox {
+          width: 52px;
+          height: 52px;
+        }
+
         .iconBox:focus-visible {
-          box-shadow: 0 0 0 var(--focus-ring) color-mix(in oklab, #5227FF 60%, white 0%);
+          box-shadow: 0 0 0 var(--focus-ring)
+            color-mix(in oklab, #5227ff 60%, white 0%);
         }
 
         /* ---------- Coaster animation (unchanged) ---------- */
@@ -239,11 +251,22 @@ export default function BottomLeftControls() {
           100% { opacity: 0; transform: translate(-3px, 6px) rotate(25deg); }
         }
 
-        /* ---------- Sticky note hover (wiggle + bob) ---------- */
+        /* ---------- Sticky note: idle + hover peel ---------- */
+        /* Subtle idle motion so it feels alive */
+        .noteBtn .noteIcon {
+          animation: note-idle 6s ease-in-out infinite;
+          transform-origin: 80% 10%;
+        }
+        @keyframes note-idle {
+          0%   { transform: rotate(0deg) translateY(0); }
+          50%  { transform: rotate(0.6deg) translateY(-1px); }
+          100% { transform: rotate(0deg) translateY(0); }
+        }
+
+        /* Stronger wiggle on interaction + peel the curled corner */
         .noteBtn:hover .noteIcon,
         .noteBtn:focus-visible .noteIcon {
           animation: note-wiggle 900ms ease-in-out both, note-bob 1200ms ease-in-out infinite;
-          transform-origin: 80% 10%; /* pivot near the curled corner */
         }
         @keyframes note-wiggle {
           0% { transform: rotate(0deg); }
@@ -258,14 +281,28 @@ export default function BottomLeftControls() {
           100% { translate: 0 0; }
         }
 
+        /* Peel effect targets just the curl path */
+        .noteBtn:hover .noteCurl,
+        .noteBtn:focus-visible .noteCurl {
+          animation: curl-peel 800ms cubic-bezier(.2,.7,.2,1) both;
+        }
+        @keyframes curl-peel {
+          0%   { transform: rotate(0deg) translate(0,0) scale(1); opacity: 1; }
+          40%  { transform: rotate(-12deg) translate(-0.5px, -0.5px) scale(1.05); opacity: 0.95; }
+          100% { transform: rotate(0deg) translate(0,0) scale(1); opacity: 1; }
+        }
+
         /* Reduced-motion fallbacks */
         @media (prefers-reduced-motion: reduce) {
           .coasterBtn:hover :global(.coaster-anim),
           .coasterBtn:focus-visible :global(.coaster-anim),
           .goldBtn:hover :global(.gold-nugget-anim),
           .goldBtn:focus-visible :global(.gold-nugget-anim),
+          .noteBtn .noteIcon,
           .noteBtn:hover .noteIcon,
-          .noteBtn:focus-visible .noteIcon {
+          .noteBtn:focus-visible .noteIcon,
+          .noteBtn:hover .noteCurl,
+          .noteBtn:focus-visible .noteCurl {
             animation: none !important;
             transform: translateY(-2px);
           }
@@ -305,8 +342,13 @@ function StickyNoteSVG({ size = 28 }: { size?: number }) {
             {/* Paper */}
             <rect x="5" y="5" width="20" height="20" rx="3" ry="3" fill="url(#note-paper)" />
 
-            {/* Curl (bottom-right) */}
-            <path d="M25 21 v4 h-4 c2 0 4-2 4-4z" fill="url(#note-curl)" />
+            {/* Curl (bottom-right) — give it a class so we can animate it */}
+            <path
+                className="noteCurl"
+                d="M25 21 v4 h-4 c2 0 4-2 4-4z"
+                fill="url(#note-curl)"
+                style={{ transformBox: "fill-box", transformOrigin: "100% 100%" }}
+            />
 
             {/* Top pin strip */}
             <rect x="5" y="7" width="20" height="3" rx="1.5" fill="#FFC857" opacity="0.9" />
