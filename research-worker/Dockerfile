@@ -4,7 +4,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 
 # Python deps (start minimal; add vectorbt/numba later)
-RUN pip install --no-cache-dir boto3 pandas numpy ccxt
+RUN pip install --no-cache-dir boto3 pandas numpy ccxt python-dateutil
 
 # App code
 WORKDIR /app
