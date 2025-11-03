@@ -8,6 +8,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
+const API = "/api/models";
+
 type KPI = { cagr?: number; sharpe?: number; mdd?: number; trades?: number };
 type PastRun = { id: string; status: "SUCCEEDED" | "FAILED" | "RUNNING"; startedAt: string; kpis?: KPI };
 type ParamsState = { rsi_len: number; rsi_buy: number; rsi_sell: number };
@@ -44,7 +46,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch(`/api/strategies/${encodeURIComponent(name)}/runs`, { cache: "no-store" });
+                const res = await fetch(`${API}/strategies/${encodeURIComponent(name)}/runs`, { cache: "no-store" });
                 if (res.ok) {
                     const data = await res.json(); setRuns(data?.runs ?? []);
                 } else {
@@ -57,11 +59,13 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
     const save = useCallback(async () => {
         setLoading(true);
         try {
-            await fetch("/api/strategies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, code }) });
+            await fetch(`${API}/strategies`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, code }),
+            });
             if (strategyId === "seed") {
-                router.replace(
-                    { pathname: "/models/strategies/[id]", query: { id: name } } as unknown as Parameters<typeof router.replace>[0]
-                );
+                router.replace({ pathname: "/models/strategies/[id]", query: { id: name } } as any);
             }
         } finally { setLoading(false); }
     }, [name, code, router, strategyId]);
@@ -70,11 +74,14 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
         setLoading(true);
         try {
             const payload = { strategy: name, params: paramsState, dataset };
-            const endpoint = kind === "backtest" ? "/api/jobs/backtest" : kind === "grid" ? "/api/jobs/grid" : "/api/jobs/walkforward";
+            const endpoint =
+                kind === "backtest" ? `${API}/jobs/backtest`
+                    : kind === "grid" ? `${API}/jobs/grid`
+                        : `${API}/jobs/walkforward`;
             const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             const { jobId } = res.ok ? await res.json() : { jobId: undefined };
             const href = jobId ? ({ pathname: "/models/runs", query: { focus: String(jobId) } } as const) : ("/models/runs" as const);
-            router.push(href as unknown as Parameters<typeof router.push>[0]);
+            router.push(href as any);
         } finally { setLoading(false); }
     }, [name, paramsState, dataset, router]);
 

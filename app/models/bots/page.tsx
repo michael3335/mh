@@ -1,4 +1,3 @@
-// app/models/bots/page.tsx
 "use client";
 
 import ASCIIText from "@/components/ASCIIText";
@@ -6,6 +5,8 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+
+const API = "/api/models";
 
 type Bot = {
     id: string;
@@ -29,7 +30,7 @@ export default function BotsPage() {
 
     const refresh = async () => {
         try {
-            const res = await fetch("/api/bots", { cache: "no-store" });
+            const res = await fetch(`${API}/bots`, { cache: "no-store" });
             if (res.ok) {
                 const data = await res.json();
                 setBots((data?.bots ?? []) as Bot[]);
@@ -47,7 +48,7 @@ export default function BotsPage() {
     const action = async (id: string, verb: "start" | "stop" | "restart") => {
         setBusyId(id);
         try {
-            await fetch(`/api/bots/${id}/${verb}`, { method: "POST" });
+            await fetch(`${API}/bots/${id}/${verb}`, { method: "POST" });
             await refresh();
         } finally {
             setBusyId(null);

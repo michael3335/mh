@@ -7,6 +7,8 @@ import type { Route } from "next";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 
+const API = "/api/models";
+
 type Run = {
     id: string;
     strategyName: string;
@@ -19,10 +21,7 @@ type Run = {
 
 export default function RunsPage() {
     const { status } = useSession();
-    const routes = {
-        home: "/" as Route,
-        signin: "/api/auth/signin" as Route,
-    };
+    const routes = { home: "/" as Route, signin: "/api/auth/signin" as Route };
 
     const [runs, setRuns] = useState<Run[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,7 +30,7 @@ export default function RunsPage() {
         let abort = false;
         (async () => {
             try {
-                const res = await fetch("/api/runs", { cache: "no-store" });
+                const res = await fetch(`${API}/runs`, { cache: "no-store" });
                 if (!abort && res.ok) {
                     const data = await res.json();
                     setRuns((data?.runs ?? []) as Run[]);
