@@ -1,12 +1,12 @@
-// app/api/models/strategies/[id]/runs/route.ts
 import { NextRequest } from "next/server";
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  const id = decodeURIComponent(params.id);
-  // TODO: replace with DB query filtered by strategyId/name
+  const { id } = await ctx.params;
+  const strategy = decodeURIComponent(id);
+  // TODO: replace with DB results
   const runs = [
     {
       id: "r_seed_001",
@@ -15,5 +15,5 @@ export async function GET(
       kpis: { cagr: 0.37, mdd: -0.21, sharpe: 1.2, trades: 322 },
     },
   ];
-  return Response.json({ strategy: id, runs });
+  return Response.json({ strategy, runs });
 }
