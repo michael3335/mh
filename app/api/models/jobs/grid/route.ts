@@ -3,36 +3,31 @@ import { z } from "zod";
 import { ResearchJob } from "@/lib/contracts";
 import { sendJson } from "@/lib/sqs";
 
-const GridItem = z.record(z.string(), z.unknown());
 const GridArray = z
-  .array(GridItem)
+  .array(z.record(z.string(), z.unknown()))
   .min(1, "grid must contain at least one item");
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
     const grid = GridArray.parse(body.grid);
 
     const runId = `r_${crypto.randomUUID()}`;
-    const artifactPrefix = `runs/${crypto.randomUUID()}/`;
-
-    // Base job (validated with Zod)
     const job = ResearchJob.parse({
       runId,
       strategyId: body.strategy,
       manifestS3Key: `strategies/${encodeURIComponent(body.strategy)}/main.py`,
-      artifactPrefix,
+      artifactPrefix: `runs/${runId}/`,
       kind: "grid",
-      grid, // allowed by the schema (optional on ResearchJob)
+      grid,
       spec: {
-        exchange: body.dataset?.exchange,
-        pair: String(body.dataset?.pairs ?? "")
+        exchange: body?.dataset?.exchange,
+        pair: String(body?.dataset?.pairs ?? "")
           .split(",")[0]
-          .trim(),
-        timeframe: body.dataset?.timeframe,
-        start: body.dataset?.from,
-        end: body.dataset?.to,
+          ?.trim(),
+        timeframe: body?.dataset?.timeframe,
+        start: body?.dataset?.from,
+        end: body?.dataset?.to,
       },
     });
 
@@ -51,12 +46,13 @@ export async function POST(req: NextRequest) {
       kind: "grid",
       messageId,
     });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const status = /grid must contain/.test(msg) ? 400 : 500;
+  } catch (err: any) {
+    const msg = err?.issues
+      ? JSON.stringify(err.issues, null, 2)
+      : String(err?.message ?? err);
     return Response.json(
       { error: "GridEnqueueFailed", message: msg },
-      { status }
+      { status: 400 }
     );
   }
 }

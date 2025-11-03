@@ -55,11 +55,12 @@ export type MetricsJson = z.infer<typeof MetricsJson>;
 export const ResearchJob = z.object({
   runId: z.string(),
   strategyId: z.string(),
-  manifestS3Key: z.string(), // strategies/{strategyId}/{commit}.zip
-  artifactPrefix: z.string(), // runs/{runId}/
+  manifestS3Key: z.string(),
+  artifactPrefix: z.string(),
   kind: RunKind,
   grid: z.array(z.record(z.string(), z.unknown())).optional(),
-  spec: MetricsJson.shape.spec, // market spec
+  params: z.record(z.string(), z.unknown()).optional(), // <— add this
+  spec: MetricsJson.shape.spec,
 });
 export type ResearchJob = z.infer<typeof ResearchJob>;
 
