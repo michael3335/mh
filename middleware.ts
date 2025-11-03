@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
+const isDev = process.env.NODE_ENV === "development";
+
 export async function middleware(req: NextRequest) {
+  // ✅ Skip all auth checks in local development
+  if (isDev) {
+    return NextResponse.next();
+  }
+
   const { pathname } = req.nextUrl;
 
   // ✅ Public routes that anyone can access
@@ -17,7 +24,7 @@ export async function middleware(req: NextRequest) {
   // ✅ Check if authenticated
   const token = await getToken({ req });
 
-  // ❌ If NOT authenticated → always redirect to error page
+  // ❌ If NOT authenticated → redirect to error page
   if (!token) {
     const url = new URL("/auth/error", req.url);
     url.searchParams.set("error", "AccessDenied");
