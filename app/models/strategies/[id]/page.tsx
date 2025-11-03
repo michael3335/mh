@@ -1,4 +1,3 @@
-// app/models/strategies/[id]/page.tsx
 "use client";
 
 import ASCIIText from "@/components/ASCIIText";
@@ -48,22 +47,21 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
             try {
                 const res = await fetch(`${API}/strategies/${encodeURIComponent(name)}/runs`, { cache: "no-store" });
                 if (res.ok) {
-                    const data = await res.json(); setRuns(data?.runs ?? []);
+                    const data = await res.json();
+                    setRuns(data?.runs ?? []);
                 } else {
-                    setRuns([{ id: "r_010", status: "SUCCEEDED", startedAt: "2025-01-09T10:00:00Z", kpis: { cagr: 0.37, mdd: -0.21, sharpe: 1.2, trades: 322 } }]);
+                    setRuns([]);
                 }
-            } catch { /* ignore */ }
+            } catch {
+                setRuns([]);
+            }
         })();
     }, [name]);
 
     const save = useCallback(async () => {
         setLoading(true);
         try {
-            await fetch(`${API}/strategies`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, code }),
-            });
+            await fetch(`${API}/strategies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, code }) });
             if (strategyId === "seed") {
                 router.replace({ pathname: "/models/strategies/[id]", query: { id: name } } as any);
             }
@@ -74,10 +72,9 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
         setLoading(true);
         try {
             const payload = { strategy: name, params: paramsState, dataset };
-            const endpoint =
-                kind === "backtest" ? `${API}/jobs/backtest`
-                    : kind === "grid" ? `${API}/jobs/grid`
-                        : `${API}/jobs/walkforward`;
+            const endpoint = kind === "backtest" ? `${API}/jobs/backtest`
+                : kind === "grid" ? `${API}/jobs/grid`
+                    : `${API}/jobs/walkforward`;
             const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             const { jobId } = res.ok ? await res.json() : { jobId: undefined };
             const href = jobId ? ({ pathname: "/models/runs", query: { focus: String(jobId) } } as const) : ("/models/runs" as const);

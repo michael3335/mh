@@ -1,4 +1,3 @@
-// app/models/runs/page.tsx
 "use client";
 
 import ASCIIText from "@/components/ASCIIText";
@@ -31,14 +30,13 @@ export default function RunsPage() {
         (async () => {
             try {
                 const res = await fetch(`${API}/runs`, { cache: "no-store" });
-                if (!abort && res.ok) {
-                    const data = await res.json();
-                    setRuns((data?.runs ?? []) as Run[]);
-                } else if (!abort) {
-                    setRuns([
-                        { id: "r_001", strategyName: "RSI_Band", kind: "backtest", status: "SUCCEEDED", startedAt: "2025-01-10T12:10:00Z", finishedAt: "2025-01-10T12:12:20Z", kpis: { cagr: 0.41, mdd: -0.23, sharpe: 1.3, trades: 812 } },
-                        { id: "r_002", strategyName: "Breakout_v2", kind: "grid", status: "RUNNING", startedAt: "2025-01-10T13:00:00Z" },
-                    ]);
+                if (!abort) {
+                    if (res.ok) {
+                        const data = await res.json();
+                        setRuns((data?.runs ?? []) as Run[]);
+                    } else {
+                        setRuns([]);
+                    }
                 }
             } finally {
                 if (!abort) setLoading(false);
