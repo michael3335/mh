@@ -1,23 +1,18 @@
 // app/api/models/runs/route.ts
+import { NextResponse } from "next/server";
+
 export async function GET() {
-  // TODO: replace with DB query ordering by createdAt desc
-  const runs = [
-    {
-      id: "r_001",
-      strategyName: "RSI_Band",
-      kind: "backtest",
-      status: "SUCCEEDED",
-      startedAt: "2025-01-10T12:10:00Z",
-      finishedAt: "2025-01-10T12:12:20Z",
-      kpis: { cagr: 0.41, mdd: -0.23, sharpe: 1.3, trades: 812 },
-    },
-    {
-      id: "r_002",
-      strategyName: "Breakout_v2",
-      kind: "grid",
-      status: "RUNNING",
-      startedAt: "2025-01-10T13:00:00Z",
-    },
-  ];
-  return Response.json({ runs });
+  try {
+    // 🔹 No placeholder data — integrate DB or S3 fetch logic here later.
+    const runs: unknown[] = [];
+
+    return NextResponse.json({ runs }, { status: 200 });
+  } catch (err) {
+    console.error("Failed to load runs:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      { error: "FailedToFetchRuns", message },
+      { status: 500 }
+    );
+  }
 }
