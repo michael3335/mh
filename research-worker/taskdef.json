@@ -1,0 +1,34 @@
+{
+  "family": "mh-research-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::418272764416:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::418272764416:role/mh-research-worker-task-role",
+  "containerDefinitions": [
+    {
+      "name": "worker",
+      "image": "418272764416.dkr.ecr.ap-southeast-2.amazonaws.com/mh/research-worker:latest",
+      "essential": true,
+      "command": ["python", "-u", "worker.py"],
+      "environment": [
+        { "name": "AWS_REGION", "value": "ap-southeast-2" },
+        {
+          "name": "SQS_RESEARCH_JOBS_URL",
+          "value": "https://sqs.ap-southeast-2.amazonaws.com/418272764416/research-jobs"
+        },
+        { "name": "S3_BUCKET", "value": "michaelharrison.au-files" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/app/research",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "research-worker",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

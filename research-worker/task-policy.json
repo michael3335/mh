@@ -1,0 +1,26 @@
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Effect":"Allow",
+      "Action":[
+        "sqs:ReceiveMessage","sqs:DeleteMessage","sqs:ChangeMessageVisibility",
+        "sqs:GetQueueAttributes","sqs:GetQueueUrl"
+      ],
+      "Resource":"arn:aws:sqs:ap-southeast-2:418272764416:research-jobs"
+    },
+    {
+      "Effect":"Allow",
+      "Action":["s3:GetObject","s3:PutObject","s3:ListBucket"],
+      "Resource":[
+        "arn:aws:s3:::michaelharrison.au-files",
+        "arn:aws:s3:::michaelharrison.au-files/*"
+      ]
+    },
+    {
+      "Effect":"Allow",
+      "Action":[ "logs:CreateLogStream","logs:PutLogEvents" ],
+      "Resource":"*"
+    }
+  ]
+}
