@@ -1,6 +1,6 @@
 // lib/auth.ts
 import { type NextAuthOptions } from "next-auth";
-import GitHub from "next-auth/providers/github";
+import GitHub, { type GithubProfile } from "next-auth/providers/github";
 
 const ALLOWED_GITHUB_ID = process.env.ALLOWED_GITHUB_ID; // e.g. "12345678"
 const ALLOWED_GITHUB_LOGIN = process.env.ALLOWED_GITHUB_LOGIN; // e.g. "your-username"
@@ -18,12 +18,11 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ account, profile }) {
       if (account?.provider === "github") {
+        const ghProfile = profile as GithubProfile | undefined;
         const githubId = String(
-          // @ts-expect-error provider profile shape
-          profile?.id ?? account.providerAccountId ?? ""
+          ghProfile?.id ?? account.providerAccountId ?? ""
         );
-        // @ts-expect-error provider profile shape
-        const githubLogin: string | undefined = profile?.login;
+        const githubLogin: string | undefined = ghProfile?.login;
 
         const allowById = ALLOWED_GITHUB_ID
           ? githubId === String(ALLOWED_GITHUB_ID)
