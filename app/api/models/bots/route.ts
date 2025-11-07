@@ -140,7 +140,8 @@ async function getObjectText(key: string): Promise<string | null> {
         Key: key,
       })
     );
-    return await res.Body?.transformToString("utf-8");
+    const body = await res.Body?.transformToString?.("utf-8");
+    return body ?? null;
   } catch (error) {
     if (isNotFound(error)) {
       return null;
@@ -151,25 +152,10 @@ async function getObjectText(key: string): Promise<string | null> {
 }
 
 function isNotFound(error: unknown) {
-  if (
-    typeof error === "object" &&
-    error &&
-    "$metadata" in error &&
-    typeof (error as { $metadata?: { httpStatusCode?: number } }).$metadata
-      ?.httpStatusCode === "number"
-  ) {
-    return (
-      (error as { $metadata?: { httpStatusCode?: number } }).$metadata!
-        .httpStatusCode === 404
-    );
-  }
-  if (
-    typeof error === "object" &&
-    error &&
-    "Code" in error &&
-    (error as { Code?: string }).Code === "NoSuchKey"
-  ) {
-    return true;
-  }
-  return false;
+  if (!error || typeof error !== "object") return false;
+  const meta =
+    (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+  if (meta === 404) return true;
+  const code = (error as { Code?: string }).Code;
+  return code === "NoSuchKey";
 }
