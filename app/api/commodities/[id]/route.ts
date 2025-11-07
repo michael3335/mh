@@ -60,7 +60,6 @@ const isFiniteNum = (n: any): n is number => Number.isFinite(n);
 async function getS3JSON<T>(Key: string, fallback: T): Promise<T> {
   try {
     const res = await s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key }));
-    // @ts-expect-error Node >=18 has transformToString available
     const body = await res.Body?.transformToString?.("utf-8");
     return body ? (JSON.parse(body) as T) : fallback;
   } catch {
