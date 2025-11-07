@@ -75,8 +75,8 @@ export async function recordQueuedRun(params: {
       kind,
       status: "QUEUED",
       artifactPrefix,
-      spec: spec as Prisma.JsonValue,
-      params: (inputParams ?? {}) as Prisma.JsonValue,
+      spec: spec as Prisma.InputJsonValue,
+      params: (inputParams ?? {}) as Prisma.InputJsonValue,
       kpis: Prisma.JsonNull,
     },
     create: {
@@ -86,8 +86,8 @@ export async function recordQueuedRun(params: {
       kind,
       status: "QUEUED",
       artifactPrefix,
-      spec: spec as Prisma.JsonValue,
-      params: (inputParams ?? {}) as Prisma.JsonValue,
+      spec: spec as Prisma.InputJsonValue,
+      params: (inputParams ?? {}) as Prisma.InputJsonValue,
     },
   });
 }

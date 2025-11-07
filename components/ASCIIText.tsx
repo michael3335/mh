@@ -350,9 +350,9 @@ class CanvAscii {
     const visibleHeight = 2 * cam.position.z * Math.tan(vHalfFovRad);
     const visibleWidth = visibleHeight * cam.aspect;
 
-    const params = this.geometry.parameters as THREE.PlaneGeometryParameters;
-    const planeW: number = params.width;
-    const planeH: number = params.height;
+    const planeParams = this.geometry.parameters as { width?: number; height?: number };
+    const planeW = planeParams.width ?? 1;
+    const planeH = planeParams.height ?? 1;
 
     const scale = Math.min(
       (visibleWidth * padding) / planeW,
@@ -488,8 +488,9 @@ class CanvAscii {
       if (!obj.isMesh) return;
       [obj.material].flat().forEach(material => {
         material.dispose();
-        Object.keys(material).forEach(key => {
-          const matProp = (material as Record<string, unknown>)[key];
+        const materialProps = material as unknown as Record<string, unknown>;
+        Object.keys(materialProps).forEach(key => {
+          const matProp = materialProps[key];
           if (
             matProp &&
             typeof matProp === 'object' &&

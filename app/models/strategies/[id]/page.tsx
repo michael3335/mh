@@ -50,7 +50,12 @@ export default function StrategyEditorPage() {
     const params = useParams<{ id: string }>();
     const router = useRouter();
 
-    const routes = { home: "/" as Route, models: "/models" as Route, signin: "/api/auth/signin" as Route };
+    const routes = {
+        home: "/" as Route,
+        models: "/models" as Route,
+        signin: "/api/auth/signin" as Route,
+        runs: "/models/runs" as Route,
+    };
 
     const strategySlug = decodeURIComponent(params.id);
     const [name, setName] = useState(strategySlug === "seed" ? "RSI_Band" : strategySlug);
@@ -151,14 +156,16 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                 return;
             }
             const jobId = body?.jobId;
-            const href = jobId ? `/models/runs?focus=${encodeURIComponent(String(jobId))}` : "/models/runs";
+            const href = jobId
+                ? (`/models/runs?focus=${encodeURIComponent(String(jobId))}` as Route)
+                : routes.runs;
             router.push(href);
         } catch (err) {
             setJobError(err instanceof Error ? err.message : "Failed to enqueue job");
         } finally {
             setLoading(false);
         }
-    }, [strategySlug, name, paramsState, dataset, router]);
+    }, [strategySlug, name, paramsState, dataset, router, routes.runs]);
 
     const canSave = useMemo(() => name.trim().length > 0 && code.trim().length > 0, [name, code]);
 

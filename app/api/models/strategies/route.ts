@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
+import { Prisma } from "@prisma/client";
 
 import { putText, BUCKET } from "@/lib/s3";
 import { authOptions } from "@/lib/auth";
@@ -224,7 +225,7 @@ async function upsertStrategyRecord(params: {
       data: {
         name,
         description,
-        manifest,
+        manifest: manifest as Prisma.InputJsonValue,
       },
     });
     return updated.id;
@@ -236,7 +237,7 @@ async function upsertStrategyRecord(params: {
       name,
       description,
       ownerId,
-      manifest,
+      manifest: manifest as Prisma.InputJsonValue,
     },
   });
   return created.id;
