@@ -1,5 +1,9 @@
 // lib/authz.ts
 import type { Session } from "next-auth";
+import { Role as PrismaRole } from "@prisma/client";
+
+import { prisma } from "@/lib/prisma";
+import { getSessionUserId } from "@/lib/session";
 
 export type Role = "researcher" | "botOperator";
 
@@ -10,11 +14,17 @@ const ROLE_ENV_VARS: Record<Role, string | undefined> = {
 
 const FALLBACK_ALLOW_ALL = process.env.AUTH_ALLOW_ALL === "true";
 const WILDCARD = "*";
+const CACHE_TTL_MS = 60_000;
+const DB_ENABLED = () => Boolean(process.env.DATABASE_URL);
 
 const roleAssignments: Record<Role, string[]> = {
   researcher: parseList(ROLE_ENV_VARS.researcher),
   botOperator: parseList(ROLE_ENV_VARS.botOperator),
 };
+
+const ADMIN_IMPLIED: Role[] = ["researcher", "botOperator"];
+type CacheEntry = { roles: Set<Role>; expires: number };
+const roleCache = new Map<string, CacheEntry>();
 
 function parseList(raw?: string): string[] {
   if (!raw) return [];
@@ -53,33 +63,86 @@ function userIdentifiers(session: Session | null): Set<string> {
   return identifiers;
 }
 
-export function hasRole(session: Session | null, role: Role): boolean {
-  if (!session?.user) return false;
-  if (FALLBACK_ALLOW_ALL) return true;
+async function rolesFromDatabase(userId: string): Promise<Set<Role>> {
+  const cacheKey = userId.toLowerCase();
+  const cached = roleCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return new Set(cached.roles);
+  }
 
-  const configured = roleAssignments[role];
-  if (!configured.length) return false;
-  if (configured.includes(WILDCARD)) return true;
-
-  const identifiers = userIdentifiers(session);
-  return configured.some((entry) => identifiers.has(entry));
+  const assignments = await prisma.roleAssignment.findMany({
+    where: { userId },
+    select: { role: true },
+  });
+  const roles = new Set<Role>();
+  for (const item of assignments) {
+    mapDbRole(item.role).forEach((r) => roles.add(r));
+  }
+  roleCache.set(cacheKey, { roles, expires: Date.now() + CACHE_TTL_MS });
+  return roles;
 }
 
-export function requireRole(session: Session | null, role: Role) {
+function mapDbRole(role: PrismaRole): Role[] {
+  if (role === "RESEARCHER") return ["researcher"];
+  if (role === "BOT_OPERATOR") return ["botOperator"];
+  if (role === "ADMIN") return ADMIN_IMPLIED;
+  return [];
+}
+
+function rolesFromEnv(session: Session | null): Set<Role> {
+  const identifiers = userIdentifiers(session);
+  const resolved = new Set<Role>();
+  (Object.keys(roleAssignments) as Role[]).forEach((role) => {
+    const configured = roleAssignments[role];
+    if (!configured.length) return;
+    if (configured.includes(WILDCARD)) {
+      resolved.add(role);
+      return;
+    }
+    if (configured.some((entry) => identifiers.has(entry))) {
+      resolved.add(role);
+    }
+  });
+  return resolved;
+}
+
+async function resolveRoles(session: Session | null): Promise<Set<Role>> {
+  if (!session?.user) return new Set();
+  if (FALLBACK_ALLOW_ALL) {
+    return new Set<Role>(["researcher", "botOperator"]);
+  }
+  const userId = getSessionUserId(session);
+  if (userId && DB_ENABLED()) {
+    return rolesFromDatabase(userId);
+  }
+  return rolesFromEnv(session);
+}
+
+export async function hasRole(
+  session: Session | null,
+  role: Role
+): Promise<boolean> {
+  if (!session?.user) return false;
+  const roles = await resolveRoles(session);
+  return roles.has(role);
+}
+
+export async function requireRole(session: Session | null, role: Role) {
   if (!session?.user) {
     return { ok: false as const, response: unauthorizedResponse() };
   }
-  if (hasRole(session, role)) {
+  if (await hasRole(session, role)) {
     return { ok: true as const };
   }
   return { ok: false as const, response: forbiddenResponse(role) };
 }
 
-export function requireAnyRole(session: Session | null, roles: Role[]) {
+export async function requireAnyRole(session: Session | null, roles: Role[]) {
   if (!session?.user) {
     return { ok: false as const, response: unauthorizedResponse() };
   }
-  if (roles.some((role) => hasRole(session, role))) {
+  const resolved = await resolveRoles(session);
+  if (roles.some((role) => resolved.has(role))) {
     return { ok: true as const };
   }
   return {

@@ -1,29 +1,16 @@
 // app/api/models/runs/route.ts
 import { s3 } from "@/lib/s3";
+import { prisma } from "@/lib/prisma";
 import { ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireRole } from "@/lib/authz";
-
-type KPIs = {
-  cagr?: number | null;
-  mdd?: number;
-  sharpe?: number | null;
-  trades?: number;
-};
-type RunRow = {
-  id: string;
-  strategyName: string;
-  kind: "backtest" | "grid" | "walkforward";
-  status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED";
-  startedAt: string;
-  finishedAt?: string | null;
-  kpis?: KPIs;
-};
+import { mapRunRow, type RunRow, type KPIs } from "@/lib/serializers/run";
+import { getSessionUserId } from "@/lib/session";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  const authz = requireRole(session, "researcher");
+  const authz = await requireRole(session, "researcher");
   if (!authz.ok) return authz.response;
   const bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET;
   if (!bucket) {
@@ -31,8 +18,45 @@ export async function GET() {
       status: 500,
     });
   }
+  const userId = getSessionUserId(session);
 
   try {
+    const dbRuns = await fetchRunsFromDb(userId ?? undefined);
+    if (dbRuns?.length) {
+      return Response.json({ runs: dbRuns });
+    }
+    const fallback = await fetchRunsFromS3(bucket);
+    return Response.json({ runs: fallback });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown");
+    return new Response(
+      JSON.stringify({ error: "ListRunsFailed", message }),
+      { status: 500 }
+    );
+  }
+}
+
+async function fetchRunsFromDb(
+  userId?: string,
+  limit = 25
+): Promise<RunRow[] | null> {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    const rows = await prisma.run.findMany({
+      where: userId ? { ownerId: userId } : undefined,
+      include: { strategy: { select: { name: true } } },
+      orderBy: { startedAt: "desc" },
+      take: limit,
+    });
+    return rows.map(mapRunRow);
+  } catch (error) {
+    console.warn("[runs] DB fallback", error);
+    return null;
+  }
+}
+
+async function fetchRunsFromS3(bucket: string): Promise<RunRow[]> {
     // 1) List all metrics.json objects under runs/
     //    (You can tune MaxKeys if you have many; we’ll grab up to 200 then fetch the latest 25)
     const listed = await s3.send(
@@ -95,13 +119,5 @@ export async function GET() {
       }
     }
 
-    return Response.json({ runs });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error ?? "Unknown");
-    return new Response(
-      JSON.stringify({ error: "ListRunsFailed", message }),
-      { status: 500 }
-    );
-  }
+    return runs;
 }

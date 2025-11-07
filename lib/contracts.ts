@@ -61,6 +61,7 @@ export const ResearchJob = z.object({
   grid: z.array(z.record(z.string(), z.unknown())).optional(),
   params: z.record(z.string(), z.unknown()).optional(), // <— add this
   spec: MetricsJson.shape.spec,
+  ownerId: z.string().optional(),
 });
 export type ResearchJob = z.infer<typeof ResearchJob>;
 

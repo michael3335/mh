@@ -12,7 +12,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  const authz = requireRole(session, "researcher");
+  const authz = await requireRole(session, "researcher");
   if (!authz.ok) return authz.response;
   const { id } = await context.params;
 

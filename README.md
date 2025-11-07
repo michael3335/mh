@@ -42,6 +42,7 @@ All `/api/models/**` routes now require explicit roles:
 - `AUTH_RESEARCHERS`: comma-separated list of emails, GitHub handles, or user IDs that may create strategies, queue research jobs, and inspect runs.
 - `AUTH_BOT_OPERATORS`: identities allowed to view or control bots.
 - `AUTH_ALLOW_ALL=true`: optional escape hatch for local development to treat every signed-in session as having all roles.
+- `SQS_PROMOTION_JOBS_URL`: queue that receives promotion jobs (run → bot).
 
 Use `*` inside either list to grant access to everyone (e.g. `AUTH_RESEARCHERS=*`).
 
@@ -55,3 +56,15 @@ npm run test
 ```
 
 `npm run test` uses Vitest + Testing Library (jsdom) to cover auth guards and UI regressions (e.g. `HistoryChart` rendering).
+
+## Database (Postgres + Prisma)
+
+Metadata for users, strategies, runs, and bots lives in Postgres via Prisma. To work locally:
+
+1. Set `DATABASE_URL=postgresql://user:pass@host:port/db`.
+2. Adjust `prisma/schema.prisma` as needed, then run `npx prisma migrate dev` to create tables.
+3. Generate the client with `npx prisma generate` (run automatically in CI).
+4. Seed roles by inserting `RoleAssignment` rows so API role checks work without the legacy env vars.
+5. Export `DATABASE_URL` plus any queue/bucket env vars (`SQS_RESEARCH_JOBS_URL`, `SQS_PROMOTION_JOBS_URL`, `AWS_S3_BUCKET`, etc.) before starting the Next.js server.
+
+If no `DATABASE_URL` is configured, the API transparently falls back to S3 mock data so the UI remains usable.
