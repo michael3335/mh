@@ -63,7 +63,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
         try {
             await fetch(`${API}/strategies`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, code }) });
             if (strategyId === "seed") {
-                router.replace({ pathname: "/models/strategies/[id]", query: { id: name } } as any);
+                router.replace(`/models/strategies/${encodeURIComponent(name)}`);
             }
         } finally { setLoading(false); }
     }, [name, code, router, strategyId]);
@@ -77,8 +77,8 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                     : `${API}/jobs/walkforward`;
             const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
             const { jobId } = res.ok ? await res.json() : { jobId: undefined };
-            const href = jobId ? ({ pathname: "/models/runs", query: { focus: String(jobId) } } as const) : ("/models/runs" as const);
-            router.push(href as any);
+            const href = jobId ? `/models/runs?focus=${encodeURIComponent(String(jobId))}` : "/models/runs";
+            router.push(href);
         } finally { setLoading(false); }
     }, [name, paramsState, dataset, router]);
 
@@ -180,7 +180,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                                     <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, 1fr)" }}>
                                         <div style={{ textAlign: "left" }}>
                                             <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Exchange</div>
-                                            <select value={dataset.exchange} onChange={(e) => setDataset((d) => ({ ...d, exchange: e.target.value }))} style={{ ...control, appearance: "auto" as any }}>
+                                            <select value={dataset.exchange} onChange={(e) => setDataset((d) => ({ ...d, exchange: e.target.value }))} style={{ ...control, appearance: "auto" as React.CSSProperties["appearance"] }}>
                                                 <option value="binance">Binance</option>
                                                 <option value="okx">OKX</option>
                                                 <option value="bybit">Bybit</option>
@@ -188,7 +188,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
                                         </div>
                                         <div style={{ textAlign: "left" }}>
                                             <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 6 }}>Timeframe</div>
-                                            <select value={dataset.timeframe} onChange={(e) => setDataset((d) => ({ ...d, timeframe: e.target.value }))} style={{ ...control, appearance: "auto" as any }}>
+                                            <select value={dataset.timeframe} onChange={(e) => setDataset((d) => ({ ...d, timeframe: e.target.value }))} style={{ ...control, appearance: "auto" as React.CSSProperties["appearance"] }}>
                                                 {["1m", "5m", "15m", "1h", "4h", "1d"].map(tf => <option key={tf} value={tf}>{tf}</option>)}
                                             </select>
                                         </div>

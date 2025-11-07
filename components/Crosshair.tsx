@@ -110,7 +110,7 @@ const Crosshair: React.FC<CrosshairProps> = ({
 
     gsap.set([lineHorizontalRef.current, lineVerticalRef.current].filter(Boolean), { opacity: 0 });
 
-    const onMouseMove = (_ev: Event) => {
+    const onMouseMove = () => {
       renderedStyles.tx.previous = renderedStyles.tx.current = mouse.x;
       renderedStyles.ty.previous = renderedStyles.ty.current = mouse.y;
 

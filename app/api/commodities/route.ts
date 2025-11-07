@@ -37,8 +37,6 @@ const S3_KEY_USD = `${S3_PREFIX}/history_usd.json`;
 const s3 = new S3Client({ region: S3_REGION });
 
 // sanity thresholds (not used to block writes; just for health checks)
-const MIN_POINTS = 30;
-const FRESHNESS_DAYS = 10;
 
 /* -------------------- Universe -------------------- */
 
@@ -116,10 +114,7 @@ const AU_PROXIES = [
 type SeriesPoint = { date: string; value: number };
 type History = { [id: string]: SeriesPoint[] };
 
-const toISODate = (d = new Date()) => new Date(d).toISOString().slice(0, 10);
 const isFiniteNum = (n: any): n is number => Number.isFinite(n);
-const daysBetween = (a: string, b: string) =>
-  Math.floor((+new Date(a) - +new Date(b)) / 86400000);
 const usdToAud = (usd: number | null, audusd: number | null) =>
   usd != null && audusd && audusd > 0 ? usd / audusd : null;
 
@@ -132,17 +127,6 @@ function computeDelta(values: number[]) {
       ? ((last - prev) / prev) * 100
       : null;
   return { last, prev, change, changePct };
-}
-
-function isSeriesFreshEnough(arr: SeriesPoint[], todayISO: string): boolean {
-  if (!arr?.length) return false;
-  const lastDate = arr[arr.length - 1].date;
-  return Math.abs(daysBetween(todayISO, lastDate)) <= FRESHNESS_DAYS;
-}
-function isComplete(arr?: SeriesPoint[], todayISO?: string): boolean {
-  if (!arr || arr.length < MIN_POINTS) return false;
-  if (todayISO && !isSeriesFreshEnough(arr, todayISO)) return false;
-  return true;
 }
 
 /** Replace with provider if it's clearly more complete; otherwise append only newer points. Returns true if mutated. */
@@ -185,7 +169,7 @@ function upsertSeriesWithProvider(
 async function getS3JSON<T>(Key: string, fallback: T): Promise<T> {
   try {
     const res = await s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key }));
-    // @ts-ignore - Node >=18 has transformToString
+    // @ts-expect-error Node >=18 has transformToString
     const body = await res.Body?.transformToString?.("utf-8");
     return body ? (JSON.parse(body) as T) : fallback;
   } catch {
@@ -475,8 +459,6 @@ export async function GET() {
     // Load existing S3 USD history (or empty)
     const historyUSD: History = await getS3JSON<History>(S3_KEY_USD, {});
     const origSerialized = JSON.stringify(historyUSD);
-    const today = toISODate(); // used for freshness checks only
-
     // FX (USD per 1 AUD)
     const audusd = await getAUDUSD();
 

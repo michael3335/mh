@@ -1,8 +1,14 @@
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
 import { ResearchJob } from "@/lib/contracts";
 import { sendJson } from "@/lib/sqs";
+import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const authz = requireRole(session, "researcher");
+  if (!authz.ok) return authz.response;
   try {
     const body = await req.json();
 
@@ -40,12 +46,15 @@ export async function POST(req: NextRequest) {
       kind: "backtest",
       messageId,
     });
-  } catch (err: any) {
-    const msg = err?.issues
-      ? { zodIssues: err.issues }
-      : err?.message
-      ? { message: err.message }
-      : { error: "Unknown error" };
-    return new Response(JSON.stringify({ ok: false, ...msg }), { status: 400 });
+  } catch (error) {
+    const responseBody =
+      error && typeof error === "object" && "issues" in error
+        ? { zodIssues: (error as { issues: unknown }).issues }
+        : error instanceof Error
+        ? { message: error.message }
+        : { error: "Unknown error" };
+    return new Response(JSON.stringify({ ok: false, ...responseBody }), {
+      status: 400,
+    });
   }
 }

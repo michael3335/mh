@@ -62,14 +62,13 @@ function HistoryChart({
     width?: number;
     height?: number;
 }) {
-    if (!data?.length) {
-        return <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>No data</div>;
-    }
 
     // Layout
     const m = { top: 16, right: 16, bottom: 44, left: 64 };
     const iw = Math.max(10, width - m.left - m.right);
     const ih = Math.max(10, height - m.top - m.bottom);
+    const marginLeft = m.left;
+    const marginTop = m.top;
 
     // Colors
     const gridY = "rgba(255,255,255,0.12)";
@@ -81,22 +80,23 @@ function HistoryChart({
     // Domains
     const xs = useMemo(() => data.map((d) => new Date(d.date).getTime()), [data]);
     const ys = useMemo(() => data.map((d) => d.value), [data]);
-    const xMin = xs[0];
-    const xMax = xs[xs.length - 1];
+    const hasData = xs.length > 0;
+    const xMin = xs[0] ?? 0;
+    const xMax = xs[xs.length - 1] ?? 1;
 
-    const yMinRaw = Math.min(...ys);
-    const yMaxRaw = Math.max(...ys);
+    const yMinRaw = ys.length ? Math.min(...ys) : 0;
+    const yMaxRaw = ys.length ? Math.max(...ys) : 0;
     const pad = (yMaxRaw - yMinRaw) * 0.08 || 1;
     const yMin = Math.max(0, yMinRaw - pad);
     const yMax = yMaxRaw + pad;
 
     // Scales
-    const xScale = (t: number) => m.left + ((t - xMin) / Math.max(1, xMax - xMin)) * iw;
-    const yScale = (v: number) => m.top + (1 - (v - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
+    const xScale = (t: number) => marginLeft + ((t - xMin) / Math.max(1, xMax - xMin)) * iw;
+    const yScale = (v: number) => marginTop + (1 - (v - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
 
     // Trend color for series only
-    const firstVal = ys[0];
-    const lastVal = ys[ys.length - 1];
+    const firstVal = ys[0] ?? 0;
+    const lastVal = ys[ys.length - 1] ?? 0;
     const delta = lastVal - firstVal;
     const seriesColor =
         delta > 0 ? "var(--pos, #22c55e)" : delta < 0 ? "var(--neg, #ef4444)" : "rgba(255,255,255,0.7)";
@@ -106,30 +106,16 @@ function HistoryChart({
         () =>
             data
                 .map((d, i) => {
-                    const x = xScale(new Date(d.date).getTime());
-                    const y = yScale(d.value);
+                    const x = marginLeft + ((new Date(d.date).getTime() - xMin) / Math.max(1, xMax - xMin)) * iw;
+                    const y =
+                        marginTop + (1 - (d.value - yMin) / Math.max(1e-12, yMax - yMin)) * ih;
                     return `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
                 })
                 .join(" "),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [data, xMin, xMax, yMin, yMax, iw, ih]
+        [data, marginLeft, marginTop, xMin, xMax, yMin, yMax, iw, ih]
     );
 
     // Ticks
-    const yTickCount = 6;
-    const stepRaw = (yMax - yMin) / (yTickCount - 1);
-    const step = niceNumber(stepRaw);
-    const yStart = Math.floor(yMin / step) * step;
-    const yTicks: number[] = [];
-    for (let y = yStart; y <= yMax + 1e-9; y += step) if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
-
-    const xTickCount = 6;
-    const xTicks: number[] = [];
-    for (let i = 0; i < xTickCount; i++) xTicks.push(xMin + ((xMax - xMin) * i) / (xTickCount - 1));
-
-    // Header change
-    const pct = firstVal ? ((lastVal - firstVal) / firstVal) * 100 : 0;
-
     /* ----- Snap crosshair to nearest actual point ----- */
     const containerRef = useRef<HTMLElement | null>(null);
     const [snapIdx, setSnapIdx] = useState<number | null>(null); // index of nearest datum
@@ -175,6 +161,29 @@ function HistoryChart({
 
     const snapX = snapIdx != null ? xScale(xs[snapIdx]) : null;
     const snapY = snapIdx != null ? yScale(ys[snapIdx]) : null;
+
+    if (!hasData) {
+        return (
+            <div style={{ height, display: "grid", placeItems: "center", opacity: 0.7 }}>
+                No data
+            </div>
+        );
+    }
+
+    const yTickCount = 6;
+    const stepRaw = (yMax - yMin) / Math.max(1, yTickCount - 1);
+    const step = niceNumber(stepRaw);
+    const yStart = Math.floor(yMin / step) * step;
+    const yTicks: number[] = [];
+    for (let y = yStart; y <= yMax + 1e-9; y += step) {
+        if (y >= yMin - 1e-9) yTicks.push(Number(y.toFixed(10)));
+    }
+
+    const xTickCount = 6;
+    const xTicks: number[] = [];
+    for (let i = 0; i < xTickCount; i++) {
+        xTicks.push(xMin + ((xMax - xMin) * i) / Math.max(1, xTickCount - 1));
+    }
 
     return (
         <div
@@ -443,8 +452,12 @@ export default function HistoryModal({ open, onClose, id }: Props) {
                     setPayload(j);
                     if (!j.fx?.audusd) setCcy("USD");
                 }
-            } catch (e: any) {
-                if (!cancelled) setErr(e?.message ?? "Failed to load history");
+            } catch (error) {
+                if (!cancelled) {
+                    const message =
+                        error instanceof Error ? error.message : "Failed to load history";
+                    setErr(message);
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -605,3 +618,5 @@ export default function HistoryModal({ open, onClose, id }: Props) {
         </ModalShell>
     );
 }
+
+export { HistoryChart };

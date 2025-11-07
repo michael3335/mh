@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { ResearchJob } from "@/lib/contracts";
 import { sendJson } from "@/lib/sqs";
+import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 
 const Walkforward = z.object({
   trainMonths: z.number().int().positive(),
@@ -10,6 +13,9 @@ const Walkforward = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const authz = requireRole(session, "researcher");
+  if (!authz.ok) return authz.response;
   try {
     const body = await req.json();
     const wf = Walkforward.parse(body.walkforward);
@@ -49,10 +55,13 @@ export async function POST(req: NextRequest) {
       kind: "walkforward",
       messageId,
     });
-  } catch (err: any) {
-    const msg = err?.issues
-      ? JSON.stringify(err.issues, null, 2)
-      : String(err?.message ?? err);
+  } catch (error) {
+    const msg =
+      error && typeof error === "object" && "issues" in error
+        ? JSON.stringify((error as { issues: unknown }).issues, null, 2)
+        : error instanceof Error
+        ? error.message
+        : String(error);
     return Response.json(
       { error: "WalkforwardEnqueueFailed", message: msg },
       { status: 400 }

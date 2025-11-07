@@ -42,10 +42,9 @@ export async function GET(req: NextRequest) {
         })) ?? [];
 
     return NextResponse.json({ items }, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to list versions" },
-      { status: 500 }
-    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to list versions";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

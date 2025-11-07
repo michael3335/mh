@@ -1,6 +1,9 @@
 // app/api/models/runs/route.ts
 import { s3 } from "@/lib/s3";
 import { ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 
 type KPIs = {
   cagr?: number | null;
@@ -19,7 +22,10 @@ type RunRow = {
 };
 
 export async function GET() {
-  const bucket = process.env.S3_BUCKET;
+  const session = await getServerSession(authOptions);
+  const authz = requireRole(session, "researcher");
+  if (!authz.ok) return authz.response;
+  const bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET;
   if (!bucket) {
     return new Response(JSON.stringify({ error: "S3_BUCKET not set" }), {
       status: 500,
@@ -90,9 +96,11 @@ export async function GET() {
     }
 
     return Response.json({ runs });
-  } catch (err) {
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown");
     return new Response(
-      JSON.stringify({ error: "ListRunsFailed", message: String(err) }),
+      JSON.stringify({ error: "ListRunsFailed", message }),
       { status: 500 }
     );
   }

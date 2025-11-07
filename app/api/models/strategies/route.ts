@@ -1,17 +1,14 @@
 // app/api/models/strategies/route.ts
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
 import { putText, BUCKET } from "@/lib/s3";
-
-function hasAwsEnv() {
-  return !!(
-    process.env.AWS_REGION &&
-    process.env.AWS_S3_BUCKET &&
-    process.env.AWS_ACCESS_KEY_ID &&
-    process.env.AWS_SECRET_ACCESS_KEY
-  );
-}
+import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  const authz = requireRole(session, "researcher");
+  if (!authz.ok) return authz.response;
   try {
     const body = await req.json().catch(() => ({}));
     const name = typeof body?.name === "string" ? body.name.trim() : "";
@@ -26,20 +23,6 @@ export async function POST(req: NextRequest) {
 
     const base = `strategies/${encodeURIComponent(name)}`;
 
-    // Dev-safe path: allow saving without S3 if not configured
-    if (!hasAwsEnv()) {
-      return Response.json(
-        {
-          ok: true,
-          saved: "dev-noop",
-          key: `${base}/main.py`,
-          bucket: BUCKET ?? null,
-        },
-        { status: 201 }
-      );
-    }
-
-    // Real S3 writes
     await putText(`${base}/main.py`, code, "text/x-python");
     await putText(
       `${base}/manifest.json`,

@@ -1,9 +1,16 @@
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 
 export async function GET(
   _req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  const authz = requireRole(session, "researcher");
+  if (!authz.ok) return authz.response;
+
   const { id } = await ctx.params;
   const strategy = decodeURIComponent(id);
   // TODO: replace with DB results

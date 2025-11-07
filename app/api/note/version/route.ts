@@ -26,10 +26,9 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to load version" },
-      { status: 500 }
-    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to load version";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

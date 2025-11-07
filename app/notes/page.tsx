@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import ASCIIText from "@/components/ASCIIText";
 import Link from "next/link";
 
 type VersionItem = { key: string; size: number; lastModified: string | null };
+
+const sanitizeHtml = (html: string) =>
+    html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 
 export default function NotesPage() {
     const { status } = useSession();
@@ -37,8 +40,12 @@ export default function NotesPage() {
                     editorRef.current.innerHTML = html || "";
                     setDirty(false);
                 }
-            } catch (e: any) {
-                if (!cancelled) setError(e?.message ?? "Failed to load note");
+            } catch (error) {
+                if (!cancelled) {
+                    const message =
+                        error instanceof Error ? error.message : "Failed to load note";
+                    setError(message);
+                }
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -48,33 +55,31 @@ export default function NotesPage() {
         };
     }, [status]);
 
-    // Autosave every 10s
-    useEffect(() => {
-        if (status !== "authenticated") return;
-        const id = setInterval(() => { if (dirty) save(); }, 10_000);
-        return () => clearInterval(id);
-    }, [dirty, status]);
-
-    function sanitize(html: string) {
-        return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
-    }
-
-    async function save() {
+    const save = useCallback(async () => {
         if (!editorRef.current) return;
         setSaving(true);
         setError(null);
         try {
-            const html = sanitize(editorRef.current.innerHTML);
+            const html = sanitizeHtml(editorRef.current.innerHTML);
             const res = await fetch("/api/note", { method: "PUT", body: html });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             setDirty(false);
             setLastSaved(Date.now());
-        } catch (e: any) {
-            setError(e?.message ?? "Failed to save note");
+        } catch (error) {
+            setError(error instanceof Error ? error.message : "Failed to save note");
         } finally {
             setSaving(false);
         }
-    }
+    }, []);
+
+    // Autosave every 10s
+    useEffect(() => {
+        if (status !== "authenticated") return;
+        const id = setInterval(() => {
+            if (dirty) save();
+        }, 10_000);
+        return () => clearInterval(id);
+    }, [dirty, status, save]);
 
     // History handlers
     async function loadHistory() {

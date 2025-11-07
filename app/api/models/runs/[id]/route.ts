@@ -2,12 +2,18 @@
 import { NextRequest } from "next/server";
 import { s3 } from "@/lib/s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/authz";
 
 // Next.js 16: context.params is now a Promise
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession(authOptions);
+  const authz = requireRole(session, "researcher");
+  if (!authz.ok) return authz.response;
   const { id } = await context.params;
 
   const bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET;
@@ -37,9 +43,20 @@ export async function GET(
       status: 200,
       headers: { "content-type": "application/json" },
     });
-  } catch (err: any) {
-    const code = err?.$metadata?.httpStatusCode ?? 500;
-    const msg = err?.message ?? String(err);
+  } catch (error) {
+    const code =
+      typeof error === "object" && error && "$metadata" in error
+        ? Number(
+            (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+              ?.httpStatusCode ?? 500
+          )
+        : 500;
+    const msg =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+        ? error
+        : "GetRunFailed";
     return new Response(
       JSON.stringify({ error: "GetRunFailed", message: msg }),
       { status: code }

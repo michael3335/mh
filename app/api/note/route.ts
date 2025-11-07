@@ -28,15 +28,26 @@ export async function GET() {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
-  } catch (err: any) {
-    if (err?.$metadata?.httpStatusCode === 404 || err?.name === "NoSuchKey") {
+  } catch (error) {
+    const metadata =
+      typeof error === "object" && error && "$metadata" in error
+        ? (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+        : undefined;
+    const errName =
+      typeof error === "object" && error && "name" in error
+        ? String((error as { name?: string }).name)
+        : undefined;
+    if (metadata?.httpStatusCode === 404 || errName === "NoSuchKey") {
       return new NextResponse("", {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
     return NextResponse.json(
-      { error: err?.message ?? "Failed to load note" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to load note",
+      },
       { status: 500 }
     );
   }
@@ -98,9 +109,12 @@ export async function PUT(req: NextRequest) {
     );
 
     return NextResponse.json({ ok: true, versionKey }, { status: 200 });
-  } catch (err: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: err?.message ?? "Failed to save note" },
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to save note",
+      },
       { status: 500 }
     );
   }

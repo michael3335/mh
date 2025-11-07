@@ -1,5 +1,12 @@
 // app/api/models/bots/route.ts
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { requireAnyRole } from "@/lib/authz";
+
 export async function GET() {
+  const session = await getServerSession(authOptions);
+  const authz = requireAnyRole(session, ["botOperator", "researcher"]);
+  if (!authz.ok) return authz.response;
   // TODO: read from DB or ECS service discovery
   const bots = [
     {

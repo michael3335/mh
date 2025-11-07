@@ -16,14 +16,16 @@ const BUCKET: string = _BUCKET;
 
 const NOTE_KEY = process.env.NOTE_KEY || "notes/quicknote.html";
 
+type RevertBody = { key?: unknown };
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const key: unknown = (body as any)?.key;
+  const body = ((await req.json().catch(() => ({}))) ?? {}) as RevertBody;
+  const key: unknown = body.key;
   if (typeof key !== "string" || !key) {
     return NextResponse.json({ error: "Missing key" }, { status: 400 });
   }
@@ -50,11 +52,10 @@ export async function POST(req: NextRequest) {
     );
 
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (err: any) {
-    console.error("POST /api/note/revert error:", err);
-    return NextResponse.json(
-      { error: err?.message ?? "Failed to revert" },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("POST /api/note/revert error:", error);
+    const message =
+      error instanceof Error ? error.message : "Failed to revert";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 /* ---------------- Types ---------------- */
 
@@ -27,6 +26,11 @@ type Item = FileItem | FolderItem;
 
 type SortKey = "name" | "size" | "date";
 type ViewMode = "list" | "grid";
+type SelectGesture = {
+    metaKey?: boolean;
+    ctrlKey?: boolean;
+    shiftKey?: boolean;
+};
 
 /* ---------------- Component ---------------- */
 
@@ -54,6 +58,7 @@ export default function Finder() {
     const gridContainerRef = useRef<HTMLDivElement>(null);
     const dragRectRef = useRef<HTMLDivElement | null>(null);
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+    const toastTimeoutRef = useRef<number | null>(null);
 
     // race-safe fetch
     const currentLoadAbortRef = useRef<AbortController | null>(null);
@@ -67,11 +72,13 @@ export default function Finder() {
     }>({ open: false, x: 0, y: 0, item: null });
 
     // toast
-    const toast = (t: string, ms = 3000) => {
+    const toast = useCallback((t: string, ms = 3000) => {
         setMsg(t);
-        window.clearTimeout((toast as any).__t);
-        (toast as any).__t = window.setTimeout(() => setMsg(null), ms);
-    };
+        if (toastTimeoutRef.current) {
+            window.clearTimeout(toastTimeoutRef.current);
+        }
+        toastTimeoutRef.current = window.setTimeout(() => setMsg(null), ms);
+    }, []);
 
     /* ---------------- Data loading ---------------- */
 
@@ -110,15 +117,17 @@ export default function Finder() {
                 if (signal?.aborted) return;
                 setItems([...accFolders, ...accFiles]);
                 setSelected(new Set());
-            } catch (e) {
-                if ((e as any).name === "AbortError") return;
-                console.error(e);
+            } catch (error) {
+                if (error instanceof DOMException && error.name === "AbortError") {
+                    return;
+                }
+                console.error(error);
                 toast("Network error while listing", 5000);
             } finally {
                 if (!signal?.aborted) setLoading(false);
             }
         },
-        []
+        [toast]
     );
 
     useEffect(() => {
@@ -210,7 +219,7 @@ export default function Finder() {
         if (!res.ok) return toast("Couldn't create folder");
         toast("Folder created");
         await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
-    }, [path, loadAll]);
+    }, [path, loadAll, toast]);
 
     const deleteKey = useCallback(async (key: string, recursive = false) => {
         const res = await fetch("/api/files/delete", {
@@ -236,7 +245,7 @@ export default function Finder() {
             else toast("Deleted");
             await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
-        [deleteKey, loadAll, path]
+        [deleteKey, loadAll, path, toast]
     );
 
     // Bulk delete for selected items
@@ -253,7 +262,7 @@ export default function Finder() {
         );
         toast("Deleted");
         await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
-    }, [selected, deleteKey, loadAll, path]);
+    }, [selected, deleteKey, loadAll, path, toast]);
 
     // File rename (single) via /api/files/rename
     const renameFile = useCallback(
@@ -273,7 +282,7 @@ export default function Finder() {
             toast("Renamed");
             await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
-        [loadAll, path]
+        [loadAll, path, toast]
     );
 
     // Folder rename (client-side pragmatic approach)
@@ -323,7 +332,7 @@ export default function Finder() {
             toast("Folder renamed");
             await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
-        [items, deleteKey, loadAll, path]
+        [items, deleteKey, loadAll, path, toast]
     );
 
     const onRename = useCallback(
@@ -379,7 +388,7 @@ export default function Finder() {
 
     /* ---------------- Selection (click / shift / meta / drag) ---------------- */
 
-    const toggleSelect = (key: string, e: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }) => {
+    const toggleSelect = (key: string, e: SelectGesture) => {
         const meta = !!(e.metaKey || e.ctrlKey);
         const shift = !!e.shiftKey;
 
@@ -934,7 +943,7 @@ function Row({
 }: {
     item: Item;
     selected: boolean;
-    onSelect: (e: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean }) => void;
+    onSelect: (e: SelectGesture) => void;
     onOpenFolder: () => void;
     onDelete: () => void;
     onRename: () => void;
@@ -1025,7 +1034,7 @@ function Grid({
 }: {
     items: Item[];
     selected: Set<string>;
-    onSelect: (key: string, e: React.MouseEvent) => void;
+    onSelect: (key: string, e: SelectGesture) => void;
     open: (name: string) => void;
     del: (key: string) => void;
     rename: (it: Item) => void;
@@ -1069,7 +1078,11 @@ function Grid({
                             } else if (e.key === " ") {
                                 e.preventDefault();
                                 // toggle select
-                                onSelect(it.key, Object.assign({}, e, { metaKey: true }) as any);
+                                onSelect(it.key, {
+                                    metaKey: true,
+                                    ctrlKey: e.ctrlKey,
+                                    shiftKey: e.shiftKey,
+                                });
                             } else if (e.key === "F2") {
                                 e.preventDefault();
                                 rename(it);

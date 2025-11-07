@@ -125,8 +125,12 @@ export default function CommoditiesPage() {
                     setAsof(json.asof as number);
                     setBase((json.base as "AUD" | "USD") ?? "AUD");
                 }
-            } catch (e: any) {
-                if (!cancelled) setError(e?.message ?? "Failed to load data");
+            } catch (error) {
+                if (!cancelled) {
+                    const message =
+                        error instanceof Error ? error.message : "Failed to load data";
+                    setError(message);
+                }
             }
         }
 
@@ -187,29 +191,28 @@ export default function CommoditiesPage() {
 
                     {/* Top overview cards (commodities) */}
                     <section aria-label="Overview" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, opacity: items ? 1 : 0.6 }}>
-                        {(items ? top : Array.from({ length: 4 })).map((c: any, i: number) => {
-                            if (!items) {
+                        {items
+                            ? top.map((c) => {
+                                const value = c.price == null ? "—" : `${fmt.format(c.price)} ${c.unit.replace(`${base}/`, "")}`;
                                 return (
-                                    <div key={`skeleton-${i}`} style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "16px" }}>
-                                        <div style={{ height: 16, width: "60%", background: "rgba(255,255,255,0.08)", marginBottom: 8 }} />
-                                        <div style={{ height: 24, width: "40%", background: "rgba(255,255,255,0.12)", marginBottom: 8 }} />
-                                        <div style={{ height: 32, width: "100%", background: "rgba(255,255,255,0.06)" }} />
-                                    </div>
+                                    <MetricCard
+                                        key={c.id}
+                                        title={`${c.name} • ${c.unit}`}
+                                        value={value}
+                                        delta={c.change}
+                                        deltaPct={c.changePct}
+                                        series={c.series}
+                                        onClick={() => openHistory(c.id)}
+                                    />
                                 );
-                            }
-                            const value = c.price == null ? "—" : `${fmt.format(c.price)} ${c.unit.replace(`${base}/`, "")}`;
-                            return (
-                                <MetricCard
-                                    key={c.id}
-                                    title={`${c.name} • ${c.unit}`}
-                                    value={value}
-                                    delta={c.change}
-                                    deltaPct={c.changePct}
-                                    series={c.series}
-                                    onClick={() => openHistory(c.id)}
-                                />
-                            );
-                        })}
+                            })
+                            : Array.from({ length: 4 }).map((_, i) => (
+                                <div key={`skeleton-${i}`} style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "16px" }}>
+                                    <div style={{ height: 16, width: "60%", background: "rgba(255,255,255,0.08)", marginBottom: 8 }} />
+                                    <div style={{ height: 24, width: "40%", background: "rgba(255,255,255,0.12)", marginBottom: 8 }} />
+                                    <div style={{ height: 32, width: "100%", background: "rgba(255,255,255,0.06)" }} />
+                                </div>
+                            ))}
                     </section>
 
                     {/* Watchlist: Global commodities */}
