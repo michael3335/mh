@@ -1,9 +1,15 @@
 import { describe, beforeEach, expect, it, vi } from "vitest";
 
-const { botFindManyMock, prismaMock } = vi.hoisted(() => {
+const { botFindManyMock, prismaMock, s3SendMock, notFoundError } = vi.hoisted(() => {
   const botFindManyMock = vi.fn();
+  const s3SendMock = vi.fn();
+  const notFoundError = Object.assign(new Error("NotFound"), {
+    $metadata: { httpStatusCode: 404 },
+  });
   return {
     botFindManyMock,
+    s3SendMock,
+    notFoundError,
     prismaMock: {
       strategy: {
         findMany: vi.fn(),
@@ -26,6 +32,7 @@ const { botFindManyMock, prismaMock } = vi.hoisted(() => {
       promotion: {
         create: vi.fn(),
         update: vi.fn(),
+        findMany: vi.fn(),
       },
       roleAssignment: {
         findFirst: vi.fn(),
@@ -36,6 +43,11 @@ const { botFindManyMock, prismaMock } = vi.hoisted(() => {
 
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
+}));
+
+vi.mock("@/lib/s3", () => ({
+  s3: { send: s3SendMock },
+  BUCKET: "test-bucket",
 }));
 
 vi.mock("@/lib/authz", () => ({
@@ -53,6 +65,9 @@ describe("GET /api/models/bots", () => {
   beforeEach(() => {
     process.env.DATABASE_URL = "postgres://test";
     botFindManyMock.mockReset();
+    s3SendMock.mockReset();
+    s3SendMock.mockRejectedValue(notFoundError);
+    prismaMock.promotion.findMany.mockResolvedValue([]);
   });
 
   it("returns bots from the database when configured", async () => {
@@ -77,6 +92,7 @@ describe("GET /api/models/bots", () => {
     expect(json.bots[0]).toMatchObject({
       id: "bot_seed_001",
       strategy: { slug: "rsi-band" },
+      logTail: null,
     });
   });
 

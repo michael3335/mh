@@ -3,8 +3,17 @@ FROM python:3.11-slim
 # System deps (speed up numpy/scipy wheels install)
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
 
-# Python deps (start minimal; add vectorbt/numba later)
-RUN pip install --no-cache-dir boto3 pandas numpy ccxt python-dateutil
+# Python deps (vectorbt stack + data tooling)
+RUN pip install --no-cache-dir \
+    boto3 \
+    pandas \
+    numpy \
+    ccxt \
+    python-dateutil \
+    numba \
+    pyarrow \
+    scipy \
+    vectorbt==0.26.1
 
 # App code
 WORKDIR /app

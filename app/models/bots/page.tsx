@@ -16,6 +16,15 @@ type Bot = {
     equity?: number;
     dayPnl?: number;
     pairlist?: string[];
+    state?: Record<string, unknown> | null;
+    logTail?: string | null;
+    lastPromotion?: {
+        id: string;
+        status: string;
+        target: string;
+        runId?: string | null;
+        createdAt: string;
+    } | null;
 };
 
 export default function BotsPage() {
@@ -42,7 +51,11 @@ export default function BotsPage() {
         }
     };
 
-    useEffect(() => { refresh(); }, []);
+    useEffect(() => {
+        refresh();
+        const interval = setInterval(refresh, 15000);
+        return () => clearInterval(interval);
+    }, []);
 
     const action = async (id: string, verb: "start" | "stop" | "restart") => {
         setBusyId(id);
@@ -146,7 +159,59 @@ export default function BotsPage() {
                                 </div>
 
                                 <div style={{ fontSize: 12, opacity: 0.8, marginTop: 8 }}>
-                                    {b.pairlist?.length ? `Pairs: ${b.pairlist.join(", ")}` : "—"}
+                                    {b.pairlist?.length ? `Pairs: ${b.pairlist.join(", ")}` : "Pairs: —"}
+                                </div>
+
+                                {b.lastPromotion && (
+                                    <div style={{ marginTop: 10, fontSize: 12 }}>
+                                        <strong>Promotion:</strong>{" "}
+                                        <span style={badge("rgba(234,179,8,.25)")}>{b.lastPromotion.status}</span>{" "}
+                                        <span style={{ opacity: 0.8 }}>
+                                            → {b.lastPromotion.target} · Run {b.lastPromotion.runId ?? "—"}
+                                        </span>
+                                        <div style={{ opacity: 0.6 }}>
+                                            {new Date(b.lastPromotion.createdAt).toLocaleString()}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>State snapshot</div>
+                                    <div
+                                        style={{
+                                            background: "rgba(0,0,0,.04)",
+                                            borderRadius: 8,
+                                            padding: "0.5rem",
+                                            fontSize: 12,
+                                            maxHeight: 100,
+                                            overflow: "auto",
+                                        }}
+                                    >
+                                        {b.state ? (
+                                            <code style={{ whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                                                {JSON.stringify(b.state, null, 2)}
+                                            </code>
+                                        ) : (
+                                            <span style={{ opacity: 0.7 }}>No snapshot uploaded</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4 }}>Log tail</div>
+                                    <pre
+                                        style={{
+                                            background: "#0b1020",
+                                            color: "#f7fafc",
+                                            borderRadius: 8,
+                                            padding: "0.5rem",
+                                            maxHeight: 140,
+                                            overflow: "auto",
+                                            fontSize: 12,
+                                        }}
+                                    >
+                                        {b.logTail ?? "No logs yet."}
+                                    </pre>
                                 </div>
 
                                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>

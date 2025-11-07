@@ -134,12 +134,18 @@ export default function RunsPage() {
                             {loading && <div style={{ padding: "1rem", color: "#111" }}>Loading…</div>}
                             {!loading && runs.map((r) => (
                                 <div key={r.id} style={row}>
-                                    <div>
+                                    <div style={{ textAlign: "left" }}>
                                         <div style={{ fontWeight: 800 }}>{r.id}</div>
                                         <div style={{ fontSize: 12, opacity: 0.7 }}>
                                             {new Date(r.startedAt).toLocaleString()}
                                             {r.finishedAt ? ` → ${new Date(r.finishedAt).toLocaleTimeString()}` : ""}
                                         </div>
+                                        <Link
+                                            href={`/models/runs/${encodeURIComponent(r.id)}`}
+                                            style={{ fontSize: 12, marginTop: 4, display: "inline-block", color: "#2563eb", textDecoration: "none" }}
+                                        >
+                                            View details →
+                                        </Link>
                                     </div>
                                     <div style={{ alignSelf: "center" }}>{r.strategyName}</div>
                                     <div style={{ alignSelf: "center", textTransform: "capitalize" }}>{r.kind}</div>

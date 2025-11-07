@@ -1,0 +1,38 @@
+{
+  "family": "mh-promotion-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::418272764416:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::418272764416:role/mh-promotion-worker-task-role",
+  "containerDefinitions": [
+    {
+      "name": "promotion-worker",
+      "image": "418272764416.dkr.ecr.ap-southeast-2.amazonaws.com/mh/promotion-worker:latest",
+      "essential": true,
+      "command": ["python", "-u", "worker.py"],
+      "environment": [
+        { "name": "AWS_REGION", "value": "ap-southeast-2" },
+        {
+          "name": "SQS_PROMOTION_JOBS_URL",
+          "value": "https://sqs.ap-southeast-2.amazonaws.com/418272764416/promotion-jobs"
+        },
+        { "name": "AWS_S3_BUCKET", "value": "michaelharrison.au-files" },
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://postgres:***@mh-postgres.cria4g6oqtr2.ap-southeast-2.rds.amazonaws.com:5432/mhdb?sslmode=require"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/app/promotion",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "promotion-worker",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

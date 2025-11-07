@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Iterable
 
 import boto3
+import ccxt
 import numpy as np
 import pandas as pd
 import psycopg
+import vectorbt as vbt
 from botocore.exceptions import BotoCoreError, ClientError
 from dateutil.relativedelta import relativedelta  # pip install python-dateutil
 from psycopg.types.json import Json
@@ -86,6 +88,129 @@ def download_strategy(manifest_key: str, dest_path: Path):
     with open(dest_path, "wb") as f:
         s3.download_fileobj(BUCKET, manifest_key, f)
     log(f"Saved strategy to {dest_path}")
+
+def safe_pair(pair: str) -> str:
+    return pair.replace("/", "-").replace(":", "-").lower()
+
+def timeframe_to_ms(timeframe: str) -> int:
+    if not timeframe:
+        return 60 * 60 * 1000
+    unit = timeframe[-1]
+    value = int(timeframe[:-1] or 1)
+    if unit == "m":
+        return value * 60 * 1000
+    if unit == "h":
+        return value * 60 * 60 * 1000
+    if unit == "d":
+        return value * 24 * 60 * 60 * 1000
+    if unit == "w":
+        return value * 7 * 24 * 60 * 60 * 1000
+    return 60 * 60 * 1000
+
+def download_if_exists(key: str, dest: Path) -> bool:
+    if not BUCKET:
+        return False
+    try:
+        with open(dest, "wb") as fh:
+            s3.download_fileobj(BUCKET, key, fh)
+        log(f"Cached s3://{BUCKET}/{key} -> {dest}")
+        return True
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in {"NoSuchKey", "404"}:
+            return False
+        raise
+
+def upload_file(path: Path, key: str, content_type: str = "application/octet-stream"):
+    if not BUCKET:
+        return
+    extra = {"ContentType": content_type}
+    s3.upload_file(str(path), BUCKET, key, ExtraArgs=extra)
+    log(f"Uploaded file s3://{BUCKET}/{key}")
+
+def fetch_ohlcv_year(exchange_id: str, symbol: str, timeframe: str, year: int) -> pd.DataFrame:
+    exchange_cls = getattr(ccxt, exchange_id, None)
+    if not exchange_cls:
+        raise RuntimeError(f"Unsupported exchange: {exchange_id}")
+    exchange = exchange_cls({"enableRateLimit": True})
+    if not exchange.has.get("fetchOHLCV"):
+        raise RuntimeError(f"{exchange_id} does not support fetchOHLCV")
+
+    since = int(pd.Timestamp(year=year, month=1, day=1, tz="UTC").timestamp() * 1000)
+    until = int(pd.Timestamp(year=year + 1, month=1, day=1, tz="UTC").timestamp() * 1000)
+    timeframe_ms = timeframe_to_ms(timeframe)
+
+    rows: List[List[float]] = []
+    cursor = since
+    while cursor < until:
+        try:
+            batch = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=cursor, limit=500)
+        except ccxt.BaseError as exc:
+            log(f"fetch_ohlcv error {exc}; sleeping")
+            time.sleep(1)
+            continue
+
+        if not batch:
+            break
+
+        rows.extend(batch)
+        next_cursor = batch[-1][0] + timeframe_ms
+        if next_cursor <= cursor:
+            next_cursor = cursor + timeframe_ms
+        cursor = next_cursor
+        if exchange.rateLimit:
+            time.sleep(exchange.rateLimit / 1000)
+
+    if not rows:
+        return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
+
+    df = pd.DataFrame(rows, columns=["timestamp", "open", "high", "low", "close", "volume"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    return df
+
+def ensure_market_data(spec: Dict[str, Any], cache_dir: Path) -> pd.DataFrame:
+    exchange_id = (spec.get("exchange") or "binance").lower()
+    symbol = spec.get("pair") or "BTC/USDT"
+    timeframe = spec.get("timeframe") or "1h"
+    start = pd.to_datetime(spec.get("start") or "2022-01-01", utc=True)
+    end = pd.to_datetime(spec.get("end") or datetime.utcnow().date(), utc=True)
+    if end <= start:
+        end = start + pd.Timedelta(days=30)
+
+    years = list(range(start.year, end.year + 1))
+    frames: List[pd.DataFrame] = []
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    pair_slug = safe_pair(symbol)
+
+    for year in years:
+        local_path = cache_dir / f"{exchange_id}_{pair_slug}_{timeframe}_{year}.parquet"
+        s3_key = f"data/{exchange_id}/{pair_slug}/{timeframe}/{year}.parquet"
+        if not local_path.exists():
+            downloaded = download_if_exists(s3_key, local_path)
+            if not downloaded:
+                df_year = fetch_ohlcv_year(exchange_id, symbol, timeframe, year)
+                if df_year.empty:
+                    continue
+                df_year.to_parquet(local_path, index=False)
+                upload_file(local_path, s3_key, "application/octet-stream")
+        try:
+            df = pd.read_parquet(local_path)
+        except Exception:
+            log(f"Failed to read cache {local_path}, refetching…")
+            df = fetch_ohlcv_year(exchange_id, symbol, timeframe, year)
+            if df.empty:
+                continue
+            df.to_parquet(local_path, index=False)
+            upload_file(local_path, s3_key, "application/octet-stream")
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        mask = (df["timestamp"] >= start) & (df["timestamp"] <= end)
+        frames.append(df.loc[mask])
+
+    if not frames:
+        raise RuntimeError("No historical data available")
+
+    merged = pd.concat(frames).drop_duplicates(subset="timestamp").sort_values("timestamp")
+    merged = merged.set_index("timestamp")
+    return merged
 
 # --------------------------------------------------------------------
 # Run store (Postgres)
@@ -218,6 +343,20 @@ def timeframe_to_freq(tf: str) -> str:
     return "1H"
 
 
+def timeframe_to_freq(tf: str) -> str:
+    if not tf:
+        return "1H"
+    suffix = tf[-1]
+    value = tf[:-1]
+    if suffix.lower() == "m":
+        return f"{value}T"
+    if suffix.lower() == "h":
+        return f"{value}H"
+    if suffix.lower() == "d":
+        return f"{value}D"
+    return "1H"
+
+
 def run_engine(
     strategy_path: Path,
     workdir: Path,
@@ -225,67 +364,48 @@ def run_engine(
     params: Optional[Dict[str, Any]] = None,
     phase: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    Simulated backtest using numpy/pandas. Replace with vectorbt/numba-based logic.
-    Generates equity/drawdown/trade artifacts so the UI can render charts.
-    """
+    cache_dir = Path("/tmp/market-data")
     params = params or {}
+    market = ensure_market_data(spec or {}, cache_dir)
+    close = market["close"]
     freq = timeframe_to_freq(spec.get("timeframe", "1h"))
-    periods = 720
-    start_ts = pd.to_datetime(spec.get("start") or datetime.utcnow().date())
-    index = pd.date_range(start=start_ts, periods=periods, freq=freq)
 
-    seed = abs(
-        hash((strategy_path.name, json.dumps(params, sort_keys=True), phase or ""))
-    ) % (2**32)
-    rng = np.random.default_rng(seed)
-    returns = rng.normal(0.0005, 0.01, periods)
-    equity = 10_000 * np.cumprod(1 + returns)
-    peak = np.maximum.accumulate(equity)
-    drawdown = equity / peak - 1
+    rsi_window = int(params.get("rsi_len", 14))
+    buy_thresh = float(params.get("rsi_buy", 30))
+    sell_thresh = float(params.get("rsi_sell", 70))
 
-    duration = max((index[-1] - index[0]).days, 1)
-    duration_years = max(duration / 365, 1 / 365)
-    net_return = float(equity[-1] / equity[0] - 1)
-    cagr = float((equity[-1] / equity[0]) ** (1 / duration_years) - 1)
-    sharpe = float(
-        (returns.mean() / (returns.std() or 1e-9)) * math.sqrt(252)
+    rsi = vbt.RSI.run(close, window=rsi_window)
+    entries = rsi.rsi <= buy_thresh
+    exits = rsi.rsi >= sell_thresh
+
+    portfolio = vbt.Portfolio.from_signals(
+        close,
+        entries,
+        exits,
+        freq=freq,
+        init_cash=10_000,
+        fees=0.0005,
+        slippage=0.0005,
     )
-    downside = returns[returns < 0]
-    sortino = float(
-        (returns.mean() / (downside.std() or 1e-9)) * math.sqrt(252)
-    )
-    win_rate = float(np.mean(returns > 0))
-    avg_trade = float(np.mean(returns) * 10_000)
 
-    trades: List[Dict[str, Any]] = []
-    step = max(5, len(index) // 30)
-    for i in range(0, len(index) - step, step):
-        entry = index[i]
-        exit_idx = min(i + step, len(index) - 1)
-        pnl = float(equity[exit_idx] - equity[i])
-        trades.append(
-            {
-                "entry": entry.isoformat(),
-                "exit": index[exit_idx].isoformat(),
-                "pnl": pnl,
-                "size": 1,
-            }
-        )
+    equity_series = portfolio.value()
+    drawdown_series = portfolio.drawdown_series()
+    trades_df = portfolio.trades.records_readable.copy()
 
     artifacts: List[Dict[str, Any]] = []
+
     equity_path = workdir / "equity.csv"
-    pd.DataFrame({"timestamp": index, "equity": equity}).to_csv(
-        equity_path, index=False
-    )
+    pd.DataFrame(
+        {"timestamp": equity_series.index, "equity": equity_series.values}
+    ).to_csv(equity_path, index=False)
     artifacts.append(
         {"path": str(equity_path), "name": "equity.csv", "content_type": "text/csv"}
     )
 
     drawdown_path = workdir / "drawdown.csv"
-    pd.DataFrame({"timestamp": index, "drawdown": drawdown}).to_csv(
-        drawdown_path, index=False
-    )
+    pd.DataFrame(
+        {"timestamp": drawdown_series.index, "drawdown": drawdown_series.values}
+    ).to_csv(drawdown_path, index=False)
     artifacts.append(
         {
             "path": str(drawdown_path),
@@ -295,10 +415,29 @@ def run_engine(
     )
 
     trades_path = workdir / "trades.csv"
-    pd.DataFrame(trades).to_csv(trades_path, index=False)
+    if not trades_df.empty:
+        trades_df = trades_df.rename(
+            columns={
+                "Entry Timestamp": "entry",
+                "Exit Timestamp": "exit",
+                "PnL": "pnl",
+            }
+        )
+    trades_df.to_csv(trades_path, index=False)
     artifacts.append(
         {"path": str(trades_path), "name": "trades.csv", "content_type": "text/csv"}
     )
+
+    stats = {
+        "netReturn": safe_metric(portfolio.total_return()),
+        "cagr": safe_metric(portfolio.cagr()),
+        "sharpe": safe_metric(portfolio.sharpe_ratio()),
+        "sortino": safe_metric(portfolio.sortino_ratio()),
+        "maxDD": safe_metric(portfolio.max_drawdown()),
+        "winRate": safe_metric(portfolio.trades.win_rate()),
+        "avgTrade": safe_metric(portfolio.trades.pnl.mean()) if portfolio.trades.count() else 0.0,
+        "trades": int(portfolio.trades.count()),
+    }
 
     logs_path = workdir / "logs.txt"
     logs_path.write_text(
@@ -307,10 +446,10 @@ def run_engine(
                 f"Strategy: {strategy_path.name}",
                 f"Phase: {phase or 'backtest'}",
                 f"Params: {json.dumps(params, sort_keys=True)}",
-                f"Net return: {net_return:.2%}",
-                f"CAGR: {cagr:.2%}",
-                f"Sharpe: {sharpe:.2f}",
-                f"Trades: {len(trades)}",
+                f"Net return: {stats['netReturn']:.2%}",
+                f"CAGR: {stats['cagr']:.2%}",
+                f"Sharpe: {stats['sharpe']:.2f}",
+                f"Trades: {stats['trades']}",
             ]
         )
     )
@@ -318,18 +457,7 @@ def run_engine(
         {"path": str(logs_path), "name": "logs.txt", "content_type": "text/plain"}
     )
 
-    kpis = {
-        "netReturn": net_return,
-        "cagr": cagr,
-        "sharpe": sharpe,
-        "sortino": sortino,
-        "maxDD": float(drawdown.min()),
-        "winRate": win_rate,
-        "avgTrade": avg_trade,
-        "trades": len(trades),
-    }
-
-    return {"kpis": kpis, "artifacts": artifacts}
+    return {"kpis": stats, "artifacts": artifacts}
 
 # --------------------------------------------------------------------
 # Kind handlers
@@ -705,3 +833,11 @@ if __name__ == "__main__":
         traceback.print_exc()
         time.sleep(2)
         sys.exit(1)
+def safe_metric(value: Any) -> float:
+    try:
+        num = float(value)
+    except Exception:
+        return 0.0
+    if math.isnan(num) or math.isinf(num):
+        return 0.0
+    return num
