@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDashboard } from "@/components/dashboard/DashboardProvider";
 
 type ValidateResponse = (res: Response) => Promise<void> | void;
@@ -46,14 +46,15 @@ export function useModelApi<T>(path: string | null, options: UseModelApiOptions<
         suppressToast = false,
     } = options;
 
-    const effectiveParser = useMemo<Parser<T>>(() => {
-        if (parser) return parser;
-        return defaultParser as Parser<T>;
+    const parserRef = useRef<Parser<T>>(parser ?? (defaultParser as Parser<T>));
+    const validatorRef = useRef<ValidateResponse>(validateResponse ?? defaultValidateResponse);
+
+    useEffect(() => {
+        parserRef.current = parser ?? (defaultParser as Parser<T>);
     }, [parser]);
 
-    const effectiveValidator = useMemo<ValidateResponse>(() => {
-        if (validateResponse) return validateResponse;
-        return defaultValidateResponse;
+    useEffect(() => {
+        validatorRef.current = validateResponse ?? defaultValidateResponse;
     }, [validateResponse]);
 
     const [data, setData] = useState<T | null>(null);
@@ -67,8 +68,8 @@ export function useModelApi<T>(path: string | null, options: UseModelApiOptions<
         setError(null);
         try {
             const res = await fetch(path, { cache: "no-store", ...requestInit });
-            await effectiveValidator(res);
-            const payload = await effectiveParser(res);
+            await validatorRef.current(res);
+            const payload = await parserRef.current(res);
             setData(payload);
             onSuccess?.(payload);
             return payload;
@@ -87,7 +88,7 @@ export function useModelApi<T>(path: string | null, options: UseModelApiOptions<
         } finally {
             setLoading(false);
         }
-    }, [enabled, path, requestInit, effectiveValidator, effectiveParser, onSuccess, notify, suppressToast]);
+    }, [enabled, path, requestInit, onSuccess, notify, suppressToast]);
 
     useEffect(() => {
         if (!immediate) return;
