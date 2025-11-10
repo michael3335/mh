@@ -1,10 +1,12 @@
 // app/api/models/runs/[id]/route.ts
 import { NextRequest } from "next/server";
-import { s3 } from "@/lib/s3";
+import { s3, BUCKET } from "@/lib/s3";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireRole } from "@/lib/authz";
+import { resolveArtifactPrefix } from "@/lib/run-artifacts";
+import { getSessionUserId } from "@/lib/session";
 
 // Next.js 16: context.params is now a Promise
 export async function GET(
@@ -15,8 +17,9 @@ export async function GET(
   const authz = await requireRole(session, "researcher");
   if (!authz.ok) return authz.response;
   const { id } = await context.params;
+  const ownerId = getSessionUserId(session);
 
-  const bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET;
+  const bucket = BUCKET || process.env.S3_BUCKET || process.env.AWS_S3_BUCKET;
   if (!bucket) {
     return new Response(JSON.stringify({ error: "S3_BUCKET not set" }), {
       status: 500,
@@ -24,7 +27,10 @@ export async function GET(
   }
 
   const runId = decodeURIComponent(id);
-  const key = `runs/${runId}/metrics.json`;
+  const prefix =
+    (await resolveArtifactPrefix(runId, ownerId)) ?? `runs/${runId}/`;
+  const normalized = prefix.endsWith("/") ? prefix : `${prefix}/`;
+  const key = `${normalized}metrics.json`;
 
   try {
     const res = await s3.send(

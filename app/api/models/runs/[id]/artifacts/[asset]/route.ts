@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireRole } from "@/lib/authz";
 import { s3, BUCKET } from "@/lib/s3";
+import { resolveArtifactPrefix } from "@/lib/run-artifacts";
+import { getSessionUserId } from "@/lib/session";
 
 const CONTENT_TYPES: Record<string, string> = {
   metrics: "application/json",
@@ -28,6 +30,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   const authz = await requireRole(session, "researcher");
   if (!authz.ok) return authz.response;
+  const ownerId = getSessionUserId(session);
 
   const { id, asset } = await ctx.params;
   const runId = decodeURIComponent(id);
@@ -41,7 +44,12 @@ export async function GET(
   }
 
   const extension = EXTENSIONS[assetKey];
-  const key = `runs/${runId}/${assetKey}.${extension}`;
+  const resolvedPrefix =
+    (await resolveArtifactPrefix(runId, ownerId)) ?? `runs/${runId}/`;
+  const prefix = resolvedPrefix.endsWith("/")
+    ? resolvedPrefix
+    : `${resolvedPrefix}/`;
+  const key = `${prefix}${assetKey}.${extension}`;
 
   try {
     const res = await s3.send(
