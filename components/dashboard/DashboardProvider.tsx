@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import type { SessionStatus } from "next-auth/react";
+
+type SessionStatus = "loading" | "authenticated" | "unauthenticated";
 
 type ToastTone = "info" | "success" | "error";
 
