@@ -247,8 +247,8 @@ async function upsertStrategyRecord(params: {
   return created.id;
 }
 
-async function ensureUserRecord(ownerId: string, session: Session) {
-  if (!session.user) return;
+async function ensureUserRecord(ownerId: string, session: Session | null) {
+  if (!session?.user) return;
   const email =
     typeof session.user.email === "string" ? session.user.email : undefined;
   const name =
