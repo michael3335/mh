@@ -1,10 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
+model User {
+  id              String            @id
+  email           String?           @unique
+  name            String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  bots            Bot[]             @relation("UserBots")
+  roles           RoleAssignment[]
+  runs            Run[]             @relation("RunOwner")
+  strategies      Strategy[]        @relation("StrategyOwner")
+  createdVersions StrategyVersion[] @relation("StrategyVersionCreatedBy")
+}
+
+model RoleAssignment {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Strategy {
+  id              String            @id @default(cuid())
+  slug            String            @unique
+  name            String
+  ownerId         String
+  manifest        Json?
+  description     String?
+  latestVersionId String?           @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  bots            Bot[]
+  runs            Run[]
+  latestVersion   StrategyVersion?  @relation("StrategyLatestVersion", fields: [latestVersionId], references: [id])
+  owner           User              @relation("StrategyOwner", fields: [ownerId], references: [id])
+  versions        StrategyVersion[]
+}
+
+model StrategyVersion {
+  id          String    @id @default(cuid())
+  strategyId  String
+  versionTag  String
+  s3Key       String
+  manifest    Json?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  currentFor  Strategy? @relation("StrategyLatestVersion")
+  createdBy   User?     @relation("StrategyVersionCreatedBy", fields: [createdById], references: [id])
+  strategy    Strategy  @relation(fields: [strategyId], references: [id])
+}
+
+model Run {
+  id             String      @id
+  strategyId     String
+  ownerId        String?
+  kind           RunKind
+  status         RunStatus   @default(QUEUED)
+  artifactPrefix String
+  spec           Json?
+  params         Json?
+  kpis           Json?
+  startedAt      DateTime    @default(now())
+  finishedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  promotions     Promotion[]
+  owner          User?       @relation("RunOwner", fields: [ownerId], references: [id])
+  strategy       Strategy    @relation(fields: [strategyId], references: [id])
+}
+
+model Bot {
+  id         String      @id @default(cuid())
+  name       String
+  mode       String
+  status     String
+  equity     Float?
+  dayPnl     Float?
+  pairlist   String[]
+  strategyId String?
+  configKey  String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  ownerId    String?
+  owner      User?       @relation("UserBots", fields: [ownerId], references: [id])
+  strategy   Strategy?   @relation(fields: [strategyId], references: [id])
+  promotions Promotion[]
+}
+
+model Promotion {
+  id        String          @id @default(cuid())
+  runId     String
+  botId     String
+  target    String
+  status    PromotionStatus @default(PENDING)
+  error     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  bot       Bot             @relation(fields: [botId], references: [id])
+  run       Run             @relation(fields: [runId], references: [id])
 }
 
 enum Role {
@@ -24,113 +125,6 @@ enum RunStatus {
   RUNNING
   SUCCEEDED
   FAILED
-}
-
-model User {
-  id        String   @id
-  email     String?  @unique
-  name      String?
-  roles     RoleAssignment[]
-  strategies Strategy[] @relation("StrategyOwner")
-  runs      Run[]       @relation("RunOwner")
-  createdVersions StrategyVersion[] @relation("StrategyVersionCreatedBy")
-  bots      Bot[] @relation("UserBots")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model RoleAssignment {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  role      Role
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Strategy {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  name      String
-  ownerId   String
-  manifest  Json?
-  description String?
-  latestVersionId String? @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner          User              @relation("StrategyOwner", fields: [ownerId], references: [id])
-  latestVersion  StrategyVersion?  @relation("StrategyLatestVersion", fields: [latestVersionId], references: [id])
-  versions       StrategyVersion[]
-  runs           Run[]
-  bots           Bot[]
-}
-
-model StrategyVersion {
-  id          String   @id @default(cuid())
-  strategyId  String
-  versionTag  String
-  s3Key       String
-  manifest    Json?
-  createdById String?
-  createdAt   DateTime @default(now())
-
-  strategy  Strategy  @relation(fields: [strategyId], references: [id])
-  createdBy User?     @relation("StrategyVersionCreatedBy", fields: [createdById], references: [id])
-  currentFor Strategy? @relation("StrategyLatestVersion")
-}
-
-model Run {
-  id             String   @id
-  strategyId     String
-  ownerId        String?
-  kind           RunKind
-  status         RunStatus @default(QUEUED)
-  artifactPrefix String
-  spec           Json?
-  params         Json?
-  kpis           Json?
-  startedAt      DateTime @default(now())
-  finishedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  strategy Strategy @relation(fields: [strategyId], references: [id])
-  owner    User?    @relation("RunOwner", fields: [ownerId], references: [id])
-  promotions Promotion[]
-}
-
-model Bot {
-  id          String   @id @default(cuid())
-  name        String
-  mode        String   // paper or live
-  status      String
-  equity      Float?
-  dayPnl      Float?
-  pairlist    String[]
-  strategyId  String?
-  configKey   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  ownerId    String?
-  strategy Strategy? @relation(fields: [strategyId], references: [id])
-  owner    User?     @relation("UserBots", fields: [ownerId], references: [id])
-  promotions Promotion[]
-}
-
-model Promotion {
-  id        String         @id @default(cuid())
-  runId     String
-  botId     String
-  target    String
-  status    PromotionStatus @default(PENDING)
-  error     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  run Run @relation(fields: [runId], references: [id])
-  bot Bot @relation(fields: [botId], references: [id])
 }
 
 enum PromotionStatus {
