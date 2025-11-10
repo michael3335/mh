@@ -1,6 +1,7 @@
 "use client";
 
-import ModelsShell, { useModelsContext } from "@/components/models/ModelsShell";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
 import { useModelApi } from "@/lib/hooks/useModelApi";
 import { useState } from "react";
 
@@ -27,14 +28,14 @@ type Bot = {
 
 export default function BotsPage() {
     return (
-        <ModelsShell title="Bots" unauthenticatedMessage="You must sign in to view bots.">
+        <DashboardShell title="Bots" unauthenticatedMessage="You must sign in to view bots.">
             <BotsContent />
-        </ModelsShell>
+        </DashboardShell>
     );
 }
 
 function BotsContent() {
-    const { status, notify } = useModelsContext();
+    const { status, notify } = useDashboard();
     const [busyId, setBusyId] = useState<string | null>(null);
 
     const enabled = status === "authenticated";

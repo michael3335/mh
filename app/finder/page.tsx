@@ -8,7 +8,8 @@ import {
     useCallback,
     Fragment,
 } from "react";
-import { useSession } from "next-auth/react";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
 import { useRouter } from "next/navigation";
 
 /* ---------------- Types ---------------- */
@@ -35,10 +36,33 @@ type SelectGesture = {
 /* ---------------- Component ---------------- */
 
 export default function Finder() {
-    const { status } = useSession();
+    return (
+        <DashboardShell
+            title="Files"
+            hero={null}
+            unauthenticatedMessage="Sign in to view files."
+            footerLinks={[]}
+            mainStyle={{
+                minHeight: "100svh",
+                width: "100vw",
+                display: "grid",
+                placeItems: "center",
+                background: "radial-gradient(1200px 800px at 20% -10%, #232325 0%, #1a1a1c 30%, #121214 100%)",
+                color: "#f2f2f7",
+                fontFamily: '-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", Arial, sans-serif',
+                padding: 0,
+            }}
+            sectionStyle={{ display: "contents" }}
+        >
+            <FinderContent />
+        </DashboardShell>
+    );
+}
+
+function FinderContent() {
+    const { notify } = useDashboard();
     const router = useRouter();
 
-    // path / data / ui state
     const [path, setPath] = useState<string>("");
     const [items, setItems] = useState<Item[]>([]);
     const [loading, setLoading] = useState(false);
@@ -49,21 +73,17 @@ export default function Finder() {
     const [sortAsc, setSortAsc] = useState<boolean>(true);
     const [progress, setProgress] = useState<number | null>(null);
 
-    // selection (keys)
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const lastClickedRef = useRef<string | null>(null);
 
-    // refs
     const fileInputRef = useRef<HTMLInputElement>(null);
     const gridContainerRef = useRef<HTMLDivElement>(null);
     const dragRectRef = useRef<HTMLDivElement | null>(null);
     const dragStartRef = useRef<{ x: number; y: number } | null>(null);
     const toastTimeoutRef = useRef<number | null>(null);
 
-    // race-safe fetch
     const currentLoadAbortRef = useRef<AbortController | null>(null);
 
-    // context menu
     const [menu, setMenu] = useState<{
         open: boolean;
         x: number;
@@ -71,14 +91,16 @@ export default function Finder() {
         item: Item | null;
     }>({ open: false, x: 0, y: 0, item: null });
 
-    // toast
-    const toast = useCallback((t: string, ms = 3000) => {
+    const toast = useCallback((t: string, ms = 3000, tone: "info" | "error" = "info") => {
         setMsg(t);
         if (toastTimeoutRef.current) {
             window.clearTimeout(toastTimeoutRef.current);
         }
         toastTimeoutRef.current = window.setTimeout(() => setMsg(null), ms);
-    }, []);
+        if (tone === "error") {
+            notify({ tone: "error", message: t });
+        }
+    }, [notify]);
 
     /* ---------------- Data loading ---------------- */
 
@@ -101,7 +123,7 @@ export default function Finder() {
                     if (!res.ok) {
                         const text = await res.text().catch(() => "");
                         console.error("[files] list failed", res.status, text);
-                        toast(`List failed (${res.status})`);
+                        toast(`List failed (${res.status})`, 3000, "error");
                         break;
                     }
                     const data: {
@@ -122,7 +144,7 @@ export default function Finder() {
                     return;
                 }
                 console.error(error);
-                toast("Network error while listing", 5000);
+                toast("Network error while listing", 5000, "error");
             } finally {
                 if (!signal?.aborted) setLoading(false);
             }
@@ -131,13 +153,12 @@ export default function Finder() {
     );
 
     useEffect(() => {
-        if (status !== "authenticated") return;
         currentLoadAbortRef.current?.abort();
         const ctrl = new AbortController();
         currentLoadAbortRef.current = ctrl;
         loadAll(path, ctrl.signal);
         return () => ctrl.abort();
-    }, [status, path, loadAll]);
+    }, [path, loadAll]);
 
     /* ---------------- Navigation ---------------- */
 
@@ -184,12 +205,12 @@ export default function Finder() {
                         path,
                     }),
                 });
-                if (!r.ok) {
-                    const text = await r.text().catch(() => "");
-                    console.error("[presign] failed", r.status, text);
-                    toast(`Upload presign failed (${r.status})`);
-                    continue;
-                }
+                    if (!r.ok) {
+                        const text = await r.text().catch(() => "");
+                        console.error("[presign] failed", r.status, text);
+                        toast(`Upload presign failed (${r.status})`, 3000, "error");
+                        continue;
+                    }
                 const { url } = (await r.json()) as { url: string };
 
                 // 2) PUT to S3 with progress
@@ -199,7 +220,7 @@ export default function Finder() {
             } catch (err) {
                 console.error(err);
                 setProgress(null);
-                toast("Upload error", 5000);
+                toast("Upload error", 5000, "error");
             }
         }
         await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
@@ -216,7 +237,7 @@ export default function Finder() {
             credentials: "same-origin",
             body: JSON.stringify({ name, path }),
         });
-        if (!res.ok) return toast("Couldn't create folder");
+        if (!res.ok) return toast("Couldn't create folder", 3000, "error");
         toast("Folder created");
         await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
     }, [path, loadAll, toast]);
@@ -241,7 +262,7 @@ export default function Finder() {
             )
                 return;
             const ok = await deleteKey(key, isFolder);
-            if (!ok) toast("Delete failed", 5000);
+            if (!ok) toast("Delete failed", 5000, "error");
             else toast("Deleted");
             await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
@@ -278,7 +299,7 @@ export default function Finder() {
                 credentials: "same-origin",
                 body: JSON.stringify({ fromKey: file.key, toKey }),
             });
-            if (!res.ok) return toast("Rename failed", 5000);
+            if (!res.ok) return toast("Rename failed", 5000, "error");
             toast("Renamed");
             await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
         },
@@ -306,7 +327,7 @@ export default function Finder() {
                     path: parentPrefix.replace(/^user\/[^/]+\//, ""),
                 }),
             });
-            if (!markerRes.ok) return toast("Couldn't create new folder", 5000);
+            if (!markerRes.ok) return toast("Couldn't create new folder", 5000, "error");
 
             // Move visible files (when viewing the parent)
             const visibleInFolder = items.filter(
@@ -520,14 +541,10 @@ export default function Finder() {
 
     /* ---------------- Render ---------------- */
 
-    if (status === "loading") return <div style={{ padding: 24 }}>Loading…</div>;
-    if (status !== "authenticated")
-        return <div style={{ padding: 24 }}>Sign in to view files.</div>;
-
     const count = sorted.length;
 
     return (
-        <main
+        <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={onDrop}
             style={{
@@ -829,7 +846,7 @@ export default function Finder() {
                     />
                 )}
             </div>
-        </main>
+        </div>
     );
 }
 

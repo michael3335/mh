@@ -1,6 +1,7 @@
 "use client";
 
-import ModelsShell, { useModelsContext } from "@/components/models/ModelsShell";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
 import { HistoryChart } from "@/components/HistoryModal";
 import type { Route } from "next";
 import { useParams } from "next/navigation";
@@ -65,7 +66,7 @@ export default function RunDetailPage() {
   const runId = decodeURIComponent(params.id);
 
   return (
-    <ModelsShell
+    <DashboardShell
       title={`Run ${runId}`}
       unauthenticatedMessage="You must sign in to view run details."
       footerLinks={[
@@ -74,7 +75,7 @@ export default function RunDetailPage() {
       ]}
     >
       <RunDetailContent runId={runId} />
-    </ModelsShell>
+    </DashboardShell>
   );
 }
 
@@ -83,7 +84,7 @@ type RunDetailContentProps = {
 };
 
 function RunDetailContent({ runId }: RunDetailContentProps) {
-  const { status } = useModelsContext();
+  const { status } = useDashboard();
   const encodedId = encodeURIComponent(runId);
   const enabled = status === "authenticated" && Boolean(runId);
 

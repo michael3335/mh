@@ -1,6 +1,7 @@
 "use client";
 
-import ModelsShell, { useModelsContext } from "@/components/models/ModelsShell";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import { z } from "zod";
@@ -50,7 +51,7 @@ export default function StrategyEditorPage() {
   const params = useParams<{ id: string }>();
   const strategySlug = decodeURIComponent(params.id);
   return (
-    <ModelsShell
+    <DashboardShell
       title="Strategy"
       unauthenticatedMessage="You must sign in to edit strategies."
       footerLinks={[
@@ -59,12 +60,12 @@ export default function StrategyEditorPage() {
       ]}
     >
       <StrategyEditorContent strategySlug={strategySlug} />
-    </ModelsShell>
+    </DashboardShell>
   );
 }
 
 function StrategyEditorContent({ strategySlug }: StrategyEditorContentProps) {
-  const { status, notify } = useModelsContext();
+  const { status, notify } = useDashboard();
   const router = useRouter();
   const runsRoute = "/models/runs" as Route;
 

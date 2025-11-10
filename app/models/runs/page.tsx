@@ -1,6 +1,7 @@
 "use client";
 
-import ModelsShell, { useModelsContext } from "@/components/models/ModelsShell";
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
 import Link from "next/link";
 import type { Route } from "next";
 import { useMemo } from "react";
@@ -20,14 +21,14 @@ type Run = {
 
 export default function RunsPage() {
     return (
-        <ModelsShell title="Runs" unauthenticatedMessage="You must sign in to view runs.">
+        <DashboardShell title="Runs" unauthenticatedMessage="You must sign in to view runs.">
             <RunsContent />
-        </ModelsShell>
+        </DashboardShell>
     );
 }
 
 function RunsContent() {
-    const { status } = useModelsContext();
+    const { status } = useDashboard();
     const enabled = status === "authenticated";
 
     const { data, loading, error } = useModelApi<Run[]>(

@@ -1,7 +1,7 @@
 // app/models/page.tsx
 "use client";
 
-import ModelsShell from "@/components/models/ModelsShell";
+import DashboardShell from "@/components/dashboard/DashboardShell";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -25,12 +25,12 @@ export default function ModelsPage() {
     };
 
     return (
-        <ModelsShell title="Models" unauthenticatedMessage="You must sign in to view models.">
+        <DashboardShell title="Models" unauthenticatedMessage="You must sign in to view models.">
             <div style={{ display: "grid", gap: "0.8rem", justifyItems: "center" }}>
                 <Link href={routes.strategiesSeed} style={buttonStyle}>📊 Strategies</Link>
                 <Link href={routes.runs} style={buttonStyle}>🚀 Runs</Link>
                 <Link href={routes.bots} style={buttonStyle}>🤖 Bots</Link>
             </div>
-        </ModelsShell>
+        </DashboardShell>
     );
 }

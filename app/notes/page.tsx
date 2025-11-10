@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
-import ASCIIText from "@/components/ASCIIText";
+import DashboardShell from "@/components/dashboard/DashboardShell";
 import Link from "next/link";
 
 type VersionItem = { key: string; size: number; lastModified: string | null };
@@ -11,7 +10,18 @@ const sanitizeHtml = (html: string) =>
     html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 
 export default function NotesPage() {
-    const { status } = useSession();
+    return (
+        <DashboardShell
+            title="Notes"
+            unauthenticatedMessage="You must sign in to edit your note."
+            footerLinks={[]}
+        >
+            <NotesContent />
+        </DashboardShell>
+    );
+}
+
+function NotesContent() {
     const editorRef = useRef<HTMLDivElement | null>(null);
 
     const [loading, setLoading] = useState(false);
@@ -25,9 +35,7 @@ export default function NotesPage() {
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [previewKey, setPreviewKey] = useState<string | null>(null);
 
-    // Load latest
     useEffect(() => {
-        if (status !== "authenticated") return;
         let cancelled = false;
         (async () => {
             setLoading(true);
@@ -42,8 +50,7 @@ export default function NotesPage() {
                 }
             } catch (error) {
                 if (!cancelled) {
-                    const message =
-                        error instanceof Error ? error.message : "Failed to load note";
+                    const message = error instanceof Error ? error.message : "Failed to load note";
                     setError(message);
                 }
             } finally {
@@ -53,7 +60,7 @@ export default function NotesPage() {
         return () => {
             cancelled = true;
         };
-    }, [status]);
+    }, []);
 
     const save = useCallback(async () => {
         if (!editorRef.current) return;
@@ -72,16 +79,13 @@ export default function NotesPage() {
         }
     }, []);
 
-    // Autosave every 10s
     useEffect(() => {
-        if (status !== "authenticated") return;
         const id = setInterval(() => {
             if (dirty) save();
         }, 10_000);
         return () => clearInterval(id);
-    }, [dirty, status, save]);
+    }, [dirty, save]);
 
-    // History handlers
     async function loadHistory() {
         setHistoryOpen(true);
         setVersions(null);
@@ -117,7 +121,6 @@ export default function NotesPage() {
             setError(`Revert error: HTTP ${res.status}`);
             return;
         }
-        // Reload the latest content after revert
         const latest = await fetch("/api/note", { cache: "no-store" });
         const html = await latest.text();
         if (editorRef.current) editorRef.current.innerHTML = html || "";
@@ -127,42 +130,8 @@ export default function NotesPage() {
         setPreviewKey(null);
     }
 
-    if (status === "loading") {
-        return (
-            <main style={{ minHeight: "100svh", display: "grid", placeItems: "center" }}>
-                <p>Checking access…</p>
-            </main>
-        );
-    }
-
-    if (status === "unauthenticated") {
-        return (
-            <main style={{ minHeight: "100svh", display: "grid", placeItems: "center", textAlign: "center", gap: 16 }}>
-                <div style={{ width: "min(92vw, 900px)", height: "clamp(80px, 18vw, 200px)", position: "relative" }}>
-                    <ASCIIText text="Notes" enableWaves interactive={false} />
-                </div>
-                <p>You must sign in to edit your note.</p>
-                <Link
-                    href="/api/auth/signin"
-                    style={{
-                        padding: "0.6rem 1.2rem",
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        border: "2px solid currentColor",
-                        textDecoration: "none",
-                    }}
-                >
-                    Sign In
-                </Link>
-                <Link href="/" style={{ opacity: 0.7, textDecoration: "none" }}>
-                    ← Back to Home
-                </Link>
-            </main>
-        );
-    }
-
     return (
-        <main
+        <div
             style={{
                 minHeight: "100svh",
                 display: "grid",
@@ -171,11 +140,6 @@ export default function NotesPage() {
                 padding: "clamp(16px, 4vw, 32px)",
             }}
         >
-            {/* Title */}
-            <div style={{ width: "min(92vw, 900px)", height: "clamp(80px, 18vw, 200px)", position: "relative", justifySelf: "center" }}>
-                <ASCIIText text="Notes" enableWaves interactive={false} />
-            </div>
-
             {/* Actions */}
             <div
                 aria-label="Editor toolbar"
@@ -200,72 +164,77 @@ export default function NotesPage() {
                         const url = prompt("Link URL:");
                         if (url) document.execCommand("createLink", false, url);
                     }}
-                    title="Insert link"
                 >
                     Link
                 </button>
                 <span style={{ flex: 1 }} />
-                <button onClick={() => document.execCommand("undo")} title="Undo">Undo</button>
-                <button onClick={() => document.execCommand("redo")} title="Redo">Redo</button>
-                <button onClick={save} disabled={saving} title="Save (Ctrl/Cmd+S)">{saving ? "Saving…" : "Save"}</button>
-                <button onClick={loadHistory} title="History">History</button>
-                <span style={{ fontSize: 12, opacity: 0.6 }}>
-                    {loading ? "Loading…" : dirty ? "Unsaved changes" : lastSaved ? `Saved ${new Date(lastSaved).toLocaleTimeString()}` : "—"}
-                </span>
+                <button disabled={saving} onClick={save}>
+                    {saving ? "Saving…" : dirty ? "Save" : "Saved"}
+                </button>
+                <button onClick={loadHistory}>History</button>
+                {lastSaved && <span style={{ fontSize: 12, opacity: 0.6 }}>Last saved {new Date(lastSaved).toLocaleTimeString()}</span>}
             </div>
 
-            {/* History Drawer */}
             {historyOpen && (
                 <div
+                    role="dialog"
+                    aria-modal="true"
                     style={{
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: 10,
-                        padding: 10,
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.45)",
                         display: "grid",
-                        gap: 8,
-                        maxWidth: 900,
-                        justifySelf: "center",
-                        width: "100%",
+                        placeItems: "center",
+                        padding: 24,
+                        zIndex: 999,
                     }}
+                    onClick={() => setHistoryOpen(false)}
                 >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <strong style={{ fontSize: 14 }}>Version History</strong>
-                        <span style={{ opacity: 0.6, fontSize: 12 }}>
-                            {versions ? `${versions.length} versions` : "Loading…"}
-                        </span>
-                        <span style={{ flex: 1 }} />
-                        <button onClick={() => setHistoryOpen(false)}>Close</button>
-                    </div>
-
-                    <div style={{ display: "grid", gap: 6 }}>
-                        {(versions ?? []).map(v => (
-                            <div
-                                key={v.key}
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "1fr auto auto",
-                                    gap: 8,
-                                    alignItems: "center",
-                                    border: "1px solid rgba(255,255,255,0.08)",
-                                    borderRadius: 8,
-                                    padding: "8px 10px",
-                                }}
-                            >
-                                <div style={{ minWidth: 0 }}>
-                                    <div style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.key}</div>
-                                    <div style={{ fontSize: 12, opacity: 0.65 }}>
-                                        {v.lastModified ? new Date(v.lastModified).toLocaleString() : "—"} · {(v.size / 1024).toFixed(1)} KB
+                    <div
+                        style={{
+                            width: "min(640px, 92vw)",
+                            maxHeight: "80vh",
+                            overflow: "auto",
+                            background: "rgba(14,14,18,0.95)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            borderRadius: 12,
+                            padding: 16,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                            <strong>History</strong>
+                            <button onClick={() => setHistoryOpen(false)}>Close</button>
+                        </div>
+                        <div style={{ display: "grid", gap: 6 }}>
+                            {(versions ?? []).map((v) => (
+                                <div
+                                    key={v.key}
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "1fr auto auto",
+                                        gap: 8,
+                                        alignItems: "center",
+                                        border: "1px solid rgba(255,255,255,0.08)",
+                                        borderRadius: 8,
+                                        padding: "8px 10px",
+                                    }}
+                                >
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.key}</div>
+                                        <div style={{ fontSize: 12, opacity: 0.65 }}>
+                                            {v.lastModified ? new Date(v.lastModified).toLocaleString() : "—"} · {(v.size / 1024).toFixed(1)} KB
+                                        </div>
                                     </div>
+                                    <button onClick={() => openPreview(v.key)}>Preview</button>
+                                    <button onClick={() => restore(v.key)}>Restore</button>
                                 </div>
-                                <button onClick={() => openPreview(v.key)}>Preview</button>
-                                <button onClick={() => restore(v.key)}>Restore</button>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Preview Modal */}
             {previewHtml != null && (
                 <div
                     role="dialog"
@@ -279,7 +248,10 @@ export default function NotesPage() {
                         zIndex: 1000,
                         padding: 16,
                     }}
-                    onClick={() => { setPreviewHtml(null); setPreviewKey(null); }}
+                    onClick={() => {
+                        setPreviewHtml(null);
+                        setPreviewKey(null);
+                    }}
                 >
                     <div
                         style={{
@@ -297,7 +269,14 @@ export default function NotesPage() {
                             <strong>Preview</strong>
                             <span style={{ opacity: 0.6, fontSize: 12 }}>{previewKey}</span>
                             <span style={{ flex: 1 }} />
-                            <button onClick={() => { setPreviewHtml(null); setPreviewKey(null); }}>Close</button>
+                            <button
+                                onClick={() => {
+                                    setPreviewHtml(null);
+                                    setPreviewKey(null);
+                                }}
+                            >
+                                Close
+                            </button>
                             {previewKey && <button onClick={() => restore(previewKey)}>Restore this</button>}
                         </div>
                         <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
@@ -305,7 +284,10 @@ export default function NotesPage() {
                 </div>
             )}
 
-            {/* Editor */}
+            <div style={{ textAlign: "center", opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Loading note…" : ""}
+            </div>
+
             <div
                 ref={editorRef}
                 contentEditable
@@ -335,7 +317,6 @@ export default function NotesPage() {
                 }}
             />
 
-            {/* Footer */}
             <div style={{ justifySelf: "center", display: "flex", gap: 12, alignItems: "center" }}>
                 {error && <span style={{ color: "rgb(255 120 120)" }}>Error: {error}</span>}
                 <Link href="/" style={{ opacity: 0.7, textDecoration: "none" }}>
@@ -356,6 +337,6 @@ export default function NotesPage() {
         button:active { transform: translateY(1px); }
         button:disabled { opacity: 0.6; cursor: not-allowed; }
       `}</style>
-        </main>
+        </div>
     );
 }

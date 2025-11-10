@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useModelsContext } from "@/components/models/ModelsShell";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
 
 type ValidateResponse = (res: Response) => Promise<void> | void;
 type Parser<T> = (res: Response) => Promise<T>;
@@ -34,7 +34,7 @@ type UseModelApiResult<T> = {
 };
 
 export function useModelApi<T>(path: string | null, options: UseModelApiOptions<T> = {}): UseModelApiResult<T> {
-    const { notify } = useModelsContext();
+    const { notify } = useDashboard();
     const {
         enabled = true,
         immediate = true,
