@@ -93,10 +93,14 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
     { enabled }
   );
 
+  const runKind = metricsQuery.data?.kind;
+  const allowArtifacts = enabled && runKind === "backtest";
+
   const equityQuery = useModelApi<SeriesPoint[]>(
     enabled ? `${API}/runs/${encodedId}/artifacts/equity` : null,
     {
-      enabled,
+      enabled: allowArtifacts,
+      immediate: allowArtifacts,
       parser: async (res) => {
         if (res.status === 404) return [];
         const text = await res.text();
@@ -112,7 +116,8 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
   const drawdownQuery = useModelApi<SeriesPoint[]>(
     enabled ? `${API}/runs/${encodedId}/artifacts/drawdown` : null,
     {
-      enabled,
+      enabled: allowArtifacts,
+      immediate: allowArtifacts,
       parser: async (res) => {
         if (res.status === 404) return [];
         const text = await res.text();
@@ -128,7 +133,8 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
   const tradesQuery = useModelApi<TradeRow[]>(
     enabled ? `${API}/runs/${encodedId}/artifacts/trades` : null,
     {
-      enabled,
+      enabled: allowArtifacts,
+      immediate: allowArtifacts,
       parser: async (res) => {
         if (res.status === 404) return [];
         const text = await res.text();
@@ -142,6 +148,9 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
   );
 
   const metrics = metricsQuery.data;
+  const artifactKindResolved = Boolean(runKind);
+  const artifactUnavailable = artifactKindResolved && runKind !== "backtest";
+
   const equity = equityQuery.data ?? [];
   const drawdown = drawdownQuery.data ?? [];
   const trades = tradesQuery.data ?? [];
@@ -228,7 +237,15 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
                 <div style={{ fontWeight: 900, marginBottom: 8, color: "#111" }}>
                   Equity Curve
                 </div>
-                {equity.length ? (
+                {!artifactKindResolved ? (
+                  <div style={{ color: "#111", fontSize: 14 }}>Loading run metadata…</div>
+                ) : artifactUnavailable ? (
+                  <div style={{ color: "#111", fontSize: 14 }}>
+                    Equity curves are only generated for backtests. This run is <strong>{runKind}</strong>.
+                  </div>
+                ) : equityQuery.loading ? (
+                  <div style={{ color: "#111", fontSize: 14 }}>Loading equity data…</div>
+                ) : equity.length ? (
                   <HistoryChart data={equity} unitLabel="USD" width={480} height={280} />
                 ) : (
                   <div style={{ color: "#111", fontSize: 14 }}>No equity data.</div>
@@ -238,7 +255,15 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
                 <div style={{ fontWeight: 900, marginBottom: 8, color: "#111" }}>
                   Drawdown
                 </div>
-                {drawdown.length ? (
+                {!artifactKindResolved ? (
+                  <div style={{ color: "#111", fontSize: 14 }}>Loading run metadata…</div>
+                ) : artifactUnavailable ? (
+                  <div style={{ color: "#111", fontSize: 14 }}>
+                    Drawdown curves are only generated for backtests. This run is <strong>{runKind}</strong>.
+                  </div>
+                ) : drawdownQuery.loading ? (
+                  <div style={{ color: "#111", fontSize: 14 }}>Loading drawdown data…</div>
+                ) : drawdown.length ? (
                   <HistoryChart data={drawdown} unitLabel="%" width={480} height={280} />
                 ) : (
                   <div style={{ color: "#111", fontSize: 14 }}>No drawdown data.</div>
@@ -250,52 +275,62 @@ function RunDetailContent({ runId }: RunDetailContentProps) {
               <div style={{ fontWeight: 900, marginBottom: 8, color: "#111", textAlign: "left" }}>
                 Trades
               </div>
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", color: "#111" }}>
-                  <thead>
-                    <tr style={{ background: "rgba(0,0,0,.05)", textAlign: "left" }}>
-                      <th style={{ padding: "0.5rem", fontSize: 12, textTransform: "uppercase" }}>
-                        Entry
-                      </th>
-                      <th style={{ padding: "0.5rem", fontSize: 12, textTransform: "uppercase" }}>
-                        Exit
-                      </th>
-                      <th style={{ padding: "0.5rem", fontSize: 12, textTransform: "uppercase" }}>
-                        PnL (USD)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trades.slice(0, 25).map((trade, idx) => (
-                      <tr key={`${trade.entry}-${idx}`} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
-                        <td style={{ padding: "0.5rem" }}>
-                          {new Date(trade.entry).toLocaleString()}
-                        </td>
-                        <td style={{ padding: "0.5rem" }}>
-                          {new Date(trade.exit).toLocaleString()}
-                        </td>
-                        <td
-                          style={{
-                            padding: "0.5rem",
-                            fontWeight: 700,
-                            color: trade.pnl >= 0 ? "#16a34a" : "#dc2626",
-                          }}
-                        >
-                          {trade.pnl.toFixed(2)}
-                        </td>
+              {!artifactKindResolved ? (
+                <div style={{ color: "#111" }}>Loading run metadata…</div>
+              ) : artifactUnavailable ? (
+                <div style={{ color: "#111" }}>
+                  Trade logs are only generated for backtests. This run is <strong>{runKind}</strong>; open one of its child runs to inspect trades.
+                </div>
+              ) : tradesQuery.loading ? (
+                <div style={{ color: "#111" }}>Loading trades…</div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", color: "#111" }}>
+                    <thead>
+                      <tr style={{ background: "rgba(0,0,0,.05)", textAlign: "left" }}>
+                        <th style={{ padding: "0.5rem", fontSize: 12, textTransform: "uppercase" }}>
+                          Entry
+                        </th>
+                        <th style={{ padding: "0.5rem", fontSize: 12, textTransform: "uppercase" }}>
+                          Exit
+                        </th>
+                        <th style={{ padding: "0.5rem", fontSize: 12, textTransform: "uppercase" }}>
+                          PnL (USD)
+                        </th>
                       </tr>
-                    ))}
-                    {!trades.length && (
-                      <tr>
-                        <td colSpan={3} style={{ padding: "0.75rem" }}>
-                          No trades recorded.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-        </div>
+                    </thead>
+                    <tbody>
+                      {trades.slice(0, 25).map((trade, idx) => (
+                        <tr key={`${trade.entry}-${idx}`} style={{ borderTop: "1px solid rgba(0,0,0,.08)" }}>
+                          <td style={{ padding: "0.5rem" }}>
+                            {new Date(trade.entry).toLocaleString()}
+                          </td>
+                          <td style={{ padding: "0.5rem" }}>
+                            {new Date(trade.exit).toLocaleString()}
+                          </td>
+                          <td
+                            style={{
+                              padding: "0.5rem",
+                              fontWeight: 700,
+                              color: trade.pnl >= 0 ? "#16a34a" : "#dc2626",
+                            }}
+                          >
+                            {trade.pnl.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                      {!trades.length && (
+                        <tr>
+                          <td colSpan={3} style={{ padding: "0.75rem" }}>
+                            No trades recorded.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
     </>
   );
 }
