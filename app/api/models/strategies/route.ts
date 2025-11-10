@@ -1,6 +1,7 @@
 // app/api/models/strategies/route.ts
 import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
+import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 
@@ -96,11 +97,14 @@ export async function POST(req: NextRequest) {
     }
 
     const ownerId = getSessionUserId(session);
-    if (hasDatabase() && !ownerId) {
-      return Response.json(
-        { error: "Missing user identifier for strategy owner" },
-        { status: 400 }
-      );
+    if (hasDatabase()) {
+      if (!ownerId) {
+        return Response.json(
+          { error: "Missing user identifier for strategy owner" },
+          { status: 400 }
+        );
+      }
+      await ensureUserRecord(ownerId, session);
     }
 
     const versionTag =
@@ -241,4 +245,18 @@ async function upsertStrategyRecord(params: {
     },
   });
   return created.id;
+}
+
+async function ensureUserRecord(ownerId: string, session: Session) {
+  if (!session.user) return;
+  const email =
+    typeof session.user.email === "string" ? session.user.email : undefined;
+  const name =
+    typeof session.user.name === "string" ? session.user.name : undefined;
+
+  await prisma.user.upsert({
+    where: { id: ownerId },
+    update: { email, name },
+    create: { id: ownerId, email, name },
+  });
 }
