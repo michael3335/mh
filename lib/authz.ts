@@ -111,11 +111,16 @@ async function resolveRoles(session: Session | null): Promise<Set<Role>> {
   if (FALLBACK_ALLOW_ALL) {
     return new Set<Role>(["researcher", "botOperator"]);
   }
+
+  const resolved = rolesFromEnv(session);
   const userId = getSessionUserId(session);
+
   if (userId && DB_ENABLED()) {
-    return rolesFromDatabase(userId);
+    const dbRoles = await rolesFromDatabase(userId);
+    dbRoles.forEach((role) => resolved.add(role));
   }
-  return rolesFromEnv(session);
+
+  return resolved;
 }
 
 export async function hasRole(

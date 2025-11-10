@@ -120,6 +120,15 @@ describe("authz role helpers", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("still honors env roles when DATABASE_URL is set", async () => {
+    process.env.DATABASE_URL = "postgres://test";
+    process.env.AUTH_RESEARCHERS = "user@example.com";
+    roleFindManyMock.mockResolvedValue([]);
+    const { requireRole } = await loadAuthz();
+    const result = await requireRole(makeSession(), "researcher");
+    expect(result.ok).toBe(true);
+  });
+
   it("denies when DB roles are empty", async () => {
     process.env.DATABASE_URL = "postgres://test";
     roleFindManyMock.mockResolvedValue([]);
