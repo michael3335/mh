@@ -61,6 +61,21 @@ vi.mock("next-auth", () => ({
 
 import { GET } from "@/app/api/models/bots/route";
 
+type ResponseBody = {
+  bots: Array<{
+    id: string;
+    strategy?: { slug: string } | null;
+    state?: Record<string, unknown> | null;
+    logTail?: string | null;
+    lastPromotion?: {
+      id: string;
+      status: string;
+      target: string;
+      runId?: string | null;
+    } | null;
+  }>;
+};
+
 describe("GET /api/models/bots", () => {
   beforeEach(() => {
     process.env.DATABASE_URL = "postgres://test";
@@ -86,13 +101,75 @@ describe("GET /api/models/bots", () => {
     ]);
 
     const res = await GET();
-    type ResponseBody = { bots: Array<{ id: string; strategy?: { slug: string } | null }> };
     const json: ResponseBody = await res.json();
     expect(json.bots).toHaveLength(1);
     expect(json.bots[0]).toMatchObject({
       id: "bot_seed_001",
       strategy: { slug: "rsi-band" },
       logTail: null,
+    });
+  });
+
+  it("enriches bots with state, log tail, and last promotion data", async () => {
+    const statePayload = { uptimeSeconds: 42, version: "1.0.0" };
+    const logText = "status=RUNNING\nheartbeat ok\n";
+
+    botFindManyMock.mockResolvedValue([
+      {
+        id: "bot_seed_002",
+        name: "Momentum Bot",
+        mode: "live",
+        status: "RUNNING",
+        equity: 15000,
+        dayPnl: 250,
+        pairlist: ["ETH/USDT"],
+        updatedAt: new Date("2024-02-01T00:00:00Z"),
+        strategy: { name: "Momentum", slug: "momentum" },
+      },
+    ]);
+
+    prismaMock.promotion.findMany.mockResolvedValue([
+      {
+        id: "promo_123",
+        botId: "bot_seed_002",
+        status: "SUCCEEDED",
+        target: "PAPER",
+        runId: "run_777",
+        createdAt: new Date("2024-02-02T00:00:00Z"),
+      },
+    ]);
+
+    s3SendMock.mockImplementation((command: { input?: { Key?: string } }) => {
+      const key = command.input?.Key;
+      if (key === "bots/bot_seed_002/state.json") {
+        return Promise.resolve({
+          Body: {
+            transformToString: () =>
+              Promise.resolve(JSON.stringify(statePayload)),
+          },
+        });
+      }
+      if (key === "bots/bot_seed_002/logs/latest.txt") {
+        return Promise.resolve({
+          Body: {
+            transformToString: () => Promise.resolve(logText),
+          },
+        });
+      }
+      return Promise.reject(notFoundError);
+    });
+
+    const res = await GET();
+    const json: ResponseBody = await res.json();
+
+    expect(json.bots).toHaveLength(1);
+    expect(json.bots[0].state).toEqual(statePayload);
+    expect(json.bots[0].logTail).toBe(logText);
+    expect(json.bots[0].lastPromotion).toMatchObject({
+      id: "promo_123",
+      status: "SUCCEEDED",
+      target: "PAPER",
+      runId: "run_777",
     });
   });
 

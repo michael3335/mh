@@ -1,12 +1,12 @@
 "use client";
 
-import ASCIIText from "@/components/ASCIIText";
+import ModelsShell, { useModelsContext } from "@/components/models/ModelsShell";
 import { HistoryChart } from "@/components/HistoryModal";
 import type { Route } from "next";
-import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useMemo } from "react";
+import type { CSSProperties } from "react";
+import { useModelApi } from "@/lib/hooks/useModelApi";
 
 type Metrics = {
   runId: string;
@@ -61,75 +61,91 @@ function csvToTrades(text: string): TradeRow[] {
 }
 
 export default function RunDetailPage() {
-  const { status } = useSession();
   const params = useParams<{ id: string }>();
   const runId = decodeURIComponent(params.id);
 
-  const routes = {
-    home: "/" as Route,
-    runs: "/models/runs" as Route,
-    signin: "/api/auth/signin" as Route,
-  };
+  return (
+    <ModelsShell
+      title={`Run ${runId}`}
+      unauthenticatedMessage="You must sign in to view run details."
+      footerLinks={[
+        { label: "← Back to runs", href: "/models/runs" as Route },
+        { label: "← Back to home", href: "/" as Route },
+      ]}
+    >
+      <RunDetailContent runId={runId} />
+    </ModelsShell>
+  );
+}
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<Metrics | null>(null);
-  const [equity, setEquity] = useState<SeriesPoint[]>([]);
-  const [drawdown, setDrawdown] = useState<SeriesPoint[]>([]);
-  const [trades, setTrades] = useState<TradeRow[]>([]);
+type RunDetailContentProps = {
+  runId: string;
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const metricsRes = await fetch(
-          `${API}/runs/${encodeURIComponent(runId)}`,
-          { cache: "no-store" }
-        );
-        if (!metricsRes.ok) {
-          throw new Error("Unable to load metrics");
-        }
-        const metricsJson = (await metricsRes.json()) as Metrics;
+function RunDetailContent({ runId }: RunDetailContentProps) {
+  const { status } = useModelsContext();
+  const encodedId = encodeURIComponent(runId);
+  const enabled = status === "authenticated" && Boolean(runId);
 
-        const [equityRes, drawdownRes, tradesRes] = await Promise.all([
-          fetch(
-            `${API}/runs/${encodeURIComponent(runId)}/artifacts/equity`,
-            { cache: "no-store" }
-          ),
-          fetch(
-            `${API}/runs/${encodeURIComponent(runId)}/artifacts/drawdown`,
-            { cache: "no-store" }
-          ),
-          fetch(
-            `${API}/runs/${encodeURIComponent(runId)}/artifacts/trades`,
-            { cache: "no-store" }
-          ),
-        ]);
+  const metricsQuery = useModelApi<Metrics>(
+    enabled ? `${API}/runs/${encodedId}` : null,
+    { enabled }
+  );
 
-        if (cancelled) return;
-        const equityText = equityRes.ok ? await equityRes.text() : "";
-        const drawdownText = drawdownRes.ok ? await drawdownRes.text() : "";
-        const tradesText = tradesRes.ok ? await tradesRes.text() : "";
-
-        setMetrics(metricsJson);
-        setEquity(csvToSeries(equityText));
-        setDrawdown(csvToSeries(drawdownText));
-        setTrades(csvToTrades(tradesText));
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load run");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const equityQuery = useModelApi<SeriesPoint[]>(
+    enabled ? `${API}/runs/${encodedId}/artifacts/equity` : null,
+    {
+      enabled,
+      parser: async (res) => {
+        if (res.status === 404) return [];
+        const text = await res.text();
+        return csvToSeries(text);
+      },
+      validateResponse: (res) => {
+        if (res.ok || res.status === 404) return;
+        throw new Error(`Failed to load equity (${res.status})`);
+      },
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [runId]);
+  );
+
+  const drawdownQuery = useModelApi<SeriesPoint[]>(
+    enabled ? `${API}/runs/${encodedId}/artifacts/drawdown` : null,
+    {
+      enabled,
+      parser: async (res) => {
+        if (res.status === 404) return [];
+        const text = await res.text();
+        return csvToSeries(text);
+      },
+      validateResponse: (res) => {
+        if (res.ok || res.status === 404) return;
+        throw new Error(`Failed to load drawdown (${res.status})`);
+      },
+    }
+  );
+
+  const tradesQuery = useModelApi<TradeRow[]>(
+    enabled ? `${API}/runs/${encodedId}/artifacts/trades` : null,
+    {
+      enabled,
+      parser: async (res) => {
+        if (res.status === 404) return [];
+        const text = await res.text();
+        return csvToTrades(text);
+      },
+      validateResponse: (res) => {
+        if (res.ok || res.status === 404) return;
+        throw new Error(`Failed to load trades (${res.status})`);
+      },
+    }
+  );
+
+  const metrics = metricsQuery.data;
+  const equity = equityQuery.data ?? [];
+  const drawdown = drawdownQuery.data ?? [];
+  const trades = tradesQuery.data ?? [];
+  const loading = metricsQuery.loading || equityQuery.loading || drawdownQuery.loading || tradesQuery.loading;
+  const error = metricsQuery.error ?? equityQuery.error ?? drawdownQuery.error ?? tradesQuery.error;
 
   const kpiEntries = useMemo(() => {
     if (!metrics?.kpis) return [];
@@ -138,7 +154,7 @@ export default function RunDetailPage() {
       .filter((entry) => typeof entry.value === "number");
   }, [metrics]);
 
-  const panel: React.CSSProperties = {
+  const panel: CSSProperties = {
     background: "#fff",
     color: "#111",
     border: "1px solid rgba(0,0,0,.12)",
@@ -148,63 +164,23 @@ export default function RunDetailPage() {
   };
 
   return (
-    <main
-      style={{
-        minHeight: "100svh",
-        width: "100%",
-        display: "grid",
-        placeItems: "center",
-        padding: "2rem",
-        textAlign: "center",
-        background: "#111213",
-        color: "#f4f4f5",
-      }}
-    >
-      <section style={{ display: "grid", gap: "1.5rem", width: "min(100%, 1080px)" }}>
-        <div style={{ width: "min(90vw, 720px)", height: "clamp(80px, 20vw, 200px)", position: "relative", margin: "0 auto" }}>
-          <ASCIIText text={`Run ${runId}`} enableWaves={false} interactive={false} />
-        </div>
-
-        {status === "loading" && <p>Checking access…</p>}
-
-        {status === "unauthenticated" && (
-          <>
-            <p>You must sign in to view run details.</p>
-            <Link
-              href={routes.signin}
-              style={{
-                padding: "0.7rem 1.2rem",
-                borderRadius: 10,
-                fontWeight: 800,
-                textDecoration: "none",
-                background: "#fff",
-                color: "#111",
-                boxShadow: "0 2px 10px rgba(0,0,0,.18)",
-              }}
-            >
-              Sign In
-            </Link>
-          </>
+    <>
+        {error && (
+          <div
+            style={{
+              background: "rgba(239,68,68,.15)",
+              border: "1px solid rgba(239,68,68,.4)",
+              borderRadius: 12,
+              padding: "0.6rem 0.9rem",
+              color: "#fee2e2",
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
         )}
 
-        {status === "authenticated" && (
-          <>
-            {error && (
-              <div
-                style={{
-                  background: "rgba(239,68,68,.15)",
-                  border: "1px solid rgba(239,68,68,.4)",
-                  borderRadius: 12,
-                  padding: "0.6rem 0.9rem",
-                  color: "#fee2e2",
-                  fontSize: 13,
-                }}
-              >
-                {error}
-              </div>
-            )}
-
-            <div style={{ ...panel, padding: "1.25rem", textAlign: "left" }}>
+        <div style={{ ...panel, padding: "1.25rem", textAlign: "left" }}>
               <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 8 }}>
                 Overview
               </div>
@@ -318,19 +294,7 @@ export default function RunDetailPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </>
-        )}
-
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 6 }}>
-          <Link href={routes.runs} style={{ opacity: 0.9, textDecoration: "none", color: "#e5e7eb" }}>
-            ← Back to runs
-          </Link>
-          <Link href={routes.home} style={{ opacity: 0.9, textDecoration: "none", color: "#e5e7eb" }}>
-            ← Back to home
-          </Link>
         </div>
-      </section>
-    </main>
+    </>
   );
 }
