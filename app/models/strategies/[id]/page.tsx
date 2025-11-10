@@ -144,17 +144,21 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
     setJobError(null);
     setLoading(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         strategy: name,
         strategySlug,
         params: validated.data.params,
         dataset: validated.data.dataset,
       };
-      const endpoint = kind === "backtest"
-        ? `${API}/jobs/backtest`
-        : kind === "grid"
-          ? `${API}/jobs/grid`
-          : `${API}/jobs/walkforward`;
+      if (kind === "grid") {
+        payload.grid = [validated.data.params];
+      }
+      const endpoint =
+        kind === "backtest"
+          ? `${API}/jobs/backtest`
+          : kind === "grid"
+            ? `${API}/jobs/grid`
+            : `${API}/jobs/walkforward`;
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
