@@ -17,8 +17,15 @@ function buildDatasourceUrl(): string | undefined {
       process.env.PRISMA_POOL_TIMEOUT ??
       url.searchParams.get("pool_timeout") ??
       "30";
+    const connectTimeout =
+      process.env.PRISMA_CONNECT_TIMEOUT ??
+      url.searchParams.get("connect_timeout") ??
+      "5";
+
     url.searchParams.set("connection_limit", limit);
     url.searchParams.set("pool_timeout", timeout);
+    url.searchParams.set("connect_timeout", connectTimeout);
+    url.searchParams.set("pgbouncer", "true");
     return url.toString();
   } catch {
     return base;
