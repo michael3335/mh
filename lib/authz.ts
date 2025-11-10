@@ -60,6 +60,11 @@ function userIdentifiers(session: Session | null): Set<string> {
   const rawId = (session.user as { id?: string })?.id?.toLowerCase();
   if (rawId) identifiers.add(rawId);
 
+  const rawLogin = (session.user as { githubLogin?: string | null })
+    ?.githubLogin
+    ?.toLowerCase();
+  if (rawLogin) identifiers.add(rawLogin);
+
   return identifiers;
 }
 

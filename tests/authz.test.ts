@@ -21,6 +21,7 @@ type SessionLike = {
     email?: string | null;
     name?: string | null;
     id?: string;
+    githubLogin?: string | null;
   };
 };
 
@@ -85,6 +86,16 @@ describe("authz role helpers", () => {
     process.env.AUTH_RESEARCHERS = "*";
     const { requireRole } = await loadAuthz();
     const result = await requireRole(makeSession(), "researcher");
+    expect(result.ok).toBe(true);
+  });
+
+  it("allows configured GitHub handle identifiers", async () => {
+    process.env.AUTH_RESEARCHERS = "octocat";
+    const { requireRole } = await loadAuthz();
+    const result = await requireRole(
+      makeSession({ githubLogin: "OctoCat" }),
+      "researcher"
+    );
     expect(result.ok).toBe(true);
   });
 
