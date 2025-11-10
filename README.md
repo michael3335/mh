@@ -63,11 +63,12 @@ npm run test
 - `/models/runs/[id]` fetches `metrics.json`, `equity.csv`, `drawdown.csv`, and `trades.csv` through the new artifact proxy at `/api/models/runs/[id]/artifacts/<asset>` and renders inline ASCII-style charts/tables.
 - `research-worker` now emits `equity.csv`, `drawdown.csv`, `trades.csv`, and `logs.txt` for every run; `grid`/`walkforward` parents aggregate KPIs for dashboards.
 
-## Research engine (vectorbt + ccxt + parquet cache)
+## Research engine (Freqtrade + ccxt + parquet cache)
 
-- `research-worker/worker.py` now downloads historical OHLCV via **ccxt**, caches each year under `s3://<bucket>/data/{exchange}/{pair}/{tf}/{yyyy}.parquet`, and reuses those parquet files before hitting the exchanges again.
-- Backtests are powered by **vectorbt + numba**, using configurable RSI thresholds and producing real KPIs (total return, CAGR, Sharpe/Sortino, drawdown, win rate, trade counts).
-- Every job uploads `equity.csv`, `drawdown.csv`, `trades.csv`, and `logs.txt`, so the UI can render charts/tablets without re-running the worker.
+- `research-worker/worker.py` still downloads historical OHLCV via **ccxt**, caches each year under `s3://<bucket>/data/{exchange}/{pair}/{tf}/{yyyy}.parquet`, and reuses those parquet files before hitting the exchanges again.
+- Downloaded strategy files are mounted into a temporary freqtrade workspace and executed through the real freqtrade backtesting command, so whatever you write in an `IStrategy` class (from the editor) is what gets simulated.
+- UI “Parameters” are injected into the freqtrade config under `self.config["model_params"]`, so strategies can react to sliders/inputs without touching config files.
+- Every job uploads `equity.csv`, `drawdown.csv`, `trades.csv`, and `logs.txt` emitted by freqtrade, so the UI can render charts/tables without re-running the worker.
 
 ## Bots dashboard & promotion status
 

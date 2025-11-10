@@ -37,6 +37,12 @@ async function main() {
       { key: "rsi_sell", label: "RSI Sell", type: "int", default: 70 },
     ],
     entrypoint: "main.py",
+    freqtrade: {
+      strategyClass: "RsiBandStrategy",
+      stakeCurrency: "USDT",
+      stakeAmount: 1000,
+      startupCandleCount: 50,
+    },
   };
 
   const strategy = await prisma.strategy.upsert({

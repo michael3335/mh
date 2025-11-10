@@ -1,21 +1,23 @@
 import os
+import ast
 import json
 import time
 import uuid
 import signal
 import sys
 import math
+import shutil
+import subprocess
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Iterable
+from typing import Dict, Any, List, Optional, Iterable, Tuple
 
 import boto3
 import ccxt
 import numpy as np
 import pandas as pd
 import psycopg
-import vectorbt as vbt
 from botocore.exceptions import BotoCoreError, ClientError
 from dateutil.relativedelta import relativedelta  # pip install python-dateutil
 from psycopg.types.json import Json
@@ -52,6 +54,16 @@ def handle_sigterm(_signo, _frame):
 
 signal.signal(signal.SIGTERM, handle_sigterm)
 signal.signal(signal.SIGINT, handle_sigterm)
+
+
+def safe_metric(value: Any) -> float:
+    try:
+        num = float(value)
+    except Exception:
+        return 0.0
+    if math.isnan(num) or math.isinf(num):
+        return 0.0
+    return num
 
 # --------------------------------------------------------------------
 # S3 helpers
@@ -329,6 +341,320 @@ def aggregate_kpis(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         agg["trades"] = int(sum(trade_counts))
     return agg
 
+
+def manifest_key_from_strategy(main_key: Optional[str]) -> Optional[str]:
+    if not main_key or "/" not in main_key:
+        return None
+    prefix = main_key.rsplit("/", 1)[0]
+    return f"{prefix}/manifest.json"
+
+
+def load_strategy_manifest(main_key: Optional[str]) -> Dict[str, Any]:
+    manifest_key = manifest_key_from_strategy(main_key)
+    if not manifest_key or not BUCKET:
+        return {}
+    try:
+        obj = s3.get_object(Bucket=BUCKET, Key=manifest_key)
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code")
+        if code in {"NoSuchKey", "404"}:
+            return {}
+        raise
+    try:
+        return json.loads(obj["Body"].read().decode("utf-8"))
+    except Exception as exc:
+        log(f"WARN: failed to parse manifest {manifest_key}: {exc}")
+        return {}
+
+
+def extract_strategy_class(strategy_file: Path, manifest: Optional[Dict[str, Any]] = None) -> str:
+    if manifest:
+        freqtrade_cfg = manifest.get("freqtrade")
+        if isinstance(freqtrade_cfg, dict):
+            configured = freqtrade_cfg.get("strategyClass")
+            if isinstance(configured, str) and configured.strip():
+                return configured.strip()
+
+    try:
+        tree = ast.parse(strategy_file.read_text())
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef):
+                for base in node.bases:
+                    name = getattr(base, "id", None) or getattr(base, "attr", None)
+                    if name == "IStrategy":
+                        return node.name
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef):
+                return node.name
+    except Exception as exc:
+        log(f"WARN: unable to infer strategy class from {strategy_file}: {exc}")
+    return "IStrategy"
+
+
+def prepare_freqtrade_workspace(workdir: Path) -> Dict[str, Path]:
+    root = workdir / "freqtrade"
+    user_data = root / "user_data"
+    strategies = user_data / "strategies"
+    data_dir = user_data / "data"
+    results = user_data / "backtest_results"
+    for path in [root, user_data, strategies, data_dir, results]:
+        path.mkdir(parents=True, exist_ok=True)
+    return {
+        "root": root,
+        "user_data": user_data,
+        "strategies": strategies,
+        "data_dir": data_dir,
+        "results": results,
+    }
+
+
+def write_freqtrade_dataset(
+    market: pd.DataFrame,
+    data_dir: Path,
+    exchange: str,
+    pair: str,
+    timeframe: str,
+) -> Path:
+    exchange_dir = data_dir / exchange.lower()
+    exchange_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{pair.replace('/', '_')}-{timeframe}.json"
+    dataset_path = exchange_dir / filename
+    records = []
+    for ts, row in market.iterrows():
+        records.append(
+            {
+                "date": pd.Timestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "open": float(row["open"]),
+                "high": float(row["high"]),
+                "low": float(row["low"]),
+                "close": float(row["close"]),
+                "volume": float(row["volume"]),
+            }
+        )
+    dataset_path.write_text(json.dumps(records))
+    return dataset_path
+
+
+def timerange_from_spec(spec: Dict[str, Any]) -> Tuple[str, pd.Timestamp, pd.Timestamp]:
+    start = pd.to_datetime(spec.get("start"), utc=True, errors="coerce")
+    end = pd.to_datetime(spec.get("end"), utc=True, errors="coerce")
+    if pd.isna(start):
+        start = pd.Timestamp.utcnow().tz_localize("UTC") - pd.Timedelta(days=90)
+    if pd.isna(end) or end <= start:
+        end = start + pd.Timedelta(days=90)
+    timerange = f"{start.strftime('%Y%m%d')}-{end.strftime('%Y%m%d')}"
+    return timerange, start, end
+
+
+def resolve_trades_file(candidate: Path, results_dir: Path) -> Path:
+    options = [candidate]
+    if candidate.suffix != ".json":
+        options.append(candidate.with_suffix(".json"))
+    options.append(results_dir / candidate.name)
+    if candidate.suffix != ".json":
+        options.append(results_dir / f"{candidate.name}.json")
+    for path in options:
+        if path.exists():
+            return path
+    candidates = sorted(results_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if candidates:
+        return candidates[0]
+    raise FileNotFoundError(f"Unable to locate freqtrade trades export near {candidate}")
+
+
+def parse_trade_timestamp(value: Any) -> Optional[pd.Timestamp]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        unit = "s"
+        if value > 1e12:
+            unit = "ms"
+        return pd.to_datetime(value, unit=unit, utc=True, errors="coerce")
+    if isinstance(value, str):
+        return pd.to_datetime(value, utc=True, errors="coerce")
+    return None
+
+
+def normalize_trades(raw_trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for record in raw_trades:
+        profit = record.get("profit_ratio")
+        if profit is None:
+            pct = record.get("profit_pct")
+            if isinstance(pct, (int, float)):
+                profit = float(pct) / 100.0
+        if profit is None:
+            continue
+        close_ts = parse_trade_timestamp(
+            record.get("close_timestamp") or record.get("close_time") or record.get("close_date")
+        )
+        if close_ts is None:
+            continue
+        open_ts = parse_trade_timestamp(
+            record.get("open_timestamp") or record.get("open_time") or record.get("open_date")
+        )
+        normalized.append(
+            {
+                "pair": record.get("pair") or "",
+                "open_time": open_ts,
+                "close_time": close_ts,
+                "profit_ratio": float(profit),
+                "profit_abs": safe_metric(record.get("profit_abs") or record.get("profit_amount")),
+                "duration": record.get("trade_duration") or record.get("duration") or record.get("duration_min"),
+            }
+        )
+    normalized.sort(key=lambda t: t["close_time"])
+    return normalized
+
+
+def load_trades(path: Path) -> List[Dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text())
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            if isinstance(data.get("trades"), list):
+                return data["trades"]
+            if isinstance(data.get("results"), list):
+                return data["results"]
+    except json.JSONDecodeError:
+        pass
+    try:
+        df = pd.read_csv(path)
+        return df.to_dict("records")
+    except Exception:
+        return []
+
+
+def build_equity_series(
+    trades: List[Dict[str, Any]],
+    initial_cash: float,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    equity = initial_cash
+    peak = initial_cash
+    equity_rows: List[Dict[str, Any]] = []
+    drawdown_rows: List[Dict[str, Any]] = []
+    for trade in trades:
+        equity *= 1 + float(trade["profit_ratio"])
+        if equity > peak:
+            peak = equity
+        dd = (equity / peak) - 1
+        timestamp = trade["close_time"].isoformat()
+        equity_rows.append({"timestamp": timestamp, "equity": equity})
+        drawdown_rows.append({"timestamp": timestamp, "drawdown": dd})
+    return equity_rows, drawdown_rows
+
+
+def compute_kpis(
+    trades: List[Dict[str, Any]],
+    equity_rows: List[Dict[str, Any]],
+    drawdown_rows: List[Dict[str, Any]],
+    period: Tuple[pd.Timestamp, pd.Timestamp],
+    initial_cash: float,
+) -> Dict[str, Any]:
+    start, end = period
+    returns = [float(trade["profit_ratio"]) for trade in trades]
+    net_return = (
+        equity_rows[-1]["equity"] / initial_cash - 1 if equity_rows else 0.0
+    )
+    duration_days = max((end - start).total_seconds() / 86400.0, 1)
+    years = duration_days / 365.25
+    growth_base = 1 + net_return
+    if growth_base <= 0 or years <= 0:
+        cagr = net_return
+    else:
+        cagr = growth_base ** (1 / years) - 1
+    sharpe = 0.0
+    sortino = 0.0
+    if returns:
+        mean_ret = float(np.mean(returns))
+        std_ret = float(np.std(returns))
+        downside = [r for r in returns if r < 0]
+        sharpe = (mean_ret / std_ret) * math.sqrt(len(returns)) if std_ret > 0 else 0.0
+        downside_std = float(np.std(downside)) if downside else 0.0
+        sortino = (mean_ret / downside_std) * math.sqrt(len(returns)) if downside_std > 0 else 0.0
+    max_dd = min((row["drawdown"] for row in drawdown_rows), default=0.0)
+    win_rate = (
+        sum(1 for r in returns if r > 0) / len(returns) if returns else 0.0
+    )
+    avg_trade = float(np.mean(returns)) if returns else 0.0
+    return {
+        "netReturn": safe_metric(net_return),
+        "cagr": safe_metric(cagr),
+        "sharpe": safe_metric(sharpe),
+        "sortino": safe_metric(sortino),
+        "maxDD": safe_metric(max_dd),
+        "winRate": safe_metric(win_rate),
+        "avgTrade": safe_metric(avg_trade),
+        "trades": len(returns),
+    }
+
+
+def run_freqtrade_process(
+    config: Dict[str, Any],
+    workspace: Dict[str, Path],
+    timerange: str,
+    strategy_class: str,
+) -> Tuple[Path, Path]:
+    config_path = workspace["root"] / "freqtrade-config.json"
+    dumpable = {}
+    for key, value in config.items():
+        if isinstance(value, Path):
+            dumpable[key] = str(value)
+        else:
+            dumpable[key] = value
+    config_path.write_text(json.dumps(dumpable, indent=2))
+
+    freqtrade_bin = os.getenv("FREQTRADE_BIN", "freqtrade")
+    export_name = f"{strategy_class.replace(' ', '_')}_trades.json"
+    export_path = workspace["results"] / export_name
+
+    env = os.environ.copy()
+    env["FREQTRADE_USERDIR"] = str(workspace["user_data"])
+
+    cmd = [
+        freqtrade_bin,
+        "backtesting",
+        "--config",
+        str(config_path),
+        "--timerange",
+        timerange,
+        "--strategy",
+        strategy_class,
+        "--export",
+        "trades",
+        "--export-filename",
+        str(export_path),
+    ]
+
+    log(f"Executing freqtrade: {' '.join(cmd)}")
+    proc = subprocess.run(
+        cmd,
+        cwd=workspace["root"],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    logs_path = workspace["root"] / "logs.txt"
+    logs_path.write_text(
+        "\n".join(
+            [
+                f"$ {' '.join(cmd)}",
+                "",
+                proc.stdout.strip(),
+                "",
+                proc.stderr.strip(),
+            ]
+        ).strip()
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"freqtrade exited with {proc.returncode}")
+
+    trades_path = resolve_trades_file(export_path, workspace["results"])
+    return trades_path, logs_path
+
 # --------------------------------------------------------------------
 # Engine hook (you implement this)
 # --------------------------------------------------------------------
@@ -363,101 +689,120 @@ def run_engine(
     spec: Dict[str, Any],
     params: Optional[Dict[str, Any]] = None,
     phase: Optional[str] = None,
+    manifest: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     cache_dir = Path("/tmp/market-data")
     params = params or {}
+    manifest = manifest or {}
+
+    exchange = (spec.get("exchange") or "binance").lower()
+    pair = spec.get("pair") or "BTC/USDT"
+    timeframe = spec.get("timeframe") or "1h"
+
     market = ensure_market_data(spec or {}, cache_dir)
-    close = market["close"]
-    freq = timeframe_to_freq(spec.get("timeframe", "1h"))
+    workspace = prepare_freqtrade_workspace(workdir)
+    timerange, start_dt, end_dt = timerange_from_spec(spec or {})
 
-    rsi_window = int(params.get("rsi_len", 14))
-    buy_thresh = float(params.get("rsi_buy", 30))
-    sell_thresh = float(params.get("rsi_sell", 70))
+    strategy_dest = workspace["strategies"] / strategy_path.name
+    shutil.copy(strategy_path, strategy_dest)
 
-    rsi = vbt.RSI.run(close, window=rsi_window)
-    entries = rsi.rsi <= buy_thresh
-    exits = rsi.rsi >= sell_thresh
+    write_freqtrade_dataset(market, workspace["data_dir"], exchange, pair, timeframe)
 
-    portfolio = vbt.Portfolio.from_signals(
-        close,
-        entries,
-        exits,
-        freq=freq,
-        init_cash=10_000,
-        fees=0.0005,
-        slippage=0.0005,
+    freqtrade_cfg = manifest.get("freqtrade", {}) if isinstance(manifest, dict) else {}
+    stake_currency = (
+        freqtrade_cfg.get("stakeCurrency")
+        if isinstance(freqtrade_cfg, dict)
+        else None
+    ) or (pair.split("/")[-1] if "/" in pair else "USDT")
+    stake_amount = (
+        float(freqtrade_cfg.get("stakeAmount", 1000))
+        if isinstance(freqtrade_cfg, dict)
+        else 1000.0
     )
-
-    equity_series = portfolio.value()
-    drawdown_series = portfolio.drawdown_series()
-    trades_df = portfolio.trades.records_readable.copy()
-
-    artifacts: List[Dict[str, Any]] = []
-
-    equity_path = workdir / "equity.csv"
-    pd.DataFrame(
-        {"timestamp": equity_series.index, "equity": equity_series.values}
-    ).to_csv(equity_path, index=False)
-    artifacts.append(
-        {"path": str(equity_path), "name": "equity.csv", "content_type": "text/csv"}
+    startup_count = (
+        int(freqtrade_cfg.get("startupCandleCount", 50))
+        if isinstance(freqtrade_cfg, dict)
+        else 50
     )
+    initial_cash = safe_metric(freqtrade_cfg.get("wallet", 10_000)) or 10_000.0
 
-    drawdown_path = workdir / "drawdown.csv"
-    pd.DataFrame(
-        {"timestamp": drawdown_series.index, "drawdown": drawdown_series.values}
-    ).to_csv(drawdown_path, index=False)
-    artifacts.append(
-        {
-            "path": str(drawdown_path),
-            "name": "drawdown.csv",
-            "content_type": "text/csv",
-        }
-    )
-
-    trades_path = workdir / "trades.csv"
-    if not trades_df.empty:
-        trades_df = trades_df.rename(
-            columns={
-                "Entry Timestamp": "entry",
-                "Exit Timestamp": "exit",
-                "PnL": "pnl",
-            }
-        )
-    trades_df.to_csv(trades_path, index=False)
-    artifacts.append(
-        {"path": str(trades_path), "name": "trades.csv", "content_type": "text/csv"}
-    )
-
-    stats = {
-        "netReturn": safe_metric(portfolio.total_return()),
-        "cagr": safe_metric(portfolio.cagr()),
-        "sharpe": safe_metric(portfolio.sharpe_ratio()),
-        "sortino": safe_metric(portfolio.sortino_ratio()),
-        "maxDD": safe_metric(portfolio.max_drawdown()),
-        "winRate": safe_metric(portfolio.trades.win_rate()),
-        "avgTrade": safe_metric(portfolio.trades.pnl.mean()) if portfolio.trades.count() else 0.0,
-        "trades": int(portfolio.trades.count()),
+    strategy_class = extract_strategy_class(strategy_dest, manifest)
+    config = {
+        "dry_run": True,
+        "dry_run_wallet": initial_cash,
+        "strategy": strategy_class,
+        "strategy_path": str(workspace["strategies"]),
+        "datadir": str(workspace["data_dir"]),
+        "dataformat_ohlcv": "json",
+        "dataformat_trades": "json",
+        "timeframe": timeframe,
+        "startup_candle_count": startup_count,
+        "max_open_trades": 5,
+        "stake_currency": stake_currency,
+        "stake_amount": stake_amount,
+        "model_params": params,
+        "exchange": {
+            "name": exchange,
+            "pair_whitelist": [pair],
+            "ccxt_config": {"enableRateLimit": True},
+        },
+        "pairlists": [{"method": "StaticPairList", "pairs": [pair]}],
     }
 
-    logs_path = workdir / "logs.txt"
-    logs_path.write_text(
-        "\n".join(
-            [
-                f"Strategy: {strategy_path.name}",
-                f"Phase: {phase or 'backtest'}",
-                f"Params: {json.dumps(params, sort_keys=True)}",
-                f"Net return: {stats['netReturn']:.2%}",
-                f"CAGR: {stats['cagr']:.2%}",
-                f"Sharpe: {stats['sharpe']:.2f}",
-                f"Trades: {stats['trades']}",
-            ]
-        )
+    trades_path, logs_path = run_freqtrade_process(
+        config,
+        workspace,
+        timerange,
+        strategy_class,
     )
-    artifacts.append(
-        {"path": str(logs_path), "name": "logs.txt", "content_type": "text/plain"}
-    )
+    raw_trades = load_trades(trades_path)
+    trades = normalize_trades(raw_trades)
+    equity_rows, drawdown_rows = build_equity_series(trades, initial_cash)
+    kpis = compute_kpis(trades, equity_rows, drawdown_rows, (start_dt, end_dt), initial_cash)
 
-    return {"kpis": stats, "artifacts": artifacts}
+    equity_path = workdir / "equity.csv"
+    pd.DataFrame(equity_rows).to_csv(equity_path, index=False)
+    drawdown_path = workdir / "drawdown.csv"
+    pd.DataFrame(drawdown_rows).to_csv(drawdown_path, index=False)
+    trades_path_csv = workdir / "trades.csv"
+    trades_df = pd.DataFrame(
+        [
+            {
+                "pair": t["pair"],
+                "open_time": t["open_time"].isoformat() if t["open_time"] else None,
+                "close_time": t["close_time"].isoformat(),
+                "profit_ratio": t["profit_ratio"],
+                "profit_abs": t["profit_abs"],
+                "duration": t["duration"],
+            }
+            for t in trades
+        ]
+    )
+    trades_df.to_csv(trades_path_csv, index=False)
+
+    summary = "\n".join(
+        [
+            f"Strategy: {strategy_class}",
+            f"Phase: {phase or 'backtest'}",
+            f"Timerange: {timerange}",
+            f"Params: {json.dumps(params, sort_keys=True)}",
+            f"Net return: {kpis['netReturn']:.2%}",
+            f"CAGR: {kpis['cagr']:.2%}",
+            f"Sharpe: {kpis['sharpe']:.2f}",
+            f"Trades: {kpis['trades']}",
+        ]
+    )
+    with open(logs_path, "a", encoding="utf-8") as fh:
+        fh.write("\n\n" + summary + "\n")
+
+    artifacts = [
+        {"path": str(equity_path), "name": "equity.csv", "content_type": "text/csv"},
+        {"path": str(drawdown_path), "name": "drawdown.csv", "content_type": "text/csv"},
+        {"path": str(trades_path_csv), "name": "trades.csv", "content_type": "text/csv"},
+        {"path": str(logs_path), "name": "logs.txt", "content_type": "text/plain"},
+    ]
+
+    return {"kpis": kpis, "artifacts": artifacts}
 
 # --------------------------------------------------------------------
 # Kind handlers
@@ -466,12 +811,16 @@ def handle_backtest(job: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
     """Run a single backtest and write metrics.json under runs/<runId>/."""
     strategy_file = workdir / "strategy_payload"
     download_strategy(job["manifestS3Key"], strategy_file)
+    manifest = load_strategy_manifest(job.get("manifestS3Key"))
+    manifest = load_strategy_manifest(job.get("manifestS3Key"))
+    manifest = load_strategy_manifest(job.get("manifestS3Key"))
 
     engine_out = run_engine(
         strategy_file,
         workdir,
         job.get("spec", {}),
         job.get("params"),
+        manifest=manifest,
     )
     result = {
         "runId": job["runId"],
@@ -527,7 +876,7 @@ def handle_grid(job: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         subdir.mkdir(parents=True, exist_ok=True)
 
         engine_out = run_engine(
-            strategy_file, subdir, job.get("spec", {}), params
+            strategy_file, subdir, job.get("spec", {}), params, manifest=manifest
         )
         child_metrics = {
             "runId": child_id,
@@ -654,7 +1003,12 @@ def handle_walkforward(job: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         params = {"wfWindow": w}
 
         engine_out = run_engine(
-            strategy_file, subdir, spec, params, phase="walkforward_test"
+            strategy_file,
+            subdir,
+            spec,
+            params,
+            phase="walkforward_test",
+            manifest=manifest,
         )
         child_metrics = {
             "runId": child_id,
@@ -833,11 +1187,3 @@ if __name__ == "__main__":
         traceback.print_exc()
         time.sleep(2)
         sys.exit(1)
-def safe_metric(value: Any) -> float:
-    try:
-        num = float(value)
-    except Exception:
-        return 0.0
-    if math.isnan(num) or math.isinf(num):
-        return 0.0
-    return num

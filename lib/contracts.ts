@@ -16,14 +16,23 @@ export const ParamSpec = z.object({
 });
 export type ParamSpec = z.infer<typeof ParamSpec>;
 
+const FreqtradeConfig = z.object({
+  strategyClass: z.string(),
+  stakeCurrency: z.string().default("USDT"),
+  stakeAmount: z.number().default(1000),
+  startupCandleCount: z.number().default(50),
+});
+
 export const Manifest = z.object({
   name: z.string(),
   version: z.string(), // git commit or semver
   description: z.string().optional(),
   params: z.array(ParamSpec),
   entrypoint: z.string().default("main.py"), // inside zip
+  freqtrade: FreqtradeConfig.optional(),
 });
 export type Manifest = z.infer<typeof Manifest>;
+export type FreqtradeConfig = z.infer<typeof FreqtradeConfig>;
 
 export const MetricsJson = z.object({
   runId: z.string(),

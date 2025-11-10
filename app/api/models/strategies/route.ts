@@ -186,7 +186,22 @@ function defaultManifest(name: string) {
       { key: "rsi_sell", label: "RSI Sell", type: "int", default: 70 },
     ],
     entrypoint: "main.py",
+    freqtrade: {
+      strategyClass: inferStrategyClassName(name),
+      stakeCurrency: "USDT",
+      stakeAmount: 1000,
+      startupCandleCount: 50,
+    },
   };
+}
+
+function inferStrategyClassName(name: string): string {
+  const parts = name
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1));
+  const base = parts.join("") || "Model";
+  return `${base}Strategy`;
 }
 
 function slugify(value: string): string {

@@ -41,7 +41,79 @@ const JobSchema = z.object({
 type KPI = { cagr?: number; sharpe?: number; mdd?: number; trades?: number };
 type PastRun = { id: string; status: "SUCCEEDED" | "FAILED" | "RUNNING"; startedAt: string; kpis?: KPI };
 type ParamsState = { rsi_len: number; rsi_buy: number; rsi_sell: number };
+type DatasetState = z.infer<typeof DatasetSchema>;
 const PARAM_KEYS = ["rsi_len", "rsi_buy", "rsi_sell"] as const;
+const DEFAULT_PARAMS: ParamsState = { rsi_len: 14, rsi_buy: 30, rsi_sell: 70 };
+
+function inferStrategyClassName(value: string): string {
+  const tokens = value
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1));
+  const base = tokens.join("") || "Model";
+  return `${base}Strategy`;
+}
+
+function createFreqtradeTemplate(className: string) {
+  return `from freqtrade.strategy.interface import IStrategy
+import pandas as pd
+import talib.abstract as ta
+
+
+class ${className}(IStrategy):
+    timeframe = "1h"
+    process_only_new_candles = True
+    minimal_roi = {
+        "0": 0.05,
+        "1440": 0
+    }
+    stoploss = -0.10
+    startup_candle_count = 50
+
+    def __post_init__(self):
+        self.model_params = self.config.get("model_params", {}) or {}
+
+    def populate_indicators(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+        length = int(self.model_params.get("rsi_len", 14))
+        dataframe["rsi"] = ta.RSI(dataframe, timeperiod=length)
+        return dataframe
+
+    def populate_entry_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+        buy_level = float(self.model_params.get("rsi_buy", 30))
+        dataframe.loc[:, "enter_long"] = dataframe["rsi"] <= buy_level
+        return dataframe
+
+    def populate_exit_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+        sell_level = float(self.model_params.get("rsi_sell", 70))
+        dataframe.loc[:, "exit_long"] = dataframe["rsi"] >= sell_level
+        return dataframe
+`;
+}
+
+function guessStakeCurrency(pairs: string) {
+  const firstPair = pairs.split(",")[0]?.trim() ?? "";
+  const [, quote] = firstPair.split("/");
+  return quote?.toUpperCase() || "USDT";
+}
+
+function buildManifestPayload(name: string, dataset: DatasetState) {
+  return {
+    name,
+    version: "dev",
+    entrypoint: "main.py",
+    params: [
+      { key: "rsi_len", label: "RSI Length", type: "int", default: DEFAULT_PARAMS.rsi_len },
+      { key: "rsi_buy", label: "RSI Buy", type: "int", default: DEFAULT_PARAMS.rsi_buy },
+      { key: "rsi_sell", label: "RSI Sell", type: "int", default: DEFAULT_PARAMS.rsi_sell },
+    ],
+    freqtrade: {
+      strategyClass: inferStrategyClassName(name),
+      stakeCurrency: guessStakeCurrency(dataset.pairs),
+      stakeAmount: 1000,
+      startupCandleCount: 50,
+    },
+  };
+}
 
 type StrategyEditorContentProps = {
   strategySlug: string;
@@ -69,22 +141,17 @@ function StrategyEditorContent({ strategySlug }: StrategyEditorContentProps) {
   const router = useRouter();
   const runsRoute = "/models/runs" as Route;
 
-  const [name, setName] = useState(strategySlug === "seed" ? "RSI_Band" : strategySlug);
-  const [code, setCode] = useState<string>(
-    `# ${name}
-from sandbox.api import Strategy, Indicator, Signal
-
-class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
-    params = { "rsi_len": 14, "rsi_buy": 30, "rsi_sell": 70 }
-    def build(self, data):
-        rsi = Indicator.rsi(data.close, self.p.rsi_len)
-        self.buy_signal  = Signal.cross_under(rsi, self.p.rsi_buy)
-        self.sell_signal = Signal.cross_over(rsi, self.p.rsi_sell)
-`
-  );
-
-  const [paramsState, setParamsState] = useState<ParamsState>({ rsi_len: 14, rsi_buy: 30, rsi_sell: 70 });
-  const [dataset, setDataset] = useState({ exchange: "binance", pairs: "BTC/USDT,ETH/USDT", timeframe: "1h", from: "2022-01-01", to: "2025-01-01" });
+  const initialName = strategySlug === "seed" ? "RSI_Band" : strategySlug;
+  const [name, setName] = useState(initialName);
+  const [code, setCode] = useState<string>(() => createFreqtradeTemplate(inferStrategyClassName(initialName)));
+  const [paramsState, setParamsState] = useState<ParamsState>(DEFAULT_PARAMS);
+  const [dataset, setDataset] = useState<DatasetState>({
+    exchange: "binance",
+    pairs: "BTC/USDT,ETH/USDT",
+    timeframe: "1h",
+    from: "2022-01-01",
+    to: "2025-01-01",
+  });
   const [loading, setLoading] = useState(false);
   const enabled = status === "authenticated";
   const { data: runsData, error: runsError } = useModelApi<PastRun[]>(
@@ -110,10 +177,11 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
     setFormError(null);
     setLoading(true);
     try {
+      const manifest = buildManifestPayload(name, dataset);
       const res = await fetch(`${API}/strategies`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, code }),
+        body: JSON.stringify({ name, code, manifest }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -133,7 +201,7 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
     } finally {
       setLoading(false);
     }
-  }, [name, code, router, strategySlug, notify]);
+  }, [name, code, dataset, router, strategySlug, notify]);
 
   const launch = useCallback(async (kind: "backtest" | "grid" | "walkforward") => {
     const validated = JobSchema.safeParse({ strategySlug, params: paramsState, dataset });
@@ -251,7 +319,10 @@ class ${name.replace(/[^A-Za-z0-9_]/g, "_")}(Strategy):
 
       <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "1fr 1fr", alignItems: "start" }}>
         <div style={{ ...panel, overflow: "hidden" }}>
-          <div style={{ textAlign: "right", padding: "6px 10px", ...chip, background: "rgba(0,0,0,.08)" }}>Python API</div>
+          <div style={{ textAlign: "right", padding: "6px 10px", ...chip, background: "rgba(0,0,0,.08)" }}>Freqtrade Strategy</div>
+          <div style={{ padding: "0.75rem 1rem", fontSize: 13, borderTop: "1px solid rgba(0,0,0,.08)", borderBottom: "1px solid rgba(0,0,0,.08)", background: "rgba(0,0,0,.02)", color: "#374151" }}>
+            Build an <code style={{ fontFamily: "ui-monospace" }}>IStrategy</code> implementation. Runtime overrides land in <code style={{ fontFamily: "ui-monospace" }}>self.config["model_params"]</code> so your code can react to UI inputs.
+          </div>
           <div style={{ height: 520 }}>
             <MonacoEditor
               height="520px"
