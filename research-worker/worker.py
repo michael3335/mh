@@ -1069,6 +1069,7 @@ def handle_walkforward(job: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
 # Main loop
 # --------------------------------------------------------------------
 def main():
+    global sqs
     print(">>> worker.py starting up", flush=True)
     print("REGION:", os.environ.get("AWS_REGION"))
     print("QUEUE_URL:", os.environ.get("SQS_RESEARCH_JOBS_URL"))
@@ -1105,7 +1106,6 @@ def main():
             time.sleep(min(backoff, 30))
             backoff = min(backoff * 2, 30)
             try:
-                global sqs
                 sqs = mk_sqs()
             except Exception as e2:
                 log(f"ERROR: recreating SQS client failed: {e2}")

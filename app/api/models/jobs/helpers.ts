@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { readStrategyPointer } from "@/lib/strategy-pointer";
+import { slugifyStrategyName } from "@/lib/slug";
 
 export const DatasetInputSchema = z.object({
   exchange: z.string().min(1),
@@ -41,6 +43,17 @@ export async function resolveStrategyForOwner(
   identifier: string,
   ownerId: string | null
 ) {
+  const strategy = await resolveStrategyFromDatabase(identifier, ownerId);
+  if (strategy) return strategy;
+
+  return resolveStrategyFromPointer(identifier);
+}
+
+async function resolveStrategyFromDatabase(
+  identifier: string,
+  ownerId: string | null
+) {
+  if (!process.env.DATABASE_URL) return null;
   const where = ownerId
     ? {
         ownerId,
@@ -67,6 +80,7 @@ export async function recordQueuedRun(params: {
 }) {
   const { runId, strategyId, ownerId, artifactPrefix, kind, spec, params: inputParams } =
     params;
+  if (!process.env.DATABASE_URL) return;
   await prisma.run.upsert({
     where: { id: runId },
     update: {
@@ -90,4 +104,35 @@ export async function recordQueuedRun(params: {
       params: (inputParams ?? {}) as Prisma.InputJsonValue,
     },
   });
+}
+
+async function resolveStrategyFromPointer(identifier: string) {
+  const pointer = await readPointerByIdentifier(identifier);
+  if (!pointer) return null;
+  return {
+    id: pointer.slug,
+    slug: pointer.slug,
+    name: pointer.name ?? pointer.slug,
+    latestVersion: {
+      id: pointer.versionTag,
+      versionTag: pointer.versionTag,
+      s3Key: pointer.s3Key,
+    },
+  };
+}
+
+async function readPointerByIdentifier(identifier: string) {
+  const candidates = Array.from(
+    new Set([
+      identifier,
+      identifier.toLowerCase(),
+      slugifyStrategyName(identifier),
+    ])
+  ).filter(Boolean);
+
+  for (const candidate of candidates) {
+    const pointer = await readStrategyPointer(candidate);
+    if (pointer) return pointer;
+  }
+  return null;
 }

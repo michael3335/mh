@@ -1,5 +1,4 @@
 // app/api/models/strategies/route.ts
-import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
@@ -10,6 +9,8 @@ import { authOptions } from "@/lib/auth";
 import { requireRole } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/session";
+import { slugifyStrategyName } from "@/lib/slug";
+import { writeStrategyPointer } from "@/lib/strategy-pointer";
 
 type StrategySummary = {
   id: string;
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
 
     const { slug, strategyForOwner } = hasDatabase() && ownerId
       ? await ensureStrategySlug(name, ownerId)
-      : { slug: slugify(name), strategyForOwner: null };
+      : { slug: slugifyStrategyName(name), strategyForOwner: null };
 
     const prefix = `strategies/${slug}/${versionTag}`;
     await putText(`${prefix}/main.py`, code, "text/x-python");
@@ -156,6 +157,16 @@ export async function POST(req: NextRequest) {
         },
       });
     }
+
+    await writeStrategyPointer({
+      slug,
+      versionTag,
+      s3Key: `${prefix}/main.py`,
+      manifest,
+      name,
+      description,
+      updatedAt: new Date().toISOString(),
+    });
 
     return Response.json(
       {
@@ -204,17 +215,8 @@ function inferStrategyClassName(name: string): string {
   return `${base}Strategy`;
 }
 
-function slugify(value: string): string {
-  const base = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
-  return base || `strategy-${randomUUID().slice(0, 8)}`;
-}
-
 async function ensureStrategySlug(name: string, ownerId: string) {
-  const baseSlug = slugify(name);
+  const baseSlug = slugifyStrategyName(name);
   let slug = baseSlug;
   let existing = await prisma.strategy.findUnique({ where: { slug } });
   let attempts = 0;

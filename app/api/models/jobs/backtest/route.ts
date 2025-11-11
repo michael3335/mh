@@ -25,12 +25,6 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const authz = await requireRole(session, "researcher");
   if (!authz.ok) return authz.response;
-  if (!process.env.DATABASE_URL) {
-    return Response.json(
-      { error: "DATABASE_URL not configured" },
-      { status: 500 }
-    );
-  }
   try {
     const parsed = BacktestBody.safeParse(await req.json().catch(() => ({})));
     if (!parsed.success) {

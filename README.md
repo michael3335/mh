@@ -73,11 +73,12 @@ npm run test
 ### Running the research worker locally
 
 1. Install the native TA-Lib libraries (macOS: `brew install ta-lib`, Debian/Ubuntu: `apt install libta-lib0 libta-lib0-dev`).
-2. Install the Python deps once: `python3 -m pip install -r research-worker/requirements.txt`.
+2. Install the Python deps once: `python3 -m pip install -r research-worker/requirements.txt && python3 -m pip install --no-deps freqtrade==2024.5`.
 3. Export the same env vars the Next.js API needs (`AWS_REGION`, `S3_BUCKET`, `SQS_RESEARCH_JOBS_URL`, `DATABASE_URL`, credentials, etc.).
 4. Start the worker alongside `npm run dev`:
    ```bash
-   python3 research-worker/worker.py
+   npm run worker
+   # or: python3 research-worker/worker.py
    ```
    The process will tail SQS, execute freqtrade backtests, upload artifacts, and update the `Run` rows so the UI advances from `QUEUED` → `RUNNING` → `SUCCEEDED`/`FAILED`.
 
