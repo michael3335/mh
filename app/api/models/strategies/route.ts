@@ -1,5 +1,6 @@
 // app/api/models/strategies/route.ts
 import { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 import type { Session } from "next-auth";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
