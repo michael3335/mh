@@ -14,8 +14,7 @@ import {
 
 /**
  * Future Plan — 18-year master plan (2025–2043)
- * Plain React + Tailwind only (no shadcn deps). Icons via lucide-react.
- * Includes concise narrative summaries + improved structure/UX.
+ * Plain React + Tailwind only. High-contrast, accessible styles (light & dark).
  */
 
 export const metadata = {
@@ -59,7 +58,7 @@ const phaseHighlights: PhaseHighlight[] = [
             "Begin German & Norwegian; keep triathlon routine.",
         ],
         outcome: "Data-driven finance foundation with public project portfolio.",
-        icon: ChartLineIcon(),
+        icon: <ChartLine className="h-5 w-5" />,
     },
     {
         title: "Phase 2 — MSc ENE @ NHH",
@@ -69,7 +68,7 @@ const phaseHighlights: PhaseHighlight[] = [
             "Advance both languages to working proficiency; evolve dashboard into research.",
         ],
         outcome: "MSc with distinction, dual language capability, applied thesis.",
-        icon: BookOpenIcon(),
+        icon: <BookOpen className="h-5 w-5" />,
     },
     {
         title: "Phase 3 — Early Career & CFA Completion",
@@ -79,7 +78,7 @@ const phaseHighlights: PhaseHighlight[] = [
             "Publish applied market/policy analyses; maintain dashboard automation.",
         ],
         outcome: "Recognised as a technically literate strategist linking finance & sustainability.",
-        icon: BriefcaseIcon(),
+        icon: <Briefcase className="h-5 w-5" />,
     },
     {
         title: "Phase 4 — PhD in Energy Economics",
@@ -89,7 +88,7 @@ const phaseHighlights: PhaseHighlight[] = [
             "Integrate prior projects as research/teaching tools; publish & present.",
         ],
         outcome: "PhD + CFA = unique hybrid of practitioner and researcher.",
-        icon: TargetIcon(),
+        icon: <Target className="h-5 w-5" />,
     },
     {
         title: "Phase 5 — Senior Strategy Leadership",
@@ -99,7 +98,7 @@ const phaseHighlights: PhaseHighlight[] = [
             "Lead data-driven initiatives; maintain bilingual fluency and balanced lifestyle.",
         ],
         outcome: "High-impact leadership, shaping energy transition strategy.",
-        icon: LayersIcon(),
+        icon: <Layers className="h-5 w-5" />,
     },
     {
         title: "Phase 6 — Executive & Thought Leadership",
@@ -109,7 +108,7 @@ const phaseHighlights: PhaseHighlight[] = [
             "Consider Oxford/INSEAD executive energy-transition program.",
         ],
         outcome: "International thought leader with financial independence and personal balance.",
-        icon: SparklesIcon(),
+        icon: <Sparkles className="h-5 w-5" />,
     },
 ];
 
@@ -138,12 +137,12 @@ const closingEssence =
 
 export default function FuturePlanPage() {
     return (
-        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-8">
+        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-8 text-slate-900 dark:text-slate-100">
             {/* Header */}
             <header className="flex flex-wrap items-center gap-3">
-                <Compass className="h-7 w-7" />
+                <Compass className="h-7 w-7 text-slate-900 dark:text-slate-100" />
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Future Plan</h1>
-                <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1 text-sm text-violet-700">
+                <span className="ml-auto inline-flex items-center gap-2 rounded-full bg-indigo-600 px-3 py-1 text-sm font-medium text-white dark:bg-indigo-500">
                     <span role="img" aria-label="crystal ball">
                         🔮
                     </span>
@@ -151,10 +150,10 @@ export default function FuturePlanPage() {
                 </span>
             </header>
 
-            {/* In-page nav */}
+            {/* In-page nav (sticky, high-contrast) */}
             <nav
                 aria-label="Section navigation"
-                className="sticky top-2 z-10 -mx-2 overflow-x-auto rounded-xl border bg-white/70 p-2 backdrop-blur supports-[backdrop-filter]:bg-white/50"
+                className="sticky top-2 z-10 -mx-2 overflow-x-auto rounded-xl border border-slate-300 bg-white/95 p-2 shadow-sm backdrop-blur dark:border-slate-600 dark:bg-slate-900/90"
             >
                 <ul className="flex gap-2 text-sm">
                     {[
@@ -169,7 +168,7 @@ export default function FuturePlanPage() {
                         <li key={id}>
                             <a
                                 href={`#${id}`}
-                                className="inline-block rounded-lg border px-3 py-1 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                                className="inline-block rounded-lg border border-slate-300 px-3 py-1 font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
                             >
                                 {label}
                             </a>
@@ -180,7 +179,7 @@ export default function FuturePlanPage() {
 
             {/* Top summary */}
             <Section id="overview" title="Overview of 18-Year Career Master Plan">
-                <p className="text-muted-foreground">{topSummary}</p>
+                <p className="text-slate-700 dark:text-slate-300">{topSummary}</p>
             </Section>
 
             {/* Identity + table */}
@@ -193,20 +192,22 @@ export default function FuturePlanPage() {
             <Section id="phases" title="Phase Highlights" icon={<Layers className="h-5 w-5" />}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {phaseHighlights.map((p) => (
-                        <article key={p.title} className="rounded-2xl border p-4 h-full">
-                            <div className="flex items-center gap-2">
-                                <div className="text-violet-600">{p.icon}</div>
-                                <h3 className="font-semibold leading-snug">{p.title}</h3>
+                        <article
+                            key={p.title}
+                            className="rounded-2xl border border-slate-300 bg-white p-4 shadow-sm dark:border-slate-600 dark:bg-slate-900"
+                        >
+                            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                                {p.icon}
+                                <h3 className="font-semibold leading-snug text-slate-900 dark:text-slate-100">{p.title}</h3>
                             </div>
-                            <p className="mt-1 text-xs text-muted-foreground">{p.years}</p>
+                            <p className="mt-1 text-xs text-slate-700 dark:text-slate-300">{p.years}</p>
                             <ul className="mt-3 list-disc pl-5 text-sm space-y-1">
                                 {p.summary.map((s) => (
                                     <li key={s}>{s}</li>
                                 ))}
                             </ul>
-                            <div className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-sm text-violet-900">
-                                <span className="font-medium">Outcome: </span>
-                                {p.outcome}
+                            <div className="mt-3 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white dark:bg-indigo-500">
+                                Outcome: {p.outcome}
                             </div>
                         </article>
                     ))}
@@ -220,8 +221,8 @@ export default function FuturePlanPage() {
 
             {/* Lifestyle */}
             <Section id="lifestyle" title="Lifestyle Integration" icon={<HeartPulse className="h-5 w-5" />}>
-                <p className="text-muted-foreground">{lifestyleSummary}</p>
-                <div className="mt-3 rounded-2xl border p-4">
+                <p className="text-slate-700 dark:text-slate-300">{lifestyleSummary}</p>
+                <div className="mt-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-sm dark:border-slate-600 dark:bg-slate-900">
                     <ProgressBar label="Consistency" value={85} />
                     <ProgressBar label="Resilience" value={80} />
                     <ProgressBar label="Balance" value={78} />
@@ -239,13 +240,13 @@ export default function FuturePlanPage() {
 
             {/* Essence */}
             <Section id="essence" title="In Essence" icon={<Sparkles className="h-5 w-5" />}>
-                <blockquote className="rounded-2xl border bg-gray-50 p-4 text-sm leading-relaxed">
+                <blockquote className="rounded-2xl border border-slate-300 bg-white p-4 text-sm leading-relaxed shadow-sm dark:border-slate-600 dark:bg-slate-900">
                     {closingEssence}
                 </blockquote>
             </Section>
 
             {/* Footer */}
-            <footer className="text-xs text-muted-foreground">
+            <footer className="text-xs text-slate-700 dark:text-slate-300">
                 Review quarterly; update annually. Last updated automatically when content changes.
             </footer>
         </div>
@@ -266,12 +267,14 @@ function Section({
     children: ReactNode;
 }) {
     return (
-        <section id={id} className="scroll-mt-20">
+        <section id={id} className="scroll-mt-24">
             <div className="mb-3 flex items-center gap-2">
-                {icon ?? <Compass className="h-5 w-5" />}
+                <span className="text-indigo-700 dark:text-indigo-400">{icon ?? <Compass className="h-5 w-5" />}</span>
                 <h2 className="text-2xl font-semibold">{title}</h2>
             </div>
-            <div className="rounded-2xl border p-4">{children}</div>
+            <div className="rounded-2xl border border-slate-300 bg-white p-4 shadow-sm dark:border-slate-600 dark:bg-slate-900">
+                {children}
+            </div>
         </section>
     );
 }
@@ -280,8 +283,11 @@ function KVGrid({ rows }: { rows: Array<[string, string]> }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rows.map(([k, v]) => (
-                <div key={k} className="rounded-xl border p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{k}</p>
+                <div
+                    key={k}
+                    className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-600 dark:bg-slate-900"
+                >
+                    <p className="text-xs uppercase tracking-wide text-slate-700 dark:text-slate-300">{k}</p>
                     <p className="font-medium">{v}</p>
                 </div>
             ))}
@@ -293,9 +299,14 @@ function BulletCards({ items }: { items: string[] }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {items.map((t) => (
-                <div key={t} className="rounded-xl border p-3 bg-white">
-                    <div className="flex items-start gap-2">
-                        <span className="mt-0.5 text-violet-600">•</span>
+                <div
+                    key={t}
+                    className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-600 dark:bg-slate-900"
+                >
+                    <div className="flex items-start gap-3">
+                        <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white dark:bg-indigo-500">
+                            •
+                        </span>
                         <p className="text-sm">{t}</p>
                     </div>
                 </div>
@@ -311,34 +322,13 @@ function ProgressBar({ label, value }: { label: string; value: number }) {
                 <span className="font-medium">{label}</span>
                 <span className="tabular-nums">{value}%</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-300 dark:bg-slate-700">
                 <div
-                    className="h-full rounded-full bg-violet-500 transition-[width]"
+                    className="h-full rounded-full bg-indigo-600 dark:bg-indigo-500 transition-[width]"
                     style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
                     aria-hidden
                 />
             </div>
         </div>
     );
-}
-
-/* ------------------------------ ICON SHORTCUTS ----------------------------- */
-
-function ChartLineIcon() {
-    return <ChartLine className="h-5 w-5" />;
-}
-function BookOpenIcon() {
-    return <BookOpen className="h-5 w-5" />;
-}
-function BriefcaseIcon() {
-    return <Briefcase className="h-5 w-5" />;
-}
-function TargetIcon() {
-    return <Target className="h-5 w-5" />;
-}
-function LayersIcon() {
-    return <Layers className="h-5 w-5" />;
-}
-function SparklesIcon() {
-    return <Sparkles className="h-5 w-5" />;
 }
