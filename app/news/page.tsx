@@ -26,6 +26,32 @@ type NewsItem = {
   publishedAt?: string | null;
 };
 
+type GuardianResponse = {
+  response?: {
+    results?: GuardianItem[];
+  };
+};
+
+type GuardianItem = {
+  webTitle?: string;
+  webUrl?: string;
+  fields?: {
+    trailText?: string;
+  };
+  webPublicationDate?: string;
+};
+
+type NYTResponse = {
+  results?: NYTItem[];
+};
+
+type NYTItem = {
+  title?: string;
+  url?: string;
+  abstract?: string;
+  published_date?: string;
+};
+
 /* ------------------------------- DATA FETCHERS ----------------------------- */
 
 // Helper: strip any HTML tags from summaries (e.g., Guardian trailText)
@@ -49,9 +75,9 @@ async function fetchGuardianTop(q = ""): Promise<NewsItem[]> {
   try {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return [];
-    const json = await res.json();
-    const results = json?.response?.results ?? [];
-    return results.map((r: any) => ({
+    const json = (await res.json()) as GuardianResponse;
+    const results = json.response?.results ?? [];
+    return results.map((r) => ({
       source: "The Guardian",
       title: r.webTitle,
       url: r.webUrl,
@@ -75,9 +101,9 @@ async function fetchNYTTop(section = "world"): Promise<NewsItem[]> {
   try {
     const res = await fetch(endpoint, { cache: "no-store" });
     if (!res.ok) return [];
-    const json = await res.json();
-    const items = json?.results ?? [];
-    return items.slice(0, 12).map((it: any) => ({
+    const json = (await res.json()) as NYTResponse;
+    const items = json.results ?? [];
+    return items.slice(0, 12).map((it) => ({
       source: "NYTimes",
       title: it.title ?? "",
       url: it.url ?? "#",

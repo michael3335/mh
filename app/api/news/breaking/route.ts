@@ -8,6 +8,28 @@ type Item = {
   publishedAt?: string | null;
 };
 
+type GuardianBreakingResponse = {
+  response?: {
+    results?: GuardianBreakingResult[];
+  };
+};
+
+type GuardianBreakingResult = {
+  webTitle?: string;
+  webUrl?: string;
+  webPublicationDate?: string;
+};
+
+type NYTBreakingResponse = {
+  results?: NYTBreakingResult[];
+};
+
+type NYTBreakingResult = {
+  title?: string;
+  url?: string;
+  published_date?: string;
+};
+
 // helpers
 const stripTags = (s?: string) => (s ? s.replace(/<[^>]*>/g, "").trim() : "");
 
@@ -21,8 +43,9 @@ async function fetchGuardian(): Promise<Item[]> {
   url.searchParams.set("api-key", key);
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return [];
-  const json = await res.json();
-  return (json?.response?.results ?? []).map((r: any) => ({
+  const json = (await res.json()) as GuardianBreakingResponse;
+  const results = json.response?.results ?? [];
+  return results.map((r) => ({
     source: "The Guardian",
     title: r.webTitle,
     url: r.webUrl,
@@ -38,8 +61,9 @@ async function fetchNYT(section = "world"): Promise<Item[]> {
     { cache: "no-store" }
   );
   if (!res.ok) return [];
-  const json = await res.json();
-  return (json?.results ?? []).slice(0, 5).map((i: any) => ({
+  const json = (await res.json()) as NYTBreakingResponse;
+  const items = (json.results ?? []).slice(0, 5);
+  return items.map((i) => ({
     source: "NYTimes",
     title: stripTags(i.title ?? ""),
     url: i.url ?? "#",

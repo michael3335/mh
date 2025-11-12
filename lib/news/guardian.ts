@@ -1,4 +1,20 @@
 // lib/news/guardian.ts
+
+type GuardianTopResponse = {
+  response?: {
+    results?: GuardianTopArticle[];
+  };
+};
+
+type GuardianTopArticle = {
+  webTitle?: string;
+  webUrl?: string;
+  fields?: {
+    trailText?: string;
+  };
+  webPublicationDate?: string;
+};
+
 export async function fetchGuardianTop(q = "top") {
   const key = process.env.GUARDIAN_API_KEY!;
   const url = new URL("https://content.guardianapis.com/search");
@@ -8,8 +24,9 @@ export async function fetchGuardianTop(q = "top") {
   url.searchParams.set("q", q);
   url.searchParams.set("api-key", key);
   const res = await fetch(url, { cache: "no-store" });
-  const json = await res.json();
-  return json.response.results.map((r: any) => ({
+  const json = (await res.json()) as GuardianTopResponse;
+  const results = json.response?.results ?? [];
+  return results.map((r) => ({
     source: "The Guardian",
     title: r.webTitle,
     url: r.webUrl,
