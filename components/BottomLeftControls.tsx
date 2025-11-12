@@ -14,6 +14,7 @@ const AUTH_DESTINATION_COASTER: Route = "/models";
 const AUTH_DESTINATION_PICKAXE: Route = "/commodities"; // keeping constant name for minimal diff
 const AUTH_DESTINATION_NOTE: Route = "/notes"; // <— sticky note destination
 const AUTH_DESTINATION_FUTURE: Route = "/future";
+const AUTH_DESTINATION_ENERGY: Route = "/energy"; // NEW: energy hub
 const RICK = "https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw";
 
 // Optional: hide on certain routes
@@ -82,6 +83,34 @@ export default function BottomLeftControls() {
         >
           <span aria-hidden className="futureIcon" style={{ fontSize: 28, lineHeight: 1 }}>
             🔮
+          </span>
+        </button>
+      )}
+
+      {/* NEW: Energy — /energy if authed; Rick otherwise */}
+      {status === "authenticated" ? (
+        <Link
+          href={AUTH_DESTINATION_ENERGY}
+          aria-label="Open energy hub"
+          className="energyBtn iconBox"
+          prefetch
+        >
+          <span aria-hidden className="energyIcon" style={{ fontSize: 28, lineHeight: 1 }}>
+            ⚡
+          </span>
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className="energyBtn iconBox"
+          aria-label="Open energy hub (sign in required)"
+          onClick={handleUnauthedRick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") handleUnauthedRick(e);
+          }}
+        >
+          <span aria-hidden className="energyIcon" style={{ fontSize: 28, lineHeight: 1 }}>
+            ⚡
           </span>
         </button>
       )}
@@ -222,6 +251,23 @@ export default function BottomLeftControls() {
           100% { transform: translateY(0); }
         }
 
+        /* ---------- NEW: Energy (bolt) animations ---------- */
+        .energyBtn:hover .energyIcon,
+        .energyBtn:focus-visible .energyIcon {
+          animation: energy-pop 320ms cubic-bezier(.2,.7,.2,1) both, energy-breathe 1400ms ease-in-out 320ms infinite;
+          text-shadow: 0 0 6px rgba(255, 234, 0, 0.5);
+        }
+        @keyframes energy-pop {
+          0% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+          60% { transform: scale(1.2) rotate(-6deg); filter: brightness(1.25); }
+          100% { transform: scale(1) rotate(0deg); filter: brightness(1); }
+        }
+        @keyframes energy-breathe {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+          100% { transform: translateY(0); }
+        }
+
         /* ---------- Coaster animation (unchanged) ---------- */
         .coasterBtn:hover :global(.coaster-anim),
         .coasterBtn:focus-visible :global(.coaster-anim) {
@@ -346,7 +392,9 @@ export default function BottomLeftControls() {
           .noteBtn:hover .noteCurl,
           .noteBtn:focus-visible .noteCurl,
           .futureBtn:hover .futureIcon,
-          .futureBtn:focus-visible .futureIcon {
+          .futureBtn:focus-visible .futureIcon,
+          .energyBtn:hover .energyIcon,
+          .energyBtn:focus-visible .energyIcon {
             animation: none !important;
             transform: translateY(-2px);
             text-shadow: none;
