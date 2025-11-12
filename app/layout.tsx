@@ -5,17 +5,12 @@ import FaviconAnimator from "@shared/components/FaviconAnimator";
 import { Analytics } from "@vercel/analytics/react";
 import AuthProvider from "@/components/AuthProvider";
 import BottomLeftControls from "@/components/BottomLeftControls";
-import { Inter, Newsreader } from "next/font/google";
+import { Inter } from "next/font/google";
 
-// Fonts (local, no runtime fetch). Inter for UI text; Newsreader for headings.
+// Single strong sans for a bold, minimal aesthetic
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
-  display: "swap",
-});
-const newsreader = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-serif",
   display: "swap",
 });
 
@@ -45,7 +40,7 @@ export const metadata: Metadata = {
   icons: [
     { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },
     { rel: "apple-touch-icon", url: "/apple-touch-icon.png", sizes: "180x180" },
-    { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#0b0b0c" },
+    { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#000000" },
   ],
   manifest: "/site.webmanifest",
 };
@@ -54,26 +49,23 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   interactiveWidget: "resizes-content",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
-  ],
-  colorScheme: "light dark",
+  // Force a single, bright theme for a black-on-white look
+  themeColor: "#ffffff",
+  colorScheme: "light",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${newsreader.variable}`}
-      // Helps avoid FOUC when user toggles prefers-color-scheme
-      style={{ colorScheme: "light dark" }}
+      className={inter.variable}
+      style={{ colorScheme: "light" }}
     >
       <body className="font-sans antialiased">
         {/* Skip to content for keyboard users */}
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:border focus:border-current focus:bg-[Canvas] focus:px-3 focus:py-1"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:border focus:border-black focus:bg-white focus:px-3 focus:py-1"
         >
           Skip to content
         </a>
