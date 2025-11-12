@@ -48,8 +48,8 @@ export default function EnergyPage() {
 
                 <Card title="Focus (next 12–18 mo)" icon="🎯">
                     <ol className="list">
-                        <li>Build AU NEM price & congestion model (5‑min granularity).</li>
-                        <li>Long‑run LCOE stack with learning curves & WACC sensitivity.</li>
+                        <li>Build AU NEM price & congestion model (5-min granularity).</li>
+                        <li>Long-run LCOE stack with learning curves & WACC sensitivity.</li>
                         <li>Transmission queue + interconnector constraint mapping.</li>
                         <li>Battery arbitrage & FCAS strategy backtests.</li>
                     </ol>
@@ -83,9 +83,8 @@ export default function EnergyPage() {
                 <Card title="Reading list" icon="📚">
                     <ul className="list">
                         <li>Grid congestion & marginal loss factors — AU case studies.</li>
-                        <li>Battery revenue stacking in energy‑only markets.</li>
-                        <li>Permitting timelines vs. build‑out rates (OECD/EM split).
-                        </li>
+                        <li>Battery revenue stacking in energy-only markets.</li>
+                        <li>Permitting timelines vs. build-out rates (OECD/EM split).</li>
                         <li>Commodity capex cycles vs. price elasticities (Cu/Li/Ni).</li>
                     </ul>
                 </Card>
@@ -104,7 +103,8 @@ export default function EnergyPage() {
                 <span>Last updated {new Date().toISOString().slice(0, 10)}</span>
             </footer>
 
-            <style jsx>{`
+            {/* NOTE: Plain <style> to avoid styled-jsx in Server Components */}
+            <style>{`
         :root {
           --bg: Canvas;
           --fg: CanvasText;
