@@ -28,8 +28,8 @@ export async function fetchGuardianTop(q = "top") {
   const results = json.response?.results ?? [];
   return results.map((r) => ({
     source: "The Guardian",
-    title: r.webTitle,
-    url: r.webUrl,
+    title: r.webTitle ?? "",
+    url: r.webUrl ?? "#",
     summary: r.fields?.trailText ?? "",
     publishedAt: r.webPublicationDate,
   }));

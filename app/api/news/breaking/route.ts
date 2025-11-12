@@ -47,8 +47,8 @@ async function fetchGuardian(): Promise<Item[]> {
   const results = json.response?.results ?? [];
   return results.map((r) => ({
     source: "The Guardian",
-    title: r.webTitle,
-    url: r.webUrl,
+    title: r.webTitle ?? "",
+    url: r.webUrl ?? "#",
     publishedAt: r.webPublicationDate,
   }));
 }
@@ -65,7 +65,7 @@ async function fetchNYT(section = "world"): Promise<Item[]> {
   const items = (json.results ?? []).slice(0, 5);
   return items.map((i) => ({
     source: "NYTimes",
-    title: stripTags(i.title ?? ""),
+    title: stripTags(i.title ?? "") || "Top Story",
     url: i.url ?? "#",
     publishedAt: i.published_date ?? null,
   }));

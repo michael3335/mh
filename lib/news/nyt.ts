@@ -21,8 +21,8 @@ export async function fetchNYTTop(section = "world") {
   const results = json.results ?? [];
   return results.slice(0, 12).map((it) => ({
     source: "NYTimes",
-    title: it.title,
-    url: it.url,
+    title: it.title ?? "",
+    url: it.url ?? "#",
     summary: it.abstract ?? "",
     publishedAt: it.published_date,
   }));

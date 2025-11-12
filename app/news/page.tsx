@@ -79,8 +79,8 @@ async function fetchGuardianTop(q = ""): Promise<NewsItem[]> {
     const results = json.response?.results ?? [];
     return results.map((r) => ({
       source: "The Guardian",
-      title: r.webTitle,
-      url: r.webUrl,
+      title: r.webTitle ?? "",
+      url: r.webUrl ?? "#",
       summary: stripTags(r.fields?.trailText),
       publishedAt: r.webPublicationDate,
     }));
