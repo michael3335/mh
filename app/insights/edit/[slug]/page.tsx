@@ -23,6 +23,10 @@ function countWords(s: string) {
     return (s.trim().match(/\b\w+\b/g) || []).length;
 }
 
+function getErrorMessage(err: unknown, fallback: string) {
+    return err instanceof Error ? err.message : fallback;
+}
+
 export default function EditDraftPage({ params }: { params: { slug: string } }) {
     const router = useRouter();
     const { slug } = params;
@@ -61,67 +65,10 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
         })();
     }, [slug]);
 
-    // keyboard shortcuts
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            const isMac = navigator.platform.toLowerCase().includes("mac");
-            const mod = isMac ? e.metaKey : e.ctrlKey;
-            if (mod && e.key.toLowerCase() === "s") {
-                e.preventDefault();
-                if (saving === "idle" && canSave) void saveDraft();
-            }
-            if (mod && e.key === "Enter") {
-                e.preventDefault();
-                if (saving === "idle" && canPublish) void publish();
-            }
-        };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
-    }, [saving, canSave, canPublish]);
-
-    // drag & drop & paste upload
-    useEffect(() => {
-        const el = editorWrapRef.current;
-        if (!el) return;
-        const onDrop = async (e: DragEvent) => {
-            if (!e.dataTransfer) return;
-            const file = Array.from(e.dataTransfer.files)[0];
-            if (!file || !file.type.startsWith("image/")) return;
-            e.preventDefault();
-            try {
-                const url = await uploadImage(file);
-                setContent((prev) => (prev ?? "") + `\n\n![](${url})\n`);
-                showToast("Image inserted");
-            } catch (err: any) {
-                setError(err?.message ?? "Image upload failed");
-            }
-        };
-        const onPaste = async (e: ClipboardEvent) => {
-            const item = e.clipboardData?.items?.[0];
-            if (!item || item.kind !== "file") return;
-            const file = item.getAsFile();
-            if (!file || !file.type.startsWith("image/")) return;
-            try {
-                const url = await uploadImage(file);
-                setContent((prev) => (prev ?? "") + `\n\n![](${url})\n`);
-                showToast("Image pasted");
-            } catch (err: any) {
-                setError(err?.message ?? "Image upload failed");
-            }
-        };
-        el.addEventListener("drop", onDrop);
-        el.addEventListener("paste", onPaste as any);
-        el.addEventListener("dragover", (e) => e.preventDefault());
-        return () => {
-            el.removeEventListener("drop", onDrop);
-            el.removeEventListener("paste", onPaste as any);
-        };
-    }, []);
-
-    const showToast = (msg: string) => {
+    const showToast = useCallback((msg: string) => {
         setToast(msg);
         window.setTimeout(() => setToast(null), 2000);
-    };
+    }, []);
 
     const uploadImage = useCallback(
         async (file: File) => {
@@ -151,50 +98,53 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
         [slug]
     );
 
-    async function upload({ draft }: { draft: boolean }) {
-        if (!meta?.author?.trim()) throw new Error("Author is required.");
-        const presign = await fetch("/api/insights/presign/post", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug, draft }),
-        });
-        if (!presign.ok) throw new Error("Failed to presign");
-        const { content: c, meta: m } = await presign.json();
+    const upload = useCallback(
+        async ({ draft }: { draft: boolean }) => {
+            if (!meta?.author?.trim()) throw new Error("Author is required.");
+            const presign = await fetch("/api/insights/presign/post", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ slug, draft }),
+            });
+            if (!presign.ok) throw new Error("Failed to presign");
+            const { content: c, meta: m } = await presign.json();
 
-        const putContent = await fetch(c.url, {
-            method: "PUT",
-            headers: { "Content-Type": "text/markdown; charset=utf-8" },
-            body: content ?? "",
-        });
-        if (!putContent.ok) throw new Error("Failed to upload content");
+            const putContent = await fetch(c.url, {
+                method: "PUT",
+                headers: { "Content-Type": "text/markdown; charset=utf-8" },
+                body: content ?? "",
+            });
+            if (!putContent.ok) throw new Error("Failed to upload content");
 
-        const metaBody = JSON.stringify(
-            { ...meta, slug, status: draft ? "draft" : "published" },
-            null,
-            2
-        );
-        const putMeta = await fetch(m.url, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json; charset=utf-8" },
-            body: metaBody,
-        });
-        if (!putMeta.ok) throw new Error("Failed to upload metadata");
-    }
+            const metaBody = JSON.stringify(
+                { ...meta, slug, status: draft ? "draft" : "published" },
+                null,
+                2
+            );
+            const putMeta = await fetch(m.url, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json; charset=utf-8" },
+                body: metaBody,
+            });
+            if (!putMeta.ok) throw new Error("Failed to upload metadata");
+        },
+        [content, meta, slug]
+    );
 
-    const saveDraft = async () => {
+    const saveDraft = useCallback(async () => {
         setError(null);
         try {
             setSaving("draft");
             await upload({ draft: true });
             setSaving("idle");
             showToast("Draft saved");
-        } catch (e: any) {
-            setError(e.message || "Save draft failed");
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, "Save draft failed"));
             setSaving("idle");
         }
-    };
+    }, [upload, showToast]);
 
-    const publish = async () => {
+    const publish = useCallback(async () => {
         setError(null);
         if (!validTitle) {
             setError("Please add a title before publishing.");
@@ -205,11 +155,68 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
             await upload({ draft: true });
             await upload({ draft: false });
             router.push(`/insights/${slug}`);
-        } catch (e: any) {
-            setError(e.message || "Publish failed");
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, "Publish failed"));
             setSaving("idle");
         }
-    };
+    }, [upload, router, slug, validTitle]);
+
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            const isMac = navigator.platform.toLowerCase().includes("mac");
+            const mod = isMac ? e.metaKey : e.ctrlKey;
+            if (mod && e.key.toLowerCase() === "s") {
+                e.preventDefault();
+                if (saving === "idle" && canSave) void saveDraft();
+            }
+            if (mod && e.key === "Enter") {
+                e.preventDefault();
+                if (saving === "idle" && canPublish) void publish();
+            }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [saving, canSave, canPublish, saveDraft, publish]);
+
+    useEffect(() => {
+        const el = editorWrapRef.current;
+        if (!el) return;
+        const onDrop = async (e: DragEvent) => {
+            if (!e.dataTransfer) return;
+            const file = Array.from(e.dataTransfer.files)[0];
+            if (!file || !file.type.startsWith("image/")) return;
+            e.preventDefault();
+            try {
+                const url = await uploadImage(file);
+                setContent((prev) => prev + `\n\n![](${url})\n`);
+                showToast("Image inserted");
+            } catch (err: unknown) {
+                setError(getErrorMessage(err, "Image upload failed"));
+            }
+        };
+        const onPaste = async (event: ClipboardEvent) => {
+            const item = event.clipboardData?.items?.[0];
+            if (!item || item.kind !== "file") return;
+            const file = item.getAsFile();
+            if (!file || !file.type.startsWith("image/")) return;
+            try {
+                const url = await uploadImage(file);
+                setContent((prev) => prev + `\n\n![](${url})\n`);
+                showToast("Image pasted");
+            } catch (err: unknown) {
+                setError(getErrorMessage(err, "Image upload failed"));
+            }
+        };
+        const onDragOver = (event: DragEvent) => event.preventDefault();
+        el.addEventListener("drop", onDrop);
+        el.addEventListener("paste", onPaste);
+        el.addEventListener("dragover", onDragOver);
+        return () => {
+            el.removeEventListener("drop", onDrop);
+            el.removeEventListener("paste", onPaste);
+            el.removeEventListener("dragover", onDragOver);
+        };
+    }, [uploadImage, showToast]);
 
     const words = countWords(content || "");
     const chars = (content || "").length;
@@ -260,7 +267,7 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
                     <small className="hint">Format: YYYY-MM-DD HH:mm TZ (24-hour).</small>
                 </label>
 
-                <label className="field" style={{ gridColumn: "span 2" as any }}>
+                <label className="field" style={{ gridColumn: "span 2" }}>
                     <span>Tags (comma separated)</span>
                     <input
                         value={(meta.tags ?? []).join(", ")}
@@ -273,7 +280,7 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
                     />
                 </label>
 
-                <label className="field" style={{ gridColumn: "span 2" as any }}>
+                <label className="field" style={{ gridColumn: "span 2" }}>
                     <span>Summary</span>
                     <input
                         value={meta.summary ?? ""}
