@@ -667,14 +667,6 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 }
 
 /* -------------------------------- TIMELINE UI ------------------------------ */
-
-type TimelineItem = {
-    years: string;
-    phase: string;
-    focus: string;
-    deliverables: string;
-};
-
 function Timeline({ items }: { items: TimelineItem[] }) {
     return (
         <ol className="relative ml-3 border-s-2 border-current/60">
