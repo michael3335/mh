@@ -14,7 +14,9 @@ const AUTH_DESTINATION_COASTER: Route = "/models";
 const AUTH_DESTINATION_PICKAXE: Route = "/commodities"; // keeping constant name for minimal diff
 const AUTH_DESTINATION_NOTE: Route = "/notes"; // <— sticky note destination
 const AUTH_DESTINATION_FUTURE: Route = "/future";
-const AUTH_DESTINATION_ENERGY: Route = "/energy"; // NEW: energy hub
+const AUTH_DESTINATION_ENERGY: Route = "/energy"; // energy hub
+const AUTH_DESTINATION_NEWS: Route = "/news"; // NEW: news briefing
+const AUTH_DESTINATION_INSIGHTS: Route = "/insights"; // NEW: portfolio blog
 const RICK = "https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw";
 
 // Optional: hide on certain routes
@@ -59,7 +61,7 @@ export default function BottomLeftControls() {
         gap: "12px",
       }}
     >
-      {/* NEW: Crystal Ball — /future if authed; Rick otherwise */}
+      {/* Crystal Ball — /future if authed; Rick otherwise */}
       {status === "authenticated" ? (
         <Link
           href={AUTH_DESTINATION_FUTURE}
@@ -87,7 +89,35 @@ export default function BottomLeftControls() {
         </button>
       )}
 
-      {/* NEW: Energy — /energy if authed; Rick otherwise */}
+      {/* NEW: News — /news if authed; Rick otherwise */}
+      {status === "authenticated" ? (
+        <Link
+          href={AUTH_DESTINATION_NEWS}
+          aria-label="Open news briefing"
+          className="newsBtn iconBox"
+          prefetch
+        >
+          <span aria-hidden className="newsIcon" style={{ fontSize: 28, lineHeight: 1 }}>
+            📰
+          </span>
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className="newsBtn iconBox"
+          aria-label="Open news briefing (sign in required)"
+          onClick={handleUnauthedRick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") handleUnauthedRick(e);
+          }}
+        >
+          <span aria-hidden className="newsIcon" style={{ fontSize: 28, lineHeight: 1 }}>
+            📰
+          </span>
+        </button>
+      )}
+
+      {/* Energy — /energy if authed; Rick otherwise */}
       {status === "authenticated" ? (
         <Link
           href={AUTH_DESTINATION_ENERGY}
@@ -111,6 +141,34 @@ export default function BottomLeftControls() {
         >
           <span aria-hidden className="energyIcon" style={{ fontSize: 28, lineHeight: 1 }}>
             ⚡
+          </span>
+        </button>
+      )}
+
+      {/* NEW: Insights — /insights if authed; Rick otherwise */}
+      {status === "authenticated" ? (
+        <Link
+          href={AUTH_DESTINATION_INSIGHTS}
+          aria-label="Open insights (portfolio blog)"
+          className="insightsBtn iconBox"
+          prefetch
+        >
+          <span aria-hidden className="insightsIcon" style={{ fontSize: 28, lineHeight: 1 }}>
+            ✍️
+          </span>
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className="insightsBtn iconBox"
+          aria-label="Open insights (sign in required)"
+          onClick={handleUnauthedRick}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") handleUnauthedRick(e);
+          }}
+        >
+          <span aria-hidden className="insightsIcon" style={{ fontSize: 28, lineHeight: 1 }}>
+            ✍️
           </span>
         </button>
       )}
@@ -163,7 +221,7 @@ export default function BottomLeftControls() {
         </button>
       )}
 
-      {/* UPDATED: Sticky Note (between coaster and folder) */}
+      {/* Sticky Note (between coaster and folder) */}
       {status === "authenticated" ? (
         <Link
           href={AUTH_DESTINATION_NOTE}
@@ -234,7 +292,7 @@ export default function BottomLeftControls() {
             color-mix(in oklab, #5227ff 60%, white 0%);
         }
 
-        /* ---------- NEW: Crystal ball animations ---------- */
+        /* Crystal ball animations */
         .futureBtn:hover .futureIcon,
         .futureBtn:focus-visible .futureIcon {
           animation: future-spin 900ms ease-in-out both, future-breath 1500ms ease-in-out infinite;
@@ -251,7 +309,7 @@ export default function BottomLeftControls() {
           100% { transform: translateY(0); }
         }
 
-        /* ---------- NEW: Energy (bolt) animations ---------- */
+        /* Energy (bolt) animations */
         .energyBtn:hover .energyIcon,
         .energyBtn:focus-visible .energyIcon {
           animation: energy-pop 320ms cubic-bezier(.2,.7,.2,1) both, energy-breathe 1400ms ease-in-out 320ms infinite;
@@ -268,13 +326,47 @@ export default function BottomLeftControls() {
           100% { transform: translateY(0); }
         }
 
-        /* ---------- Coaster animation (unchanged) ---------- */
+        /* News (paper) animations */
+        .newsBtn:hover .newsIcon,
+        .newsBtn:focus-visible .newsIcon {
+          animation: news-pop 260ms cubic-bezier(.2,.7,.2,1) both, news-bob 1200ms ease-in-out 260ms infinite;
+          text-shadow: 0 0 6px rgba(80, 120, 255, 0.45);
+        }
+        @keyframes news-pop {
+          0% { transform: scale(1) rotate(0deg); }
+          60% { transform: scale(1.18) rotate(3deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+        @keyframes news-bob {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+          100% { transform: translateY(0); }
+        }
+
+        /* Insights (pen) animations */
+        .insightsBtn:hover .insightsIcon,
+        .insightsBtn:focus-visible .insightsIcon {
+          animation: ins-pop 280ms cubic-bezier(.2,.7,.2,1) both, ins-breathe 1300ms ease-in-out 280ms infinite;
+          text-shadow: 0 0 6px rgba(255, 160, 90, 0.45);
+        }
+        @keyframes ins-pop {
+          0% { transform: scale(1) rotate(0deg); }
+          60% { transform: scale(1.16) rotate(-4deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+        @keyframes ins-breathe {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+          100% { transform: translateY(0); }
+        }
+
+        /* Coaster animation (unchanged) */
         .coasterBtn:hover :global(.coaster-anim),
         .coasterBtn:focus-visible :global(.coaster-anim) {
           animation: rc-wiggle 900ms ease-in-out both, rc-bob 1200ms ease-in-out infinite;
         }
 
-        /* ---------- Gold nugget/pickaxe animations ---------- */
+        /* Gold nugget/pickaxe animations */
         .goldBtn:hover :global(.gold-nugget-anim),
         .goldBtn:focus-visible :global(.gold-nugget-anim) {
           animation: gold-swing 900ms ease-in-out both, gold-bob 1200ms ease-in-out infinite;
@@ -344,7 +436,7 @@ export default function BottomLeftControls() {
           100% { opacity: 0; transform: translate(-3px, 6px) rotate(25deg); }
         }
 
-        /* ---------- Sticky note: idle + hover peel ---------- */
+        /* Sticky note: idle + hover peel */
         .noteBtn .noteIcon {
           animation: note-idle 6s ease-in-out infinite;
           transform-origin: 80% 10%;
@@ -394,7 +486,11 @@ export default function BottomLeftControls() {
           .futureBtn:hover .futureIcon,
           .futureBtn:focus-visible .futureIcon,
           .energyBtn:hover .energyIcon,
-          .energyBtn:focus-visible .energyIcon {
+          .energyBtn:focus-visible .energyIcon,
+          .newsBtn:hover .newsIcon,
+          .newsBtn:focus-visible .newsIcon,
+          .insightsBtn:hover .insightsIcon,
+          .insightsBtn:focus-visible .insightsIcon {
             animation: none !important;
             transform: translateY(-2px);
             text-shadow: none;
