@@ -1,188 +1,97 @@
 // app/insights/[slug]/page.tsx
-// Server component. Dynamic route for individual Insight posts.
-
 import Link from "next/link";
+import { s3, BUCKET } from "@/lib/s3";
+import { GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-type Post = {
+type PostMeta = {
     slug: string;
     title: string;
-    date: string; // ISO yyyy-mm-dd
-    summary: string;
+    author: string;
+    date: string;
+    summary?: string;
     tags?: string[];
-    body: string[]; // simple paragraphs for now; swap to MDX later
 };
 
-// --- Demo content (replace with MDX/DB fetch) ---
-const POSTS: Record<string, Post> = {
-    "energy-storage-arb": {
-        slug: "energy-storage-arb",
-        title: "Battery Arbitrage: Where The Spread Actually Lives",
-        date: "2025-10-14",
-        summary:
-            "Mapping 5-minute price distributions to storage dispatch and why scarcity rents cluster on shoulder hours.",
-        tags: ["Energy", "Markets", "Strategy"],
-        body: [
-            "Battery revenue is dominated by a handful of high-spread intervals, not the average day. That pushes strategy toward probabilistic dispatch rather than simple heuristic rules.",
-            "We examine shoulder-hour clustering, FCAS uplifts, and congestion pockets that change node-level spreads — especially under interconnector constraints.",
-            "A practical takeaway: pair price-shape analysis with availability windows and cycle budgets; optimize the last 10–15% of dispatch, not the first 85%.",
-        ],
-    },
-    "lcoe-sensitivity": {
-        slug: "lcoe-sensitivity",
-        title: "LCOE Isn’t a Price: WACC, Curves, and Context",
-        date: "2025-09-02",
-        summary:
-            "A quick explainer on levelized costs, discount rates, and the mistakes people make when they compare techs.",
-        tags: ["Finance", "Modeling"],
-        body: [
-            "LCOE is a financing- and utilization-dependent statistic. Comparing across technologies without normalizing for WACC, capacity factor, and curtailment bakes in apples-to-oranges bias.",
-            "We show how plausible WACC bands shift rankings and why ‘cheapest’ in league tables can mask integration costs and grid constraints.",
-        ],
-    },
-    "policy-permitting": {
-        slug: "policy-permitting",
-        title: "Permitting Is the New Policy",
-        date: "2025-07-21",
-        summary:
-            "Why queue reform beats new subsidies for unlocking grids and generation at scale.",
-        tags: ["Policy", "Energy"],
-        body: [
-            "Bottlenecks moved from capex to process. Interconnection queues, land, and transmission corridors set the pace.",
-            "Simplify milestones, time-box studies, and stage deposits to align incentives. The cheapest subsidy is often time.",
-        ],
-    },
-};
-
-function getPostBySlug(slug: string): Post | null {
-    return POSTS[slug] ?? null;
-}
-
-// --- Static params for SSG (optional but nice) ---
-export function generateStaticParams() {
-    return Object.keys(POSTS).map((slug) => ({ slug }));
-}
-
-export function generateMetadata({ params }: { params: { slug: string } }) {
-    const post = getPostBySlug(params.slug);
-    if (!post) {
-        return { title: "Not found • Insights" };
+async function fetchPost(slug: string): Promise<{ meta: PostMeta; content: string } | null> {
+    const base = `insights/${encodeURIComponent(slug)}`;
+    try {
+        await s3.send(new HeadObjectCommand({ Bucket: BUCKET, Key: `${base}/meta.json` }));
+    } catch {
+        return null;
     }
-    return {
-        title: `${post.title} • Insights`,
-        description: post.summary,
-    };
+    const [metaObj, contentObj] = await Promise.all([
+        s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: `${base}/meta.json` })),
+        s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: `${base}/content.md` })),
+    ]);
+    const [metaText, mdText] = await Promise.all([
+        metaObj.Body!.transformToString(),
+        contentObj.Body!.transformToString(),
+    ]);
+    return { meta: JSON.parse(metaText), content: mdText };
 }
 
-export default function InsightPostPage({ params }: { params: { slug: string } }) {
-    const post = getPostBySlug(params.slug);
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+    const data = await fetchPost(params.slug);
+    if (!data) return { title: "Not found • Insights" };
+    return { title: `${data.meta.title} • Insights`, description: data.meta.summary || data.meta.title };
+}
 
-    if (!post) {
+export default async function InsightPage({ params }: { params: { slug: string } }) {
+    const data = await fetchPost(params.slug);
+    if (!data) {
         return (
             <main className="wrap">
-                <header className="hero">
-                    <div className="symbol" aria-hidden>
-                        <span className="mark" role="img">✍️</span>
-                    </div>
-                    <div className="titleBlock">
-                        <h1>Post not found</h1>
-                        <p className="tagline">The post you’re looking for doesn’t exist.</p>
-                    </div>
-                </header>
-                <p style={{ marginTop: 16 }}>
-                    <Link href="/insights">← Back to Insights</Link>
-                </p>
-                <style>{baseStyles}</style>
+                <h1>Not found</h1>
+                <p><Link href="/insights">← Back to Insights</Link></p>
             </main>
         );
     }
 
+    const { meta, content } = data;
+
     return (
         <main className="wrap">
-            <header className="hero" aria-labelledby="post-title">
-                <div className="symbol" aria-hidden>
-                    <span className="mark" role="img">✍️</span>
-                </div>
+            <header className="hero">
+                <div className="symbol"><span className="mark">✍️</span></div>
                 <div className="titleBlock">
-                    <h1 id="post-title">{post.title}</h1>
+                    <h1>{meta.title}</h1>
                     <p className="meta">
-                        <span>{formatDate(post.date)}</span>
-                        {post.tags?.length ? (
-                            <span className="tags">
-                                {post.tags.map((t) => (
-                                    <span key={t} className="tag" aria-label={`tag ${t}`}>{t}</span>
-                                ))}
-                            </span>
-                        ) : null}
+                        <span>{formatDate(meta.date)}</span> • <span>{meta.author}</span>
+                        {meta.tags?.length ? <> • {meta.tags.join(", ")}</> : null}
                     </p>
-                    <p className="tagline">{post.summary}</p>
+                    {meta.summary ? <p className="tagline">{meta.summary}</p> : null}
                 </div>
             </header>
 
             <article className="prose">
-                {post.body.map((para, i) => (
-                    <p key={i}>{para}</p>
-                ))}
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
             </article>
 
             <nav className="footNav">
-                <Link href="/insights" prefetch className="pill">← Back to Insights</Link>
+                <Link className="pill" href="/insights">← Back to Insights</Link>
             </nav>
 
-            {/* Plain <style> to avoid styled-jsx in Server Component */}
-            <style>{baseStyles}</style>
+            <style>{styles}</style>
         </main>
     );
 }
 
-// --- Utilities ---
 function formatDate(iso: string) {
     const d = new Date(iso + "T00:00:00");
-    const fmt = new Intl.DateTimeFormat("en-AU", {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-        timeZone: "Australia/Hobart",
-    });
-    return fmt.format(d);
+    return new Intl.DateTimeFormat("en-AU", { year: "numeric", month: "short", day: "2-digit" }).format(d);
 }
 
-const baseStyles = `
-:root {
-  --bg: Canvas;
-  --fg: CanvasText;
-  --muted: color-mix(in oklab, CanvasText 60%, Canvas 40%);
-  --rule: color-mix(in oklab, CanvasText 15%, Canvas 85%);
-  --pill-bg: color-mix(in oklab, CanvasText 8%, Canvas 92%);
-  --pill-fg: LinkText;
-}
-.wrap { background: var(--bg); color: var(--fg); padding: clamp(20px, 4vw, 40px); max-width: 920px; margin: 0 auto; }
-.hero {
-  display: grid; grid-template-columns: auto 1fr; gap: clamp(16px, 3vw, 28px);
-  align-items: center; padding-block: clamp(8px, 2vw, 20px); border-bottom: 1px solid var(--rule);
-}
-.symbol {
-  inline-size: clamp(64px, 10vw, 96px); block-size: clamp(64px, 10vw, 96px);
-  display: grid; place-items: center; border-radius: 20px;
-  background: color-mix(in oklab, CanvasText 6%, Canvas 94%);
-  box-shadow: 0 1px 0 color-mix(in oklab, CanvasText 8%, transparent),
-              0 12px 40px color-mix(in oklab, CanvasText 8%, transparent);
-}
-.mark { font-size: clamp(40px, 7vw, 56px); line-height: 1; display: block; transform: translateY(1px); }
-.titleBlock h1 { font-size: clamp(32px, 5vw, 56px); letter-spacing: -0.02em; margin: 0; }
-.meta { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); margin: 8px 0 0; font-size: 14px; }
-.tags { display: inline-flex; gap: 6px; }
-.tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--pill-bg); }
-.tagline { margin: 6px 0 0; color: var(--muted); max-width: 70ch; }
-
-.prose { padding-block: clamp(16px, 3vw, 28px); }
-.prose p { margin: 0 0 14px 0; line-height: 1.65; }
-
-.footNav { border-top: 1px solid var(--rule); padding-top: 16px; display: flex; justify-content: space-between; }
-.pill {
-  display: inline-block; padding: 8px 12px; border-radius: 999px;
-  background: var(--pill-bg); color: var(--pill-fg); text-decoration: none;
-  border: 1px solid var(--rule);
-}
-
-@media (prefers-reduced-motion: reduce) { .mark { transform: none !important; } }
+const styles = `
+.wrap { max-width: 820px; margin: 0 auto; padding: clamp(16px, 4vw, 32px); }
+.hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; border-bottom: 1px solid #e5e5e5; padding-bottom: 12px; }
+.symbol { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 16px; background: #f6f6f9; }
+.mark { font-size: 40px; }
+.titleBlock h1 { margin: 0; font-size: clamp(24px, 4vw, 40px); }
+.meta { color: #666; margin: 6px 0 0; }
+.tagline { color: #666; margin: 6px 0 0; }
+.prose { margin-top: 16px; }
+.footNav { margin-top: 16px; border-top: 1px solid #e5e5e5; padding-top: 12px; }
+.pill { display: inline-block; padding: 8px 12px; border-radius: 999px; border: 1px solid #ddd; text-decoration: none; }
 `;
