@@ -4,6 +4,7 @@ import { s3, BUCKET } from "@/lib/s3";
 import { GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatMetaDate } from "@/lib/insights/date";
 
 type PostMeta = {
     slug: string;
@@ -58,7 +59,7 @@ export default async function InsightPage({ params }: { params: { slug: string }
                 <div className="titleBlock">
                     <h1>{meta.title}</h1>
                     <p className="meta">
-                        <span>{formatDate(meta.date)}</span> • <span>{meta.author}</span>
+                        <span>{formatMetaDate(meta.date)}</span> • <span>{meta.author}</span>
                         {meta.tags?.length ? <> • {meta.tags.join(", ")}</> : null}
                     </p>
                     {meta.summary ? <p className="tagline">{meta.summary}</p> : null}
@@ -77,12 +78,6 @@ export default async function InsightPage({ params }: { params: { slug: string }
         </main>
     );
 }
-
-function formatDate(iso: string) {
-    const d = new Date(iso + "T00:00:00");
-    return new Intl.DateTimeFormat("en-AU", { year: "numeric", month: "short", day: "2-digit" }).format(d);
-}
-
 const styles = `
 .wrap { max-width: 820px; margin: 0 auto; padding: clamp(16px, 4vw, 32px); }
 .hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; border-bottom: 1px solid #e5e5e5; padding-bottom: 12px; }

@@ -21,7 +21,6 @@ type Meta = {
 function nowMelbourne(): { isoDate: string; display: string } {
     const tz = "Australia/Melbourne";
     const d = new Date();
-    // display like "2025-11-12 21:43 AEDT"
     const datePart = new Intl.DateTimeFormat("en-CA", {
         timeZone: tz,
         year: "numeric",
@@ -34,10 +33,10 @@ function nowMelbourne(): { isoDate: string; display: string } {
         hour: "2-digit",
         minute: "2-digit",
     }).format(d); // HH:mm
-    const tzName = new Intl.DateTimeFormat("en-AU", {
-        timeZone: tz,
-        timeZoneName: "short",
-    }).formatToParts(d).find(p => p.type === "timeZoneName")?.value ?? "AET";
+    const tzName =
+        new Intl.DateTimeFormat("en-AU", { timeZone: tz, timeZoneName: "short" })
+            .formatToParts(d)
+            .find((p) => p.type === "timeZoneName")?.value ?? "AET";
     return { isoDate: d.toISOString(), display: `${datePart} ${timePart} ${tzName}` };
 }
 
@@ -61,19 +60,18 @@ export default function NewInsightPage() {
         summary: "",
         status: "draft",
     });
-    const [content, setContent] = useState<string>("");
+    const [content, setContent] = useState<string>(""); // <- string (not string | undefined)
     const [saving, setSaving] = useState<"idle" | "draft" | "publish">("idle");
     const [error, setError] = useState<string | null>(null);
     const [toast, setToast] = useState<string | null>(null);
     const draftTimer = useRef<number | null>(null);
     const editorWrapRef = useRef<HTMLDivElement>(null);
 
-    // validation
     const validTitle = meta.title.trim().length > 0;
     const canSave = slug.length > 0 && meta.author.trim().length > 0;
     const canPublish = canSave && validTitle;
 
-    // keyboard shortcuts: Cmd/Ctrl+S (save draft), Cmd/Ctrl+Enter (publish)
+    // keyboard shortcuts
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             const isMac = navigator.platform.toLowerCase().includes("mac");
@@ -91,7 +89,7 @@ export default function NewInsightPage() {
         return () => window.removeEventListener("keydown", onKey);
     }, [saving, canSave, canPublish]);
 
-    // autosave every 15s while editing
+    // autosave every 15s
     useEffect(() => {
         draftTimer.current = window.setInterval(() => {
             if (canSave) void saveDraft(true);
@@ -99,9 +97,9 @@ export default function NewInsightPage() {
         return () => {
             if (draftTimer.current) window.clearInterval(draftTimer.current);
         };
-    }, [slug, meta.author, meta.title, content]); // re-arm when key values change
+    }, [slug, meta.author, meta.title, content]);
 
-    // drag & drop image upload
+    // drag & drop & paste upload
     useEffect(() => {
         const el = editorWrapRef.current;
         if (!el) return;
@@ -199,8 +197,6 @@ export default function NewInsightPage() {
     async function uploadPost({ draft }: { draft: boolean }) {
         if (!slug) throw new Error("Slug is required.");
         if (!meta.author.trim()) throw new Error("Author is required.");
-        // title required ONLY for publish (draft can be saved without a title if desired,
-        // but we’ll gently encourage title via UI)
         const presign = await fetch("/api/insights/presign/post", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -230,7 +226,7 @@ export default function NewInsightPage() {
     }
 
     const saveDraft = async (silent = false) => {
-        if (!canSave) return; // avoid noisy errors during autosave before slug exists
+        if (!canSave) return;
         try {
             if (!silent) setSaving("draft");
             await uploadPost({ draft: true });
@@ -252,7 +248,6 @@ export default function NewInsightPage() {
         }
         try {
             setSaving("publish");
-            // keep a draft copy, then publish
             await uploadPost({ draft: true });
             await uploadPost({ draft: false });
             router.push(`/insights/${slug}`);
@@ -268,7 +263,9 @@ export default function NewInsightPage() {
     return (
         <main className="wrap">
             <header className="hero" aria-labelledby="new-title">
-                <div className="symbol" aria-hidden><span className="mark">✍️</span></div>
+                <div className="symbol" aria-hidden>
+                    <span className="mark">✍️</span>
+                </div>
                 <div className="titleBlock">
                     <h1 id="new-title">New Insight</h1>
                     <p className="tagline">
@@ -279,7 +276,9 @@ export default function NewInsightPage() {
 
             <section className="metaGrid" aria-label="Post metadata">
                 <label className="field">
-                    <span>Title <b className="req">(required)</b></span>
+                    <span>
+                        Title <b className="req">(required)</b>
+                    </span>
                     <input
                         value={meta.title}
                         onChange={(e) => onTitle(e.target.value)}
@@ -315,7 +314,9 @@ export default function NewInsightPage() {
                         onChange={(e) => setMeta((m) => ({ ...m, date: e.target.value }))}
                         placeholder={initialNow.display}
                     />
-                    <small className="hint">Format: YYYY-MM-DD HH:mm TZ (24-hour, e.g., {initialNow.display}).</small>
+                    <small className="hint">
+                        Format: YYYY-MM-DD HH:mm TZ (24-hour, e.g., {initialNow.display}).
+                    </small>
                 </label>
 
                 <label className="field" style={{ gridColumn: "span 2" as any }}>
@@ -325,7 +326,10 @@ export default function NewInsightPage() {
                         onChange={(e) =>
                             setMeta((m) => ({
                                 ...m,
-                                tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean),
+                                tags: e.target.value
+                                    .split(",")
+                                    .map((t) => t.trim())
+                                    .filter(Boolean),
                             }))
                         }
                         placeholder="Energy, Markets, Finance"
@@ -345,18 +349,36 @@ export default function NewInsightPage() {
             <section className="editorSection" data-color-mode="light" ref={editorWrapRef}>
                 <div className="toolbar" role="toolbar" aria-label="Editor actions">
                     <div className="left">
-                        <button type="button" className="btn" onClick={insertImage} aria-label="Insert image">Insert image</button>
+                        <button type="button" className="btn" onClick={insertImage} aria-label="Insert image">
+                            Insert image
+                        </button>
                     </div>
                     <div className="middle">
-                        <span className="meter" aria-live="polite">{words} words • {chars} chars</span>
+                        <span className="meter" aria-live="polite">
+                            {words} words • {chars} chars
+                        </span>
                     </div>
                     <div className="right">
-                        <Link href="/insights/drafts" className="pill" aria-label="View drafts">Drafts</Link>
-                        <Link href="/insights" className="pill" aria-label="Cancel and return">Cancel</Link>
-                        <button type="button" className="pill" onClick={() => saveDraft()} disabled={!canSave || saving !== "idle"}>
+                        <Link href="/insights/drafts" className="pill" aria-label="View drafts">
+                            Drafts
+                        </Link>
+                        <Link href="/insights" className="pill" aria-label="Cancel and return">
+                            Cancel
+                        </Link>
+                        <button
+                            type="button"
+                            className="pill"
+                            onClick={() => saveDraft()}
+                            disabled={!canSave || saving !== "idle"}
+                        >
                             {saving === "draft" ? "Saving…" : "Save draft"}
                         </button>
-                        <button type="button" className="pill primary" onClick={publish} disabled={!canPublish || saving !== "idle"}>
+                        <button
+                            type="button"
+                            className="pill primary"
+                            onClick={publish}
+                            disabled={!canPublish || saving !== "idle"}
+                        >
                             {saving === "publish" ? "Publishing…" : "Publish"}
                         </button>
                     </div>
@@ -364,14 +386,22 @@ export default function NewInsightPage() {
 
                 <MDEditor
                     value={content}
-                    onChange={setContent}
+                    onChange={(v) => setContent(v ?? "")} // <- wrap undefined
                     previewOptions={{ remarkPlugins: [remarkGfm] }}
                     height={560}
                 />
             </section>
 
-            {error ? <p className="error" role="alert">{error}</p> : null}
-            {toast ? <p className="toast" role="status">{toast}</p> : null}
+            {error ? (
+                <p className="error" role="alert">
+                    {error}
+                </p>
+            ) : null}
+            {toast ? (
+                <p className="toast" role="status">
+                    {toast}
+                </p>
+            ) : null}
 
             <style>{styles}</style>
         </main>

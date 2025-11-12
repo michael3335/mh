@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { s3, BUCKET } from "@/lib/s3";
 import { ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { compareMetaDatesDesc, formatMetaDate } from "@/lib/insights/date";
 
 type PostMeta = {
     slug: string;
@@ -28,7 +29,7 @@ async function listMetas(): Promise<PostMeta[]> {
         const txt = await obj.Body!.transformToString();
         metas.push(JSON.parse(txt));
     }
-    return metas.sort((a, b) => (a.date < b.date ? 1 : -1));
+    return metas.sort((a, b) => compareMetaDatesDesc(a.date, b.date));
 }
 
 export default async function InsightsPage() {
@@ -52,7 +53,7 @@ export default async function InsightsPage() {
                     <li key={p.slug} className="postCard">
                         <h3><Link href={`/insights/${p.slug}`}>{p.title}</Link></h3>
                         <p className="meta">
-                            <span>{formatDate(p.date)}</span> • <span>{p.author}</span>
+                            <span>{formatMetaDate(p.date)}</span> • <span>{p.author}</span>
                             {p.tags?.length ? <> • {p.tags.join(", ")}</> : null}
                         </p>
                         {p.summary ? <p>{p.summary}</p> : null}
@@ -65,12 +66,6 @@ export default async function InsightsPage() {
         </main>
     );
 }
-
-function formatDate(iso: string) {
-    const d = new Date(iso + "T00:00:00");
-    return new Intl.DateTimeFormat("en-AU", { year: "numeric", month: "short", day: "2-digit" }).format(d);
-}
-
 const styles = `
 .wrap { max-width: 1000px; margin: 0 auto; padding: clamp(16px, 4vw, 32px); }
 .hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; border-bottom: 1px solid #e5e5e5; padding-bottom: 12px; }

@@ -1,7 +1,7 @@
 // app/insights/edit/[slug]/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,7 +27,7 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
     const router = useRouter();
     const { slug } = params;
     const [meta, setMeta] = useState<Meta | null>(null);
-    const [content, setContent] = useState<string>("");
+    const [content, setContent] = useState<string>(""); // <- string (not string | undefined)
     const [saving, setSaving] = useState<"idle" | "draft" | "publish">("idle");
     const [error, setError] = useState<string | null>(null);
     const [toast, setToast] = useState<string | null>(null);
@@ -45,10 +45,9 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
                 return;
             }
             const { meta, content } = await res.json();
-            // default author if missing; keep original date if present
+            // defaults if missing
             if (!meta.author) meta.author = "Michael Harrison";
             if (!meta.date) {
-                // keep existing date if present; otherwise leave as-is
                 const tz = "Australia/Melbourne";
                 const d = new Date();
                 const datePart = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
@@ -58,7 +57,7 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
                 meta.date = `${datePart} ${timePart} ${tzName}`;
             }
             setMeta(meta);
-            setContent(content);
+            setContent(content ?? "");
         })();
     }, [slug]);
 
@@ -80,7 +79,7 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
         return () => window.removeEventListener("keydown", onKey);
     }, [saving, canSave, canPublish]);
 
-    // drag & drop & paste to upload
+    // drag & drop & paste upload
     useEffect(() => {
         const el = editorWrapRef.current;
         if (!el) return;
@@ -124,26 +123,33 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
         window.setTimeout(() => setToast(null), 2000);
     };
 
-    const uploadImage = useCallback(async (file: File) => {
-        const presign = await fetch("/api/insights/presign/media", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                slug,
-                filename: `${Date.now()}-${file.name}`,
-                contentType: file.type,
-                draft: true,
-            }),
-        });
-        if (!presign.ok) throw new Error("Failed to presign image");
-        const { url, key } = await presign.json();
-        const put = await fetch(url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-        if (!put.ok) throw new Error("Failed to upload image");
-        const host =
-            process.env.NEXT_PUBLIC_S3_PUBLIC_HOST ??
-            `${process.env.NEXT_PUBLIC_S3_BUCKET ?? ""}.s3.${process.env.NEXT_PUBLIC_AWS_REGION ?? ""}.amazonaws.com`;
-        return `https://${host}/${key}`;
-    }, [slug]);
+    const uploadImage = useCallback(
+        async (file: File) => {
+            const presign = await fetch("/api/insights/presign/media", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    slug,
+                    filename: `${Date.now()}-${file.name}`,
+                    contentType: file.type,
+                    draft: true,
+                }),
+            });
+            if (!presign.ok) throw new Error("Failed to presign image");
+            const { url, key } = await presign.json();
+            const put = await fetch(url, {
+                method: "PUT",
+                headers: { "Content-Type": file.type },
+                body: file,
+            });
+            if (!put.ok) throw new Error("Failed to upload image");
+            const host =
+                process.env.NEXT_PUBLIC_S3_PUBLIC_HOST ??
+                `${process.env.NEXT_PUBLIC_S3_BUCKET ?? ""}.s3.${process.env.NEXT_PUBLIC_AWS_REGION ?? ""}.amazonaws.com`;
+            return `https://${host}/${key}`;
+        },
+        [slug]
+    );
 
     async function upload({ draft }: { draft: boolean }) {
         if (!meta?.author?.trim()) throw new Error("Author is required.");
@@ -213,7 +219,9 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
     return (
         <main className="wrap">
             <header className="hero" aria-labelledby="edit-title">
-                <div className="symbol"><span className="mark">✍️</span></div>
+                <div className="symbol">
+                    <span className="mark">✍️</span>
+                </div>
                 <div className="titleBlock">
                     <h1 id="edit-title">Edit draft: {meta.title || "Untitled"}</h1>
                     <p className="tagline">Iterate quickly — autosave, paste images, and publish when ready.</p>
@@ -222,7 +230,9 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
 
             <section className="metaGrid" aria-label="Post metadata">
                 <label className="field">
-                    <span>Title <b className="req">(required)</b></span>
+                    <span>
+                        Title <b className="req">(required)</b>
+                    </span>
                     <input
                         value={meta.title}
                         onChange={(e) => setMeta({ ...meta, title: e.target.value })}
@@ -254,7 +264,12 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
                     <span>Tags (comma separated)</span>
                     <input
                         value={(meta.tags ?? []).join(", ")}
-                        onChange={(e) => setMeta({ ...meta, tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) })}
+                        onChange={(e) =>
+                            setMeta({
+                                ...meta,
+                                tags: e.target.value.split(",").map((t) => t.trim()).filter(Boolean),
+                            })
+                        }
                     />
                 </label>
 
@@ -271,31 +286,67 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
             <section className="editorSection" data-color-mode="light" ref={editorWrapRef}>
                 <div className="toolbar" role="toolbar" aria-label="Editor actions">
                     <div className="left">
-                        <button className="btn" type="button" onClick={() => {
-                            const el = document.activeElement as HTMLElement | null;
-                            el?.blur();
-                        }} aria-label="Editor menu">•••</button>
+                        <button
+                            className="btn"
+                            type="button"
+                            onClick={() => {
+                                const el = document.activeElement as HTMLElement | null;
+                                el?.blur();
+                            }}
+                            aria-label="Editor menu"
+                        >
+                            •••
+                        </button>
                     </div>
                     <div className="middle">
-                        <span className="meter" aria-live="polite">{words} words • {chars} chars</span>
+                        <span className="meter" aria-live="polite">
+                            {words} words • {chars} chars
+                        </span>
                     </div>
                     <div className="right">
-                        <Link href="/insights/drafts" className="pill">Drafts</Link>
-                        <Link href="/insights" className="pill">Published</Link>
-                        <button className="pill" type="button" onClick={saveDraft} disabled={!canSave || saving !== "idle"}>
+                        <Link href="/insights/drafts" className="pill">
+                            Drafts
+                        </Link>
+                        <Link href="/insights" className="pill">
+                            Published
+                        </Link>
+                        <button
+                            className="pill"
+                            type="button"
+                            onClick={saveDraft}
+                            disabled={!canSave || saving !== "idle"}
+                        >
                             {saving === "draft" ? "Saving…" : "Save draft"}
                         </button>
-                        <button className="pill primary" type="button" onClick={publish} disabled={!canPublish || saving !== "idle"}>
+                        <button
+                            className="pill primary"
+                            type="button"
+                            onClick={publish}
+                            disabled={!canPublish || saving !== "idle"}
+                        >
                             {saving === "publish" ? "Publishing…" : "Publish"}
                         </button>
                     </div>
                 </div>
 
-                <MDEditor value={content} onChange={setContent} previewOptions={{ remarkPlugins: [remarkGfm] }} height={560} />
+                <MDEditor
+                    value={content}
+                    onChange={(v) => setContent(v ?? "")} // <- wrap undefined
+                    previewOptions={{ remarkPlugins: [remarkGfm] }}
+                    height={560}
+                />
             </section>
 
-            {error ? <p className="error" role="alert">{error}</p> : null}
-            {toast ? <p className="toast" role="status">{toast}</p> : null}
+            {error ? (
+                <p className="error" role="alert">
+                    {error}
+                </p>
+            ) : null}
+            {toast ? (
+                <p className="toast" role="status">
+                    {toast}
+                </p>
+            ) : null}
 
             <style>{styles}</style>
         </main>
