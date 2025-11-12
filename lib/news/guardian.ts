@@ -16,7 +16,8 @@ type GuardianTopArticle = {
 };
 
 export async function fetchGuardianTop(q = "top") {
-  const key = process.env.GUARDIAN_API_KEY!;
+  const key = process.env.GUARDIAN_API_KEY;
+  if (!key) return [];
   const url = new URL("https://content.guardianapis.com/search");
   url.searchParams.set("page-size", "12");
   url.searchParams.set("order-by", "newest");

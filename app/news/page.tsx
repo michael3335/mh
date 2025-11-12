@@ -26,151 +26,30 @@ type NewsItem = {
   publishedAt?: string | null;
 };
 
-type GuardianResponse = {
-  response?: {
-    results?: GuardianItem[];
-  };
+type CuratedNewsItem = NewsItem & {
+  id?: string;
+  tags?: string[];
+  rationale?: string;
+  score?: number;
 };
 
-type GuardianItem = {
-  webTitle?: string;
-  webUrl?: string;
-  fields?: {
-    trailText?: string;
-  };
-  webPublicationDate?: string;
-};
+/* ---------------------- CURATED + BREAKING DATA (SSR) ---------------------- */
 
-type NYTResponse = {
-  results?: NYTItem[];
-};
-
-type NYTItem = {
-  title?: string;
-  url?: string;
-  abstract?: string;
-  published_date?: string;
-};
-
-/* ------------------------------- DATA FETCHERS ----------------------------- */
-
-// Helper: strip any HTML tags from summaries (e.g., Guardian trailText)
-function stripTags(html?: string) {
-  if (!html) return "";
-  return html.replace(/<[^>]*>/g, "").trim();
-}
-
-// Guardian Content API (requires GUARDIAN_API_KEY)
-async function fetchGuardianTop(q = ""): Promise<NewsItem[]> {
-  const key = process.env.GUARDIAN_API_KEY;
-  if (!key) return [];
-
-  const url = new URL("https://content.guardianapis.com/search");
-  url.searchParams.set("page-size", "12");
-  url.searchParams.set("order-by", "newest");
-  url.searchParams.set("show-fields", "headline,trailText,byline,shortUrl");
-  if (q) url.searchParams.set("q", q);
-  url.searchParams.set("api-key", key);
-
+async function fetchCuratedStories(): Promise<CuratedNewsItem[]> {
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    if (!host) return [];
+    const base = `${proto}://${host}`;
+    const res = await fetch(`${base}/api/news/curate`, { cache: "no-store" });
     if (!res.ok) return [];
-    const json = (await res.json()) as GuardianResponse;
-    const results = json.response?.results ?? [];
-    return results.map((r) => ({
-      source: "The Guardian",
-      title: r.webTitle ?? "",
-      url: r.webUrl ?? "#",
-      summary: stripTags(r.fields?.trailText),
-      publishedAt: r.webPublicationDate,
-    }));
+    const json = await res.json();
+    return Array.isArray(json?.curated) ? (json.curated as CuratedNewsItem[]) : [];
   } catch {
     return [];
   }
 }
-
-// NYTimes Top Stories API (requires NYT_API_KEY)
-async function fetchNYTTop(section = "world"): Promise<NewsItem[]> {
-  const key = process.env.NYT_API_KEY;
-  if (!key) return [];
-
-  const endpoint = `https://api.nytimes.com/svc/topstories/v2/${encodeURIComponent(
-    section
-  )}.json?api-key=${key}`;
-
-  try {
-    const res = await fetch(endpoint, { cache: "no-store" });
-    if (!res.ok) return [];
-    const json = (await res.json()) as NYTResponse;
-    const items = json.results ?? [];
-    return items.slice(0, 12).map((it) => ({
-      source: "NYTimes",
-      title: it.title ?? "",
-      url: it.url ?? "#",
-      summary: (it.abstract ?? "").trim(),
-      publishedAt: it.published_date ?? null,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-// Minimal RSS fetcher (no extra deps) for BBC / Al Jazeera
-// NOTE: This is a very light parser that pulls out <item><title>, <link>, <pubDate>
-// and best-effort <description>. For production, consider a robust parser.
-async function fetchRSS(url: string, source: string): Promise<NewsItem[]> {
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) return [];
-    const xml = await res.text();
-
-    // Split on <item> boundaries
-    const items = xml.split(/<item[\s>]/i).slice(1);
-    const parsed = items.slice(0, 12).map((chunk) => {
-      const title = (chunk.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/i)?.[1] ??
-        chunk.match(/<title>([^<]+)<\/title>/i)?.[1] ??
-        "").trim();
-
-      const link = (chunk.match(/<link>([^<]+)<\/link>/i)?.[1] ?? "").trim();
-
-      const pubDate =
-        chunk.match(/<pubDate>([^<]+)<\/pubDate>/i)?.[1]?.trim() ?? null;
-
-      const desc =
-        chunk.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/i)?.[1] ??
-        chunk.match(/<description>([\s\S]*?)<\/description>/i)?.[1] ??
-        "";
-
-      return {
-        source,
-        title,
-        url: link || "#",
-        summary: stripTags(desc),
-        publishedAt: pubDate,
-      } as NewsItem;
-    });
-
-    return parsed;
-  } catch {
-    return [];
-  }
-}
-
-// Stubs for enterprise sources (activate once you have API contracts/keys)
-async function fetchReuters(): Promise<NewsItem[]> {
-  // TODO: Wire Reuters Connect / News API
-  return [];
-}
-async function fetchAP(): Promise<NewsItem[]> {
-  // TODO: Wire AP Media / Elections APIs
-  return [];
-}
-async function fetchEconomist(): Promise<NewsItem[]> {
-  // TODO: Wire licensed endpoint (no public content API)
-  return [];
-}
-
-/* -------------------------- BREAKING BANNER (SSR) -------------------------- */
 
 // Server-side fetch from your API route at /api/news/breaking
 async function fetchBreaking(): Promise<NewsItem | null> {
@@ -194,27 +73,10 @@ async function fetchBreaking(): Promise<NewsItem | null> {
 export default async function NewsBriefingPage() {
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  // Fetch multiple sources in parallel
-  const [guardian, nyt, bbc, aj, reuters, ap, economist, breaking] =
-    await Promise.all([
-      fetchGuardianTop(""), // you can bias queries here if desired
-      fetchNYTTop("world"),
-      fetchRSS("https://feeds.bbci.co.uk/news/world/rss.xml?edition=uk", "BBC"),
-      fetchRSS("https://www.aljazeera.com/xml/rss/all.xml", "Al Jazeera"),
-      fetchReuters(),
-      fetchAP(),
-      fetchEconomist(),
-      fetchBreaking(),
-    ]);
-
-  const items = [...guardian, ...nyt, ...bbc, ...aj, ...reuters, ...ap, ...economist]
-    .filter((i) => i.title && i.url)
-    .sort(
-      (a, b) =>
-        new Date(b.publishedAt ?? 0).getTime() -
-        new Date(a.publishedAt ?? 0).getTime()
-    )
-    .slice(0, 18);
+  const [curated, breaking] = await Promise.all([
+    fetchCuratedStories(),
+    fetchBreaking(),
+  ]);
 
   return (
     <main className="wrap">
@@ -236,19 +98,31 @@ export default async function NewsBriefingPage() {
 
       <section className="grid">
         <Card title="Top stories" icon="⭐">
-          {items.length === 0 ? (
+          {!curated.length ? (
             <p className="muted">No stories available right now.</p>
           ) : (
             <ol className="list">
-              {items.map((it) => (
-                <li key={`${it.source}-${it.url}`}>
+              {curated.map((it) => (
+                <li key={it.id ?? `${it.source}-${it.url}`}>
                   <strong>{it.title}</strong>{" "}
                   <span className="muted">— {it.source}</span>{" "}
                   <a href={it.url} className="pill" target="_blank" rel="noreferrer">
                     Read
                   </a>
+                  {it.tags?.length ? (
+                    <span className="tags">
+                      {it.tags.map((tag: string) => (
+                        <span className="tag" key={tag}>
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
                   {it.summary ? (
                     <div className="muted small">{it.summary}</div>
+                  ) : null}
+                  {it.rationale ? (
+                    <div className="muted small rationale">{it.rationale}</div>
                   ) : null}
                 </li>
               ))}
@@ -424,6 +298,24 @@ export default async function NewsBriefingPage() {
           display: inline-block; padding: 8px 12px; border-radius: 999px;
           background: var(--pill-bg); color: var(--pill-fg); text-decoration: none;
           border: 1px solid var(--rule);
+        }
+        .tags {
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-left: 6px;
+        }
+        .tag {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          padding: 2px 6px;
+          border-radius: 999px;
+          border: 1px solid var(--rule);
+          color: var(--muted);
+        }
+        .rationale {
+          margin-top: 4px;
         }
         .markets {
           display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px;

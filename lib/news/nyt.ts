@@ -12,7 +12,8 @@ type NYTTopArticle = {
 };
 
 export async function fetchNYTTop(section = "world") {
-  const key = process.env.NYT_API_KEY!;
+  const key = process.env.NYT_API_KEY;
+  if (!key) return [];
   const res = await fetch(
     `https://api.nytimes.com/svc/topstories/v2/${section}.json?api-key=${key}`,
     { cache: "no-store" }
