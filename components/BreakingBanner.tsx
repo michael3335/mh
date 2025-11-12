@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-
 type Item = { source: string; title: string; url: string; publishedAt?: string | null };
 
 export default function BreakingBanner() {
@@ -19,9 +17,15 @@ export default function BreakingBanner() {
     }
 
     useEffect(() => {
-        load();
-        const id = setInterval(load, 60_000); // refresh every 60s
-        return () => clearInterval(id);
+        const refresh = () => {
+            void load();
+        };
+        const intervalId = window.setInterval(refresh, 60_000);
+        const initialId = window.setTimeout(refresh, 0);
+        return () => {
+            window.clearInterval(intervalId);
+            window.clearTimeout(initialId);
+        };
     }, []);
 
     if (!item) return null;
@@ -31,9 +35,9 @@ export default function BreakingBanner() {
             <span className="flash" aria-hidden>●</span>
             <span className="label">Breaking</span>
             <span className="sep" aria-hidden>·</span>
-            <Link href={item.url} target="_blank" className="headline">
+            <a href={item.url} target="_blank" rel="noreferrer" className="headline">
                 {item.title}
-            </Link>
+            </a>
             <span className="source"> — {item.source}</span>
 
             <style jsx>{`

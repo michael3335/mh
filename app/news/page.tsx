@@ -244,9 +244,9 @@ export default async function NewsBriefingPage() {
                 <li key={`${it.source}-${it.url}`}>
                   <strong>{it.title}</strong>{" "}
                   <span className="muted">— {it.source}</span>{" "}
-                  <Link href={it.url} className="pill" target="_blank">
+                  <a href={it.url} className="pill" target="_blank" rel="noreferrer">
                     Read
-                  </Link>
+                  </a>
                   {it.summary ? (
                     <div className="muted small">{it.summary}</div>
                   ) : null}
@@ -476,9 +476,9 @@ function BreakingBannerSSR({ item }: { item: NewsItem | null }) {
       <span className="flash" aria-hidden>●</span>
       <span className="b-label">Breaking</span>
       <span className="b-sep" aria-hidden>·</span>
-      <Link href={item.url} target="_blank" className="b-headline">
-        {item.title}
-      </Link>
+    <a href={item.url} target="_blank" rel="noreferrer" className="b-headline">
+      {item.title}
+    </a>
       <span className="b-source"> — {item.source}</span>
     </div>
   );
