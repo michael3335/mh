@@ -15,8 +15,8 @@ import {
 
 /**
  * Future Plan — 18-year master plan (2025–2043)
- * Server component. Contrast-safe via system colors (Canvas/CanvasText/LinkText).
- * Minimalist phase UI inspired by ANKA/KLIM/Heide: big type, hairline rules, airy spacing.
+ * Server component.
+ * Global aesthetic: clean, bold, minimal, black on white.
  */
 
 export const metadata = {
@@ -394,19 +394,19 @@ const timeline: TimelineItem[] = [
 
 export default function FuturePlanPage() {
     return (
-        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-10 bg-[Canvas] text-[CanvasText]">
+        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-10 bg-white text-black">
             {/* Header */}
             <header className="flex flex-wrap items-center gap-3">
-                <Compass className="h-8 w-8 text-current" />
-                <h1 className="text-4xl font-semibold tracking-tight">Future Plan</h1>
-                <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-current px-3 py-1 text-sm font-semibold">
+                <Compass className="h-8 w-8" />
+                <h1 className="text-4xl font-bold tracking-tight">Future Plan</h1>
+                <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-semibold">
                     <span role="img" aria-label="crystal ball">🔮</span>
                     2025 → 2043
                 </span>
             </header>
 
             {/* Overview */}
-            <Section id="overview" title="Overview of 18-Year Career Master Plan" icon={<Compass className="h-5 w-5 text-current" />}>
+            <Section id="overview" title="Overview of 18-Year Career Master Plan" icon={<Compass className="h-5 w-5" />}>
                 <p className="text-lg leading-relaxed">{overviewText}</p>
                 <div className="mt-6">
                     <KVGrid rows={overviewRows} />
@@ -418,15 +418,21 @@ export default function FuturePlanPage() {
                 <div className="mb-4 flex items-end justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <Layers className="h-5 w-5" />
-                        <h2 className="text-2xl font-semibold">Phases</h2>
+                        <h2 className="text-2xl font-bold">Phases</h2>
                     </div>
 
                     {/* Toolbar: Expand/Collapse All (no client component needed) */}
                     <div className="flex items-center gap-2">
-                        <button data-phase-toggle="expand" className="inline-flex items-center gap-2 rounded-full border border-current px-3 py-1 text-sm font-medium hover:underline">
+                        <button
+                            data-phase-toggle="expand"
+                            className="inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-medium hover:underline"
+                        >
                             Expand all
                         </button>
-                        <button data-phase-toggle="collapse" className="inline-flex items-center gap-2 rounded-full border border-current px-3 py-1 text-sm font-medium hover:underline">
+                        <button
+                            data-phase-toggle="collapse"
+                            className="inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-medium hover:underline"
+                        >
                             Collapse all
                         </button>
                     </div>
@@ -437,7 +443,11 @@ export default function FuturePlanPage() {
                     {/* Sticky outline of phases */}
                     <aside className="lg:col-span-3 lg:sticky lg:top-20 space-y-2">
                         {phases.map((p, i) => (
-                            <a key={p.title} href={`#phase-${i + 1}`} className="block rounded-md px-2 py-1 text-sm hover:underline">
+                            <a
+                                key={p.title}
+                                href={`#phase-${i + 1}`}
+                                className="block rounded-md px-2 py-1 text-sm hover:underline"
+                            >
                                 <span className="mr-2 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
                                 {p.years}
                             </a>
@@ -451,7 +461,7 @@ export default function FuturePlanPage() {
                                 key={p.title}
                                 id={`phase-${idx + 1}`}
                                 className={[
-                                    "group rounded-2xl border border-current/80 transition-colors",
+                                    "group rounded-2xl border border-black/20 transition-colors",
                                     "[&[open]>summary>svg.chev]:rotate-180",
                                 ].join(" ")}
                                 open={idx === 0}
@@ -459,17 +469,23 @@ export default function FuturePlanPage() {
                                 <summary className="flex items-start gap-4 px-5 py-4 cursor-pointer list-none">
                                     {/* Number + meta block */}
                                     <div className="min-w-16 text-sm">
-                                        <div className="font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</div>
-                                        <div className="mt-1 inline-flex items-center rounded-full border border-current/80 px-2 py-0.5 text-xs">{p.years}</div>
+                                        <div className="font-bold tabular-nums">{String(idx + 1).padStart(2, "0")}</div>
+                                        <div className="mt-1 inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
+                                            {p.years}
+                                        </div>
                                     </div>
 
                                     {/* Title + badges */}
                                     <div className="flex-1">
                                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                            <span className="text-current">{p.icon}</span>
-                                            <h3 className="text-xl font-semibold">{p.title}</h3>
-                                            <span className="inline-flex items-center rounded-full border border-current/80 px-2 py-0.5 text-xs">{p.location}</span>
-                                            <span className="inline-flex items-center rounded-full border border-current/80 px-2 py-0.5 text-xs">{p.age} yrs</span>
+                                            <span>{p.icon}</span>
+                                            <h3 className="text-xl font-bold">{p.title}</h3>
+                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
+                                                {p.location}
+                                            </span>
+                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
+                                                {p.age} yrs
+                                            </span>
                                         </div>
                                     </div>
 
@@ -481,9 +497,12 @@ export default function FuturePlanPage() {
                                 <div className="px-5 pb-5">
                                     {/* Meta badges row */}
                                     {p.meta?.length ? (
-                                        <div className="mb-5 flex flex-wrap gap-2 border-t border-current/40 pt-4">
+                                        <div className="mb-5 flex flex-wrap gap-2 border-t border-black/10 pt-4">
                                             {p.meta.map((m) => (
-                                                <span key={m.label + m.value} className="inline-flex items-center gap-1 rounded-full border border-current px-3 py-1 text-xs font-semibold">
+                                                <span
+                                                    key={m.label + m.value}
+                                                    className="inline-flex items-center gap-1 rounded-full border border-black/20 px-3 py-1 text-xs font-semibold"
+                                                >
                                                     <span className="opacity-80">{m.label}:</span> {m.value}
                                                 </span>
                                             ))}
@@ -493,11 +512,13 @@ export default function FuturePlanPage() {
                                     {/* Sections grid */}
                                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                         {p.sections.map((s) => (
-                                            <article key={s.heading} className="rounded-xl border border-current/60 p-4">
-                                                <h4 className="mb-3 text-base font-semibold">{s.heading}</h4>
+                                            <article key={s.heading} className="rounded-xl border border-black/20 p-4">
+                                                <h4 className="mb-3 text-base font-bold">{s.heading}</h4>
                                                 {s.bullets && (
                                                     <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                        {s.bullets.map((b) => <li key={b}>{b}</li>)}
+                                                        {s.bullets.map((b) => (
+                                                            <li key={b}>{b}</li>
+                                                        ))}
                                                     </ul>
                                                 )}
                                                 {s.links?.length ? (
@@ -515,21 +536,25 @@ export default function FuturePlanPage() {
 
                                     {/* KPIs */}
                                     {p.kpis?.length ? (
-                                        <div className="mt-6 rounded-xl border border-current/80 p-4">
-                                            <h4 className="mb-2 text-base font-semibold">🎯 Milestones & KPIs</h4>
+                                        <div className="mt-6 rounded-xl border border-black/20 p-4">
+                                            <h4 className="mb-2 text-base font-bold">🎯 Milestones & KPIs</h4>
                                             <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                {p.kpis.map((k) => <li key={k}>{k}</li>)}
+                                                {p.kpis.map((k) => (
+                                                    <li key={k}>{k}</li>
+                                                ))}
                                             </ul>
                                         </div>
                                     ) : null}
 
                                     {/* Outcomes */}
                                     {p.outcomes ? (
-                                        <div className="mt-6 rounded-xl border-2 border-current p-4">
-                                            <h4 className="mb-2 text-base font-semibold">✅ Outcomes</h4>
+                                        <div className="mt-6 rounded-xl border-2 border-black p-4">
+                                            <h4 className="mb-2 text-base font-bold">✅ Outcomes</h4>
                                             {Array.isArray(p.outcomes) ? (
                                                 <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                    {p.outcomes.map((o) => <li key={o}>{o}</li>)}
+                                                    {p.outcomes.map((o) => (
+                                                        <li key={o}>{o}</li>
+                                                    ))}
                                                 </ul>
                                             ) : (
                                                 <p className="text-sm">{p.outcomes}</p>
@@ -560,12 +585,12 @@ export default function FuturePlanPage() {
             </section>
 
             {/* Timeline */}
-            <Section id="timeline" title="Timeline" icon={<CalendarDays className="h-5 w-5 text-current" />}>
+            <Section id="timeline" title="Timeline" icon={<CalendarDays className="h-5 w-5" />}>
                 <Timeline items={timeline} />
             </Section>
 
             {/* Footer */}
-            <footer className="text-xs opacity-90">
+            <footer className="text-xs">
                 Review quarterly; update annually. Last updated automatically when content changes.
             </footer>
         </div>
@@ -588,10 +613,10 @@ function Section({
     return (
         <section id={id} className="scroll-mt-24">
             <div className="mb-4 flex items-center gap-2">
-                <span className="text-current">{icon ?? <Compass className="h-5 w-5 text-current" />}</span>
-                <h2 className="text-2xl font-semibold">{title}</h2>
+                <span>{icon ?? <Compass className="h-5 w-5" />}</span>
+                <h2 className="text-2xl font-bold">{title}</h2>
             </div>
-            <div className="rounded-2xl border border-current p-5">{children}</div>
+            <div className="rounded-2xl border border-black/20 p-5">{children}</div>
         </section>
     );
 }
@@ -600,9 +625,9 @@ function KVGrid({ rows }: { rows: Array<[string, string]> }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rows.map(([k, v]) => (
-                <div key={k} className="rounded-xl border border-current p-4">
+                <div key={k} className="rounded-xl border border-black/20 p-4">
                     <p className="text-[11px] uppercase tracking-wider opacity-80">{k}</p>
-                    <p className="mt-1 text-base font-semibold leading-snug">{v}</p>
+                    <p className="mt-1 text-base font-bold leading-snug">{v}</p>
                 </div>
             ))}
         </div>
@@ -615,7 +640,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-md border border-current px-2 py-1 text-[LinkText] underline decoration-current underline-offset-2"
+            className="inline-flex items-center gap-1 px-1 py-0.5 hover:underline"
         >
             <LinkIcon className="h-3.5 w-3.5" />
             {children}
@@ -627,18 +652,25 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 
 function Timeline({ items }: { items: TimelineItem[] }) {
     return (
-        <ol className="relative ml-3 border-s-2 border-current/60">
+        <ol className="relative ml-3 border-s-2 border-black/20">
             {items.map((t) => (
                 <li key={t.phase} className="ms-6 pb-6 last:pb-0">
-                    <span className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-current bg-[Canvas]" aria-hidden />
+                    <span
+                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-black bg-white"
+                        aria-hidden
+                    />
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs font-semibold">
+                        <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs font-semibold">
                             {t.years}
                         </span>
-                        <span className="text-sm font-semibold">{t.phase}</span>
+                        <span className="text-sm font-bold">{t.phase}</span>
                     </div>
-                    <p className="mt-2 text-sm"><span className="font-medium">Focus:</span> {t.focus}</p>
-                    <p className="text-sm"><span className="font-medium">Key deliverables:</span> {t.deliverables}</p>
+                    <p className="mt-2 text-sm">
+                        <span className="font-semibold">Focus:</span> {t.focus}
+                    </p>
+                    <p className="text-sm">
+                        <span className="font-semibold">Key deliverables:</span> {t.deliverables}
+                    </p>
                 </li>
             ))}
         </ol>
