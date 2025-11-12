@@ -16,7 +16,7 @@ import {
 /**
  * Future Plan — 18-year master plan (2025–2043)
  * High-contrast, system-color driven (Canvas/CanvasText/LinkText) and HC-friendly.
- * Uses <details>/<summary> accordions; no shadcn deps.
+ * Uses <details>/<summary> accordions; no styled-jsx, no "use client".
  */
 
 export const metadata = {
@@ -407,7 +407,7 @@ export default function FuturePlanPage() {
                             <div className="px-4 pb-4">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {p.sections.map((s) => (
-                                        <article key={s.heading} className="rounded-xl border border-current/60 p-4 hc-border">
+                                        <article key={s.heading} className="rounded-xl border border-current/60 p-4">
                                             <h4 className="mb-2 font-semibold">{s.heading}</h4>
                                             {s.bullets && (
                                                 <ul className="list-disc pl-5 space-y-1 text-sm">
@@ -480,13 +480,6 @@ export default function FuturePlanPage() {
                     {closingEssence}
                 </blockquote>
             </Section>
-
-            {/* HC helpers */}
-            <style jsx>{`
-        @media (forced-colors: active) {
-          .hc-border { border-color: CanvasText !important; }
-        }
-      `}</style>
 
             {/* Footer */}
             <footer className="text-xs opacity-90">
