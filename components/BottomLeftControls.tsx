@@ -203,7 +203,7 @@ export default function BottomLeftControls() {
         <Folder size={0.4} color="#5227FF" />
       </button>
 
-      <style jsx>{`
+      <style>{`
         :root {
           --btn-size: 44px; /* standardized hitbox */
           --focus-ring: 2px;
