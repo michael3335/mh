@@ -174,8 +174,8 @@ function PostCard({ post, priority = false }: { post: Post; priority?: boolean }
                 id={`post-${slug}`}
                 style={{ margin: 0, fontSize: priority ? "clamp(18px,2.4vw,24px)" : "clamp(16px,2vw,20px)" }}
             >
-                {/* Use typed params with the dynamic route /insights/[slug] */}
-                <Link href={{ pathname: "/insights/[slug]", params: { slug } }} prefetch>
+                {/* Use UrlObject with dynamic route + query (typed-safe) */}
+                <Link href={{ pathname: "/insights/[slug]", query: { slug } }} prefetch>
                     {title}
                 </Link>
             </h3>
