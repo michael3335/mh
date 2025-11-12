@@ -1,7 +1,4 @@
 // app/insights/page.tsx
-// Server component. Contrast-safe via system colors (Canvas/CanvasText/LinkText).
-// Portfolio blog hub — essays, research notes, case studies.
-
 import Link from "next/link";
 
 export const metadata = {
@@ -115,7 +112,6 @@ export default function InsightsPage() {
                 <span>Last updated {new Date().toISOString().slice(0, 10)}</span>
             </footer>
 
-            {/* Plain <style> to avoid styled-jsx in a Server Component */}
             <style>{`
         :root {
           --bg: Canvas;
@@ -125,53 +121,17 @@ export default function InsightsPage() {
           --pill-bg: color-mix(in oklab, CanvasText 8%, Canvas 92%);
           --pill-fg: LinkText;
         }
-        .wrap {
-          background: var(--bg);
-          color: var(--fg);
-          padding: clamp(20px, 4vw, 40px);
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        .hero {
-          display: grid;
-          grid-template-columns: auto 1fr;
-          gap: clamp(16px, 3vw, 28px);
-          align-items: center;
-          padding-block: clamp(8px, 2vw, 20px);
-          border-bottom: 1px solid var(--rule);
-        }
-        .symbol {
-          inline-size: clamp(64px, 10vw, 96px);
-          block-size: clamp(64px, 10vw, 96px);
-          display: grid; place-items: center;
-          border-radius: 20px;
-          background: color-mix(in oklab, CanvasText 6%, Canvas 94%);
-          box-shadow: 0 1px 0 color-mix(in oklab, CanvasText 8%, transparent),
-                      0 12px 40px color-mix(in oklab, CanvasText 8%, transparent);
-        }
+        .wrap { background: var(--bg); color: var(--fg); padding: clamp(20px, 4vw, 40px); max-width: 1200px; margin: 0 auto; }
+        .hero { display: grid; grid-template-columns: auto 1fr; gap: clamp(16px, 3vw, 28px); align-items: center; padding-block: clamp(8px, 2vw, 20px); border-bottom: 1px solid var(--rule); }
+        .symbol { inline-size: clamp(64px, 10vw, 96px); block-size: clamp(64px, 10vw, 96px); display: grid; place-items: center; border-radius: 20px; background: color-mix(in oklab, CanvasText 6%, Canvas 94%); box-shadow: 0 1px 0 color-mix(in oklab, CanvasText 8%, transparent), 0 12px 40px color-mix(in oklab, CanvasText 8%, transparent); }
         .mark { font-size: clamp(40px, 7vw, 56px); line-height: 1; display: block; transform: translateY(1px); }
         .titleBlock h1 { font-size: clamp(40px, 6vw, 72px); letter-spacing: -0.02em; margin: 0; }
         .tagline { margin: 8px 0 0; font-size: clamp(14px, 1.7vw, 18px); color: var(--muted); max-width: 70ch; }
         .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-        .pill {
-          display: inline-block; padding: 8px 12px; border-radius: 999px;
-          background: var(--pill-bg); color: var(--pill-fg); text-decoration: none;
-          border: 1px solid var(--rule);
-        }
+        .pill { display: inline-block; padding: 8px 12px; border-radius: 999px; background: var(--pill-bg); color: var(--pill-fg); text-decoration: none; border: 1px solid var(--rule); }
 
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(12, 1fr);
-          gap: clamp(14px, 2vw, 22px);
-          padding-block: clamp(16px, 3vw, 28px);
-        }
-        .card {
-          grid-column: span 12;
-          border: 1px solid var(--rule);
-          border-radius: 16px;
-          padding: clamp(14px, 2vw, 22px);
-          background: color-mix(in oklab, Canvas 98%, CanvasText 2%);
-        }
+        .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: clamp(14px, 2vw, 22px); padding-block: clamp(16px, 3vw, 28px); }
+        .card { grid-column: span 12; border: 1px solid var(--rule); border-radius: 16px; padding: clamp(14px, 2vw, 22px); background: color-mix(in oklab, Canvas 98%, CanvasText 2%); }
         .cardHeader { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px 0; }
         .cardTitle { font-size: clamp(18px, 2.2vw, 22px); margin: 0; }
         .cardIcon { font-size: 18px; }
@@ -180,35 +140,21 @@ export default function InsightsPage() {
         .postGrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
         .postGrid > li { grid-column: span 12; }
 
-        .postCard {
-          border: 1px dashed var(--rule);
-          border-radius: 14px;
-          padding: 12px;
-          display: grid;
-          gap: 6px;
-          background: color-mix(in oklab, Canvas 99%, CanvasText 1%);
-        }
+        .postCard { border: 1px dashed var(--rule); border-radius: 14px; padding: 12px; display: grid; gap: 6px; background: color-mix(in oklab, Canvas 99%, CanvasText 1%); }
         .postMeta { color: var(--muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
         .tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-        .tag {
-          font-size: 11px; padding: 2px 8px; border-radius: 999px;
-          border: 1px solid var(--rule); background: var(--pill-bg);
-        }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); background: var(--pill-bg); }
+
         .muted { color: var(--muted); }
         .small { font-size: 12px; }
 
-        .foot {
-          display:flex; gap:8px; align-items:center; justify-content:flex-end;
-          padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted);
-          font-size: 12px;
-        }
+        .foot { display:flex; gap:8px; align-items:center; justify-content:flex-end; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 12px; }
         .footSymbol { font-size: 14px; }
 
         @media (min-width: 720px) {
           .featured { grid-column: span 6; }
           .allPosts { grid-column: span 6; }
           .howTo { grid-column: span 12; }
-
           .postGrid > li { grid-column: span 6; }
         }
 
@@ -224,8 +170,14 @@ function PostCard({ post, priority = false }: { post: Post; priority?: boolean }
     const { slug, title, summary, date, tags } = post;
     return (
         <article className="postCard" aria-labelledby={`post-${slug}`}>
-            <h3 id={`post-${slug}`} style={{ margin: 0, fontSize: priority ? "clamp(18px,2.4vw,24px)" : "clamp(16px,2vw,20px)" }}>
-                <Link href={`/insights/${slug}`} prefetch>{title}</Link>
+            <h3
+                id={`post-${slug}`}
+                style={{ margin: 0, fontSize: priority ? "clamp(18px,2.4vw,24px)" : "clamp(16px,2vw,20px)" }}
+            >
+                {/* Use typed params with the dynamic route /insights/[slug] */}
+                <Link href={{ pathname: "/insights/[slug]", params: { slug } }} prefetch>
+                    {title}
+                </Link>
             </h3>
             <p className="postMeta">
                 <span>{formatDate(date)}</span>
@@ -243,7 +195,6 @@ function PostCard({ post, priority = false }: { post: Post; priority?: boolean }
 }
 
 function formatDate(iso: string) {
-    // Render yyyy-mm-dd → Mon DD, YYYY (client-free)
     const d = new Date(iso + "T00:00:00");
     const fmt = new Intl.DateTimeFormat("en-AU", {
         year: "numeric",
