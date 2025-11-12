@@ -1,10 +1,21 @@
+/* app/globals.css */
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ----------------------------- Color System ------------------------------ */
 @custom-variant dark (&:is(.dark *));
+
 :root {
   color-scheme: light dark;
+
+  /* Global radius scale */
   --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Base tokens (light) — values only back Tailwind CSS vars below */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -23,11 +34,15 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+
+  /* Charts */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+
+  /* Sidebar */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -36,80 +51,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Hairline & editorial helpers */
+  --hairline: 1px;
+  --rule: color-mix(in oklab, CanvasText 26%, transparent);
+  --rule-strong: color-mix(in oklab, CanvasText 45%, transparent);
 }
 
-* {
-  box-sizing: border-box;
-}
+@media (min-resolution: 2dppx) {
+  :root {
+    --hairline: 0.5px;
+  }
 
-html,
-body {
-  padding: 0;
-  margin: 0;
-  height: 100%;
-}
-
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
-    "Apple Color Emoji", "Segoe UI Emoji";
-  background: canvas;
-  color: canvastext;
-}
-
-a {
-  color: inherit;
-}
-
-/* --- Add this --- */
-.contactLink {
-  font-size: 1.125rem;
-  text-decoration: none;
-  border-bottom: 1px solid currentColor;
-  padding-bottom: 2px;
-  opacity: 0.9;
-  transition: opacity 120ms ease-out;
-}
-
-.contactLink:hover {
-  opacity: 1;
-}
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  /* optically lighter borders on retina */
 }
 
 .dark {
@@ -144,13 +98,254 @@ a {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  --rule: color-mix(in oklab, CanvasText 28%, transparent);
+  --rule-strong: color-mix(in oklab, CanvasText 52%, transparent);
+}
+
+/* ----------------------------- Tailwind Bridge ---------------------------- */
+@theme inline {
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ------------------------------- Resets ----------------------------------- */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  /* Fonts: provided by next/font in layout */
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: Canvas;
+  color: CanvasText;
+  text-rendering: optimizeLegibility;
+}
+
+/* Underlined, contrast-safe links with subtle thickness */
+a {
+  color: LinkText;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 0.08em;
+}
+
+a:where(:hover, :focus-visible) {
+  text-underline-offset: 3px;
+}
+
+/* Contact link helper (kept) */
+.contactLink {
+  font-size: 1.125rem;
+  text-decoration: none;
+  border-bottom: var(--hairline) solid currentColor;
+  padding-bottom: 2px;
+  opacity: 0.9;
+  transition: opacity 120ms ease-out;
+}
+
+.contactLink:hover {
+  opacity: 1;
+}
+
+/* --------------------------- Editorial Typography ------------------------- */
+h1,
+h2 {
+  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-weight: 600;
+}
+
+h2 {
+  font-weight: 600;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ----------------------------- Hairline Borders --------------------------- */
+.hr,
+.rule {
+  border: 0;
+  border-top: var(--hairline) solid var(--rule);
+}
+
+.rule-strong {
+  border-top: var(--hairline) solid var(--rule-strong);
+}
+
+/* Utility: apply hairline border to any element */
+.hairline {
+  border-width: var(--hairline) !important;
+  border-style: solid;
+  border-color: var(--rule) !important;
+}
+
+/* Cards & Surfaces (subtle, shadowless) */
+.card {
+  border: var(--hairline) solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: Canvas;
+}
+
+/* -------------------------- Details / Summary UX -------------------------- */
+details {
+  border: var(--hairline) solid var(--rule);
+  border-radius: var(--radius-xl);
+  background: Canvas;
+}
+
+details+details {
+  margin-top: 0.75rem;
+}
+
+details[open] {
+  border-color: var(--rule-strong);
+  border-width: calc(var(--hairline) + 1px);
+}
+
+summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.25rem;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary:focus-visible {
+  outline: 2px solid CanvasText;
+  outline-offset: 2px;
+}
+
+details .panel {
+  padding: 0 1.25rem 1.25rem 1.25rem;
+  border-top: var(--hairline) solid var(--rule);
+}
+
+/* ------------------------------- Selection -------------------------------- */
+::selection {
+  color: Canvas;
+  background: CanvasText;
+}
+
+/* --------------------------- Reduced Motion ------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------- Forced Colors (HC) --------------------------- */
+@media (forced-colors: active) {
+  :root {
+    --rule: CanvasText;
+    --rule-strong: CanvasText;
+  }
+
+  .hairline,
+  .card,
+  details,
+  .rule,
+  .rule-strong {
+    border-color: CanvasText !important;
+  }
+
+  summary:focus-visible {
+    outline-color: CanvasText;
+  }
+}
+
+/* ------------------------------- Prose-ish -------------------------------- */
+.prose-lite p {
+  line-height: 1.6;
+}
+
+.prose-lite ul {
+  margin: 0.25rem 0 0.5rem;
+  padding-inline-start: 1.15rem;
+}
+
+.prose-lite li {
+  margin: 0.15rem 0;
+}
+
+/* ---------------------------- Form & Inputs (UX) -------------------------- */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+button {
+  border: var(--hairline) solid var(--rule);
+  background: Canvas;
+  color: CanvasText;
+  border-radius: var(--radius-md);
+}
+
+button:where(:hover, :focus-visible) {
+  border-color: var(--rule-strong);
+}
+
+/* ------------------------- Tailwind Convenience --------------------------- */
+/* (So Tailwind classes can benefit from the serif heading globally) */
+.heading-serif {
+  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
 }
