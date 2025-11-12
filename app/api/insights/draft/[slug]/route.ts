@@ -1,13 +1,14 @@
 // app/api/insights/draft/[slug]/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { s3, BUCKET } from "@/lib/s3";
 import { GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 export async function GET(
-  _: Request,
-  { params }: { params: { slug: string } }
+  _req: NextRequest,
+  context: { params: Promise<{ slug: string }> }
 ) {
-  const slug = params.slug;
+  const { slug } = await context.params; // Next 16: params is a Promise
+
   const base = `insights/_drafts/${encodeURIComponent(slug)}`;
   try {
     await s3.send(
@@ -23,6 +24,7 @@ export async function GET(
       new GetObjectCommand({ Bucket: BUCKET, Key: `${base}/content.md` })
     ),
   ]);
+
   const [metaText, mdText] = await Promise.all([
     metaObj.Body!.transformToString(),
     contentObj.Body!.transformToString(),
