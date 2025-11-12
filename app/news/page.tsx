@@ -6,6 +6,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { headers } from "next/headers";
 
 // Disable caching so the briefing is always fresh on load
 export const dynamic = "force-dynamic";
@@ -143,24 +144,42 @@ async function fetchEconomist(): Promise<NewsItem[]> {
   return [];
 }
 
+/* -------------------------- BREAKING BANNER (SSR) -------------------------- */
+
+// Server-side fetch from your API route at /api/news/breaking
+async function fetchBreaking(): Promise<NewsItem | null> {
+  try {
+    const h = headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    if (!host) return null;
+    const base = `${proto}://${host}`;
+    const res = await fetch(`${base}/api/news/breaking`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json?.item as NewsItem) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /* --------------------------------- PAGE ----------------------------------- */
 
 export default async function NewsBriefingPage() {
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // Fetch multiple sources in parallel
-  const [guardian, nyt, bbc, aj, reuters, ap, economist] = await Promise.all([
-    fetchGuardianTop(""), // you can bias queries here if desired
-    fetchNYTTop("world"),
-    fetchRSS(
-      "https://feeds.bbci.co.uk/news/world/rss.xml?edition=uk",
-      "BBC"
-    ),
-    fetchRSS("https://www.aljazeera.com/xml/rss/all.xml", "Al Jazeera"),
-    fetchReuters(),
-    fetchAP(),
-    fetchEconomist(),
-  ]);
+  const [guardian, nyt, bbc, aj, reuters, ap, economist, breaking] =
+    await Promise.all([
+      fetchGuardianTop(""), // you can bias queries here if desired
+      fetchNYTTop("world"),
+      fetchRSS("https://feeds.bbci.co.uk/news/world/rss.xml?edition=uk", "BBC"),
+      fetchRSS("https://www.aljazeera.com/xml/rss/all.xml", "Al Jazeera"),
+      fetchReuters(),
+      fetchAP(),
+      fetchEconomist(),
+      fetchBreaking(),
+    ]);
 
   const items = [...guardian, ...nyt, ...bbc, ...aj, ...reuters, ...ap, ...economist]
     .filter((i) => i.title && i.url)
@@ -173,6 +192,8 @@ export default async function NewsBriefingPage() {
 
   return (
     <main className="wrap">
+      <BreakingBannerSSR item={breaking} />
+
       <header className="hero" aria-labelledby="news-title">
         <div className="symbol" aria-hidden>
           <span className="paper" role="img">
@@ -200,7 +221,9 @@ export default async function NewsBriefingPage() {
                   <Link href={it.url} className="pill" target="_blank">
                     Read
                   </Link>
-                  {it.summary ? <div className="muted small">{it.summary}</div> : null}
+                  {it.summary ? (
+                    <div className="muted small">{it.summary}</div>
+                  ) : null}
                 </li>
               ))}
             </ol>
@@ -218,7 +241,9 @@ export default async function NewsBriefingPage() {
             <Metric label="AUD/USD" value="—" delta="—" />
             <Metric label="BTC" value="—" delta="—" />
           </div>
-          <p className="muted small">Hint: we can wire these to a data source later.</p>
+          <p className="muted small">
+            Hint: we can wire these to a data source later.
+          </p>
         </Card>
 
         <Card title="Energy & climate" icon="⚡">
@@ -340,6 +365,26 @@ export default async function NewsBriefingPage() {
           padding: clamp(14px, 2vw, 22px);
           background: color-mix(in oklab, Canvas 98%, CanvasText 2%);
         }
+        .breaking {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border: 1px solid color-mix(in oklab, CanvasText 20%, Canvas 80%);
+          background: color-mix(in oklab, CanvasText 6%, Canvas 94%);
+          border-radius: 12px;
+          margin-bottom: 12px;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+        .flash { color: #d00; font-size: 14px; animation: pulse 1.2s infinite; }
+        .b-label { font-weight: 700; letter-spacing: 0.02em; }
+        .b-sep { opacity: 0.5; }
+        .b-headline { text-decoration: none; color: LinkText; font-weight: 600; }
+        .b-source { color: var(--muted); }
+        @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
         .cardHeader {
           display: flex; align-items: baseline; gap: 10px;
           margin: 0 0 8px 0;
@@ -393,6 +438,23 @@ export default async function NewsBriefingPage() {
         }
       `}</style>
     </main>
+  );
+}
+
+/* ---------------------------- BREAKING UI (SSR) ---------------------------- */
+
+function BreakingBannerSSR({ item }: { item: NewsItem | null }) {
+  if (!item) return null;
+  return (
+    <div role="region" aria-label="Breaking news" className="breaking">
+      <span className="flash" aria-hidden>●</span>
+      <span className="b-label">Breaking</span>
+      <span className="b-sep" aria-hidden>·</span>
+      <Link href={item.url} target="_blank" className="b-headline">
+        {item.title}
+      </Link>
+      <span className="b-source"> — {item.source}</span>
+    </div>
   );
 }
 
