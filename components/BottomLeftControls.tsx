@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import RollerCoaster from "@/components/RollerCoaster";
@@ -9,10 +10,10 @@ import Folder from "@/components/Folder";
 import GoldNugget from "@/components/GoldNugget";
 
 const AUTH_DESTINATION_FOLDER = "/finder";
-const AUTH_DESTINATION_COASTER = "/models";
-const AUTH_DESTINATION_PICKAXE = "/commodities"; // keeping constant name for minimal diff
-const AUTH_DESTINATION_NOTE = "/notes"; // <— sticky note destination
-const AUTH_DESTINATION_FUTURE = "/future"; // <— NEW: crystal ball destination
+const AUTH_DESTINATION_COASTER: Route = "/models";
+const AUTH_DESTINATION_PICKAXE: Route = "/commodities"; // keeping constant name for minimal diff
+const AUTH_DESTINATION_NOTE: Route = "/notes"; // <— sticky note destination
+const AUTH_DESTINATION_FUTURE: Route = "/future";
 const RICK = "https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw";
 
 // Optional: hide on certain routes

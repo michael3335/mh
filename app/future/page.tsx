@@ -1,51 +1,35 @@
-"use client";
-
-import { useMemo } from "react";
-import { motion } from "framer-motion";
-import {
-    Card, CardContent, CardHeader, CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
-import {
-    Compass, Target, Rocket, Calendar, BookOpen, Briefcase, Trophy, Languages,
-} from "lucide-react";
+// app/future/page.tsx
+import type { ReactNode } from "react";
+import { Compass } from "lucide-react"; // optional; remove if you don't use lucide
 
 export const metadata = {
-    title: "Career Plan",
+    title: "Future Plan",
     description: "18-year master plan (2025–2043)",
 };
 
-// ---------- DATA FROM USER ----------
-const overview = {
-    updated: "Updated 18-year master plan (2025 → ~2043, to age 40)",
-    theme: [
-        { k: "Identity", v: "Energy-economics & sustainability strategist with finance + data expertise" },
-        { k: "Education", v: "Master of Finance → CFA I–III → MSc ENE @ NHH → PhD (Energy Econ)" },
-        { k: "Technical", v: "Python · R · Stata certified + Forecasting Dashboard" },
-        { k: "Languages", v: "German (B2) · Norwegian (B2/C1)" },
-        { k: "Career arc", v: "Student → Analyst → Strategist → Executive / Policy Advisor" },
-        { k: "Lifestyle", v: "Structured endurance-sport routine + family + balance" },
-        { k: "Vision by 40", v: "Senior energy/ESG strategy or policy leader with global profile and financial independence" },
-    ],
-};
-
 type Bullet = string | { title: string; items?: string[] };
-
+type Section = { icon?: ReactNode; heading: string; bullets: Bullet[] };
 type Phase = {
     title: string;
     years: string;
     location: string;
     age: string;
-    sections: { icon?: JSX.Element; heading: string; bullets: Bullet[] }[];
+    sections: Section[];
     outcome?: string[] | string;
     salary?: string;
     lifestyle?: string;
     languages?: string;
 };
+
+const overview = [
+    ["Identity", "Energy-economics & sustainability strategist with finance + data expertise"],
+    ["Education", "Master of Finance → CFA I–III → MSc ENE @ NHH → PhD (Energy Econ)"],
+    ["Technical", "Python · R · Stata certified + Forecasting Dashboard"],
+    ["Languages", "German (B2) · Norwegian (B2/C1)"],
+    ["Career arc", "Student → Analyst → Strategist → Executive / Policy Advisor"],
+    ["Lifestyle", "Structured endurance-sport routine + family + balance"],
+    ["Vision by 40", "Senior energy/ESG strategy or policy leader with global profile and financial independence"],
+];
 
 const phases: Phase[] = [
     {
@@ -55,23 +39,17 @@ const phases: Phase[] = [
         age: "22–24",
         sections: [
             {
-                icon: <BookOpen className="h-5 w-5" />,
                 heading: "Academics & Qualifications",
                 bullets: [
                     "Continue Master of Finance (finish 2026).",
                     "CFA Level I (mid-2026) and begin Level II (early 2027) prep.",
                     {
                         title: "Complete Python, R, and Stata short certificates:",
-                        items: [
-                            "IBM Python for Data Science (Coursera)",
-                            "Data Analyst with R (DataCamp)",
-                            "LSE Data Analysis Using Stata",
-                        ],
+                        items: ["IBM Python for Data Science (Coursera)", "Data Analyst with R (DataCamp)", "LSE Data Analysis Using Stata"],
                     },
                 ],
             },
             {
-                icon: <Target className="h-5 w-5" />,
                 heading: "Major project",
                 bullets: [
                     "Build the Econometric Geopolitical Energy Forecast System / Dashboard.",
@@ -82,18 +60,10 @@ const phases: Phase[] = [
                 ],
             },
             {
-                icon: <Languages className="h-5 w-5" />,
                 heading: "Languages",
-                bullets: [
-                    "Start German A1–A2 with Goethe-Institut (online or in-person).",
-                    "Begin Norwegian A1 (Folkeuniversitetet online or FutureLearn).",
-                ],
+                bullets: ["Start German A1–A2 with Goethe-Institut.", "Begin Norwegian A1 (Folkeuniversitetet/FutureLearn)."],
             },
-            {
-                icon: <Trophy className="h-5 w-5" />,
-                heading: "Lifestyle",
-                bullets: ["6–8 h/wk cycling/running training.", "Compete in a sprint triathlon or Gran Fondo."],
-            },
+            { heading: "Lifestyle", bullets: ["6–8 h/wk cycling/running training.", "Compete in a sprint triathlon or Gran Fondo."] },
         ],
         outcome: [
             "Master of Finance nearly complete",
@@ -110,24 +80,15 @@ const phases: Phase[] = [
         age: "24–26",
         sections: [
             {
-                icon: <BookOpen className="h-5 w-5" />,
                 heading: "Goals",
                 bullets: [
                     "MSc in Energy, Natural Resources & Environment (energy economics, sustainability, geopolitics).",
-                    "Internship @ Equinor, Statkraft, or DNV (ideally data/strategy role).",
+                    "Internship @ Equinor, Statkraft, or DNV (data/strategy).",
                     "Thesis expands the dashboard into academic econometric research.",
                 ],
             },
-            {
-                icon: <Languages className="h-5 w-5" />,
-                heading: "Languages",
-                bullets: ["German B1 (Goethe)", "Norwegian B1–B2 (NHH Norsk courses)"],
-            },
-            {
-                icon: <Trophy className="h-5 w-5" />,
-                heading: "Lifestyle",
-                bullets: ["8–10 h/wk training with BSI Cycling & Athletics.", "Race local triathlons or Bergen Marathon."],
-            },
+            { heading: "Languages", bullets: ["German B1 (Goethe)", "Norwegian B1–B2 (NHH Norsk)."] },
+            { heading: "Lifestyle", bullets: ["8–10 h/wk with BSI Cycling & Athletics.", "Race local tris / Bergen Marathon."] },
         ],
         outcome: ["MSc distinction + industry contact", "Dual language capability", "Portfolio project recognised as applied research"],
     },
@@ -138,36 +99,20 @@ const phases: Phase[] = [
         age: "26–29",
         sections: [
             {
-                icon: <Briefcase className="h-5 w-5" />,
                 heading: "Career",
                 bullets: [
                     "Energy / ESG Analyst → Associate → Strategist (Statkraft, DNV, Ørsted, or finance).",
                     "Apply CFA skills to ESG/transition-finance work.",
-                    "Sit CFA Level III (2030) → achieve CFA Charter (2031).",
+                    "Sit CFA Level III (2030) → CFA Charter (2031).",
                     "Add CFA ESG Certificate.",
                 ],
             },
-            {
-                icon: <Rocket className="h-5 w-5" />,
-                heading: "Development",
-                bullets: [
-                    "Publish at least one professional article (energy markets or policy).",
-                    "Maintain your dashboard — integrate new data and automate forecasts.",
-                ],
-            },
-            {
-                icon: <Languages className="h-5 w-5" />,
-                heading: "Languages",
-                bullets: ["Maintain German B2 and Norwegian B2 proficiency."],
-            },
+            { heading: "Development", bullets: ["Publish at least one professional article.", "Maintain & automate the dashboard."] },
+            { heading: "Languages", bullets: ["Maintain German B2 and Norwegian B2."] },
         ],
         salary: "NOK 650–850k (≈ AUD 95–125k)",
         lifestyle: "Stable training · 8–10 h/wk",
-        outcome: [
-            "Full CFA Charterholder",
-            "Recognised as a technical + strategic analyst",
-            "Real-world proof of forecasting and data analytics skill",
-        ],
+        outcome: ["Full CFA Charterholder", "Recognised technical + strategic analyst", "Proof of forecasting/data analytics skill"],
     },
     {
         title: "Phase 4 — Applied PhD in Energy Economics",
@@ -176,21 +121,16 @@ const phases: Phase[] = [
         age: "29–33",
         sections: [
             {
-                icon: <BookOpen className="h-5 w-5" />,
                 heading: "Focus",
                 bullets: [
                     "Industrial-PhD partnership (Equinor, DNV, or policy agency).",
-                    "Dissertation: Energy security, geopolitics, and market integration.",
+                    "Dissertation: Energy security, geopolitics, market integration.",
                     "Integrate dashboard as a research/teaching tool.",
                     "Publish 2–3 papers (Energy Economics, Applied Energy, Sustainable Finance & Investment).",
                     "Present at IAEE and European energy conferences.",
                 ],
             },
-            {
-                icon: <Trophy className="h-5 w-5" />,
-                heading: "Lifestyle",
-                bullets: ["Family years · 6 h/wk training."],
-            },
+            { heading: "Lifestyle", bullets: ["Family years · 6 h/wk training."] },
         ],
         salary: "Stipend: NOK 550–650k (AUD 80–95k)",
         outcome: "PhD + CFA + real-world project portfolio = unique hybrid profile.",
@@ -202,11 +142,10 @@ const phases: Phase[] = [
         age: "33–37",
         sections: [
             {
-                icon: <Briefcase className="h-5 w-5" />,
                 heading: "Roles",
                 bullets: [
                     "Senior Energy Economist / Strategy Manager (Equinor, DNV, Ørsted).",
-                    "ESG or Sustainability Strategy Lead (finance or industry).",
+                    "ESG or Sustainability Strategy Lead (finance/industry).",
                     "Pivot home to Australia: AEMO, ARENA, CSIRO, major banks.",
                 ],
             },
@@ -223,17 +162,16 @@ const phases: Phase[] = [
         age: "37–40",
         sections: [
             {
-                icon: <Target className="h-5 w-5" />,
                 heading: "Goals",
                 bullets: [
-                    "Executive Director / Head of Strategy / Policy Advisor role.",
-                    "Contribute to public discourse on the global energy transition.",
-                    "Mentor younger professionals; guest lecture at universities.",
-                    "Consider post-PhD Executive Program in Energy Transition (INSEAD / Oxford).",
+                    "Executive Director / Head of Strategy / Policy Advisor.",
+                    "Contribute to public discourse on the energy transition.",
+                    "Mentor younger professionals; guest lecture.",
+                    "Consider post-PhD exec program (INSEAD / Oxford).",
                 ],
             },
         ],
-        outcome: ["Financial independence; work-life-family equilibrium.", "Continue endurance training as lifestyle anchor."],
+        outcome: ["Financial independence; work-life-family equilibrium.", "Endurance training continues as lifestyle anchor."],
     },
 ];
 
@@ -272,248 +210,185 @@ const by2043 = [
     "Financially independent, family established, and physically active",
 ];
 
-// ---------- PAGE ----------
-export default function CareerPlanPage() {
-    const completion = useMemo(() => {
-        // lightweight illustrative progress: phases with explicit “Outcome” count as planned steps
-        const total = phases.length + credentialMap.length + summaryTimeline.length;
-        const done = 0; // wire up to persisted progress later
-        return Math.round((done / Math.max(total, 1)) * 100);
-    }, []);
-
+export default function FuturePlanPage() {
     return (
         <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-6">
-            {/* Header */}
-            <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}
-                className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                    <h1 className="text-3xl md:text-4xl font-semibold tracking-tight flex items-center gap-3">
-                        <Compass className="h-8 w-8" /> Career Plan
-                    </h1>
-                    <p className="text-muted-foreground">{overview.updated}</p>
-                </div>
-                <div className="w-full md:w-80">
-                    <div className="flex items-center justify-between text-sm mb-1">
-                        <span>{completion}% complete</span>
-                        <Rocket className="h-4 w-4" />
-                    </div>
-                    <Progress value={completion} />
-                </div>
-            </motion.header>
+            <header className="flex items-center gap-3">
+                <Compass className="h-7 w-7" />
+                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Future Plan</h1>
+                <span className="ml-auto rounded-full bg-violet-100 px-3 py-1 text-sm text-violet-700">Updated 2025→2043</span>
+            </header>
 
             {/* Overview */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-2xl"><Target className="h-6 w-6" /> Overview</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {overview.theme.map((row) => (
-                                <div key={row.k} className="rounded-2xl border p-3">
-                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{row.k}</p>
-                                    <p className="font-medium">{row.v}</p>
+            <section className="rounded-2xl border p-4">
+                <h2 className="text-2xl font-semibold mb-3">Overview</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {overview.map(([k, v]) => (
+                        <div key={k} className="rounded-xl border p-3">
+                            <p className="text-xs uppercase tracking-wide text-muted-foreground">{k}</p>
+                            <p className="font-medium">{v}</p>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* Phases (details/summary accordions) */}
+            <section className="space-y-4">
+                <h2 className="text-2xl font-semibold">Phases</h2>
+                {phases.map((p) => (
+                    <details key={p.title} className="rounded-2xl border p-4 group">
+                        <summary className="cursor-pointer list-none flex flex-wrap items-center gap-2 font-semibold">
+                            {p.title}
+                            <span className="text-xs rounded-full bg-gray-100 px-2 py-0.5">{p.years}</span>
+                            <span className="text-xs rounded-full border px-2 py-0.5">{p.location}</span>
+                            <span className="text-xs rounded-full bg-gray-100 px-2 py-0.5">{p.age} yrs</span>
+                        </summary>
+                        <div className="mt-3 space-y-4">
+                            {p.sections.map((s) => (
+                                <div key={s.heading}>
+                                    <h4 className="font-medium mb-1">{s.heading}</h4>
+                                    <ul className="list-disc pl-6 space-y-1">
+                                        {s.bullets.map((b, i) =>
+                                            typeof b === "string" ? (
+                                                <li key={i}>{b}</li>
+                                            ) : (
+                                                <li key={i}>
+                                                    <span className="font-medium">{b.title}</span>
+                                                    {b.items && (
+                                                        <ul className="list-[circle] pl-5 mt-1 space-y-1">
+                                                            {b.items.map((it) => <li key={it}>{it}</li>)}
+                                                        </ul>
+                                                    )}
+                                                </li>
+                                            )
+                                        )}
+                                    </ul>
                                 </div>
                             ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            </motion.section>
 
-            {/* Phases */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                <Tabs defaultValue="Phase 1" className="w-full">
-                    <TabsList className="w-full grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6">
-                        {phases.map((p) => (
-                            <TabsTrigger key={p.title} value={p.title}>
-                                {p.title.split(" — ")[0]}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                    {phases.map((p) => (
-                        <TabsContent key={p.title} value={p.title} className="mt-4">
-                            <Card className="shadow-sm">
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-2xl">{p.title}</CardTitle>
-                                    <div className="flex flex-wrap gap-2 text-sm">
-                                        <Badge variant="secondary"><Calendar className="h-3.5 w-3.5 mr-1" /> {p.years}</Badge>
-                                        <Badge variant="outline">{p.location}</Badge>
-                                        <Badge>{p.age} yrs</Badge>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                {p.salary && (
+                                    <div className="rounded-xl border p-3">
+                                        <p className="text-xs uppercase text-muted-foreground">Salary</p>
+                                        <p className="font-medium">{p.salary}</p>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="space-y-5">
-                                    {p.sections.map((s) => (
-                                        <div key={s.heading} className="space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                {s.icon}
-                                                <h4 className="font-semibold">{s.heading}</h4>
-                                            </div>
-                                            <ul className="list-disc pl-6 space-y-1">
-                                                {s.bullets.map((b, i) =>
-                                                    typeof b === "string" ? (
-                                                        <li key={i}>{b}</li>
-                                                    ) : (
-                                                        <li key={i}>
-                                                            <span className="font-medium">{b.title}</span>
-                                                            {b.items && (
-                                                                <ul className="list-[circle] pl-5 mt-1 space-y-1">
-                                                                    {b.items.map((it) => <li key={it}>{it}</li>)}
-                                                                </ul>
-                                                            )}
-                                                        </li>
-                                                    )
-                                                )}
-                                            </ul>
-                                        </div>
-                                    ))}
-                                    <Separator />
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                        {p.salary && (
-                                            <div className="rounded-2xl border p-3">
-                                                <p className="text-xs uppercase text-muted-foreground">Salary</p>
-                                                <p className="font-medium">{p.salary}</p>
-                                            </div>
-                                        )}
-                                        {p.languages && (
-                                            <div className="rounded-2xl border p-3">
-                                                <p className="text-xs uppercase text-muted-foreground">Languages</p>
-                                                <p className="font-medium">{p.languages}</p>
-                                            </div>
-                                        )}
-                                        {p.lifestyle && (
-                                            <div className="rounded-2xl border p-3 sm:col-span-2">
-                                                <p className="text-xs uppercase text-muted-foreground">Lifestyle</p>
-                                                <p className="font-medium">{p.lifestyle}</p>
-                                            </div>
-                                        )}
-                                        {p.outcome && (
-                                            <div className="rounded-2xl border p-3 sm:col-span-2">
-                                                <p className="text-xs uppercase text-muted-foreground">Outcome</p>
-                                                {Array.isArray(p.outcome) ? (
-                                                    <ul className="list-disc pl-6 space-y-1">{p.outcome.map((o) => <li key={o}>{o}</li>)}</ul>
-                                                ) : (
-                                                    <p className="font-medium">{p.outcome}</p>
-                                                )}
-                                            </div>
+                                )}
+                                {p.languages && (
+                                    <div className="rounded-xl border p-3">
+                                        <p className="text-xs uppercase text-muted-foreground">Languages</p>
+                                        <p className="font-medium">{p.languages}</p>
+                                    </div>
+                                )}
+                                {p.lifestyle && (
+                                    <div className="rounded-xl border p-3 sm:col-span-2">
+                                        <p className="text-xs uppercase text-muted-foreground">Lifestyle</p>
+                                        <p className="font-medium">{p.lifestyle}</p>
+                                    </div>
+                                )}
+                                {p.outcome && (
+                                    <div className="rounded-xl border p-3 sm:col-span-2">
+                                        <p className="text-xs uppercase text-muted-foreground">Outcome</p>
+                                        {Array.isArray(p.outcome) ? (
+                                            <ul className="list-disc pl-6 space-y-1">{p.outcome.map((o) => <li key={o}>{o}</li>)}</ul>
+                                        ) : (
+                                            <p className="font-medium">{p.outcome}</p>
                                         )}
                                     </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    ))}
-                </Tabs>
-            </motion.section>
+                                )}
+                            </div>
+                        </div>
+                    </details>
+                ))}
+            </section>
 
             {/* Summary Timeline */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-2xl">Summary Timeline</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Phase</TableHead>
-                                    <TableHead>Years</TableHead>
-                                    <TableHead>Focus</TableHead>
-                                    <TableHead>Key Deliverables</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {summaryTimeline.map(([phase, years, focus, dels]) => (
-                                    <TableRow key={phase}>
-                                        <TableCell className="font-medium">{phase}</TableCell>
-                                        <TableCell>{years}</TableCell>
-                                        <TableCell>{focus}</TableCell>
-                                        <TableCell>{dels}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </motion.section>
+            <section className="rounded-2xl border p-4">
+                <h2 className="text-2xl font-semibold mb-3">Summary Timeline</h2>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="text-left">
+                                <th className="py-2 pr-3">Phase</th>
+                                <th className="py-2 pr-3">Years</th>
+                                <th className="py-2 pr-3">Focus</th>
+                                <th className="py-2">Key Deliverables</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {summaryTimeline.map(([phase, years, focus, dels]) => (
+                                <tr key={phase} className="border-t">
+                                    <td className="py-2 pr-3 font-medium">{phase}</td>
+                                    <td className="py-2 pr-3">{years}</td>
+                                    <td className="py-2 pr-3">{focus}</td>
+                                    <td className="py-2">{dels}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-            {/* Technical & Language Credential Map */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-2xl">
-                            <BookOpen className="h-6 w-6" /> Technical & Language Credential Map
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Area</TableHead>
-                                    <TableHead>Credential</TableHead>
-                                    <TableHead>Level / Provider</TableHead>
-                                    <TableHead className="text-right">Target Year</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {credentialMap.map(([area, credential, level, year]) => (
-                                    <TableRow key={area + credential}>
-                                        <TableCell className="font-medium">{area}</TableCell>
-                                        <TableCell>{credential}</TableCell>
-                                        <TableCell>{level}</TableCell>
-                                        <TableCell className="text-right">{year}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </motion.section>
+            {/* Credential Map */}
+            <section className="rounded-2xl border p-4">
+                <h2 className="text-2xl font-semibold mb-3">Technical & Language Credential Map</h2>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="text-left">
+                                <th className="py-2 pr-3">Area</th>
+                                <th className="py-2 pr-3">Credential</th>
+                                <th className="py-2 pr-3">Level / Provider</th>
+                                <th className="py-2 text-right">Target Year</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {credentialMap.map(([area, credential, level, year]) => (
+                                <tr key={area + credential} className="border-t">
+                                    <td className="py-2 pr-3 font-medium">{area}</td>
+                                    <td className="py-2 pr-3">{credential}</td>
+                                    <td className="py-2 pr-3">{level}</td>
+                                    <td className="py-2 text-right">{year}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-            {/* Athletic & Lifestyle Integration */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="flex items-center gap-2 text-2xl">
-                            <Trophy className="h-6 w-6" /> Athletic & Lifestyle Integration
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Period</TableHead>
-                                    <TableHead>Base</TableHead>
-                                    <TableHead>Focus</TableHead>
-                                    <TableHead>Events</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {lifestyleBlocks.map(([period, base, focus, events]) => (
-                                    <TableRow key={period + base}>
-                                        <TableCell className="font-medium">{period}</TableCell>
-                                        <TableCell>{base}</TableCell>
-                                        <TableCell>{focus}</TableCell>
-                                        <TableCell>{events}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </motion.section>
+            {/* Lifestyle */}
+            <section className="rounded-2xl border p-4">
+                <h2 className="text-2xl font-semibold mb-3">Athletic & Lifestyle Integration</h2>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="text-left">
+                                <th className="py-2 pr-3">Period</th>
+                                <th className="py-2 pr-3">Base</th>
+                                <th className="py-2 pr-3">Focus</th>
+                                <th className="py-2">Events</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {lifestyleBlocks.map(([period, base, focus, events]) => (
+                                <tr key={period + base} className="border-t">
+                                    <td className="py-2 pr-3 font-medium">{period}</td>
+                                    <td className="py-2 pr-3">{base}</td>
+                                    <td className="py-2 pr-3">{focus}</td>
+                                    <td className="py-2">{events}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
             {/* By 2043 */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-2xl">✅ By 2043 (~Age 40)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ul className="list-disc pl-6 space-y-1">
-                            {by2043.map((x) => <li key={x}>{x}</li>)}
-                        </ul>
-                    </CardContent>
-                </Card>
-            </motion.section>
+            <section className="rounded-2xl border p-4">
+                <h2 className="text-2xl font-semibold mb-2">✅ By 2043 (~Age 40)</h2>
+                <ul className="list-disc pl-6 space-y-1">
+                    {by2043.map((x) => <li key={x}>{x}</li>)}
+                </ul>
+            </section>
 
             <footer className="text-xs text-muted-foreground">
                 This plan is a living document. Review quarterly; update annually.
