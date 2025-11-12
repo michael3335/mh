@@ -10,12 +10,13 @@ import {
     Sparkles,
     Link as LinkIcon,
     CalendarDays,
+    ChevronDown,
 } from "lucide-react";
 
 /**
  * Future Plan — 18-year master plan (2025–2043)
- * High-contrast via system colors (Canvas/CanvasText/LinkText). Server component (no styled-jsx).
- * Collapsible phases + a concise timeline.
+ * Server component. Contrast-safe via system colors (Canvas/CanvasText/LinkText).
+ * Collapsible phases with richer detail and improved UX.
  */
 
 export const metadata = {
@@ -94,6 +95,7 @@ type Phase = {
     sections: PhaseSection[];
     meta?: { label: string; value: string }[];
     outcomes?: string[] | string;
+    kpis?: string[];
 };
 
 const phases: Phase[] = [
@@ -107,23 +109,24 @@ const phases: Phase[] = [
             {
                 heading: "🎓 Academics & Qualifications",
                 bullets: [
-                    "Continue Master of Finance (finish 2026).",
-                    "CFA Level I (mid-2026); begin Level II prep (early 2027).",
-                    "Complete Python, R, and Stata certificates.",
+                    "Continue Master of Finance (target completion: 2026).",
+                    "Sit CFA Level I (mid-2026); begin Level II prep (early 2027).",
+                    "Certificate sprint: IBM Python for Data Science, Data Analyst with R (DataCamp), LSE Stata.",
                 ],
                 links: [
                     { label: "IBM Python for Data Science (Coursera)", href: L.IBM_PY_DS },
                     { label: "Data Analyst with R (DataCamp)", href: L.DATACAMP_R },
-                    { label: "LSE Data Analysis Using Stata", href: L.LSE_STATA },
+                    { label: "LSE — Data Analysis Using Stata", href: L.LSE_STATA },
                     { label: "CFA Institute", href: L.CFA },
                 ],
             },
             {
-                heading: "💻 Major Project — Energy Forecast Dashboard",
+                heading: "💻 Major Project — Econometric Energy Forecast Dashboard",
                 bullets: [
-                    "Collect open datasets (Nord Pool, ENTSO-E, EIA, GPR, weather).",
-                    "Implement VAR/SVAR; build FastAPI + React dashboard.",
-                    "Document progress (GitHub/LinkedIn); publish 1–2 posts or a short working paper.",
+                    "Datasets: Nord Pool prices, ENTSO-E load/gen, EIA fundamentals, Geopolitical Risk Index, weather.",
+                    "Models: VAR/SVAR, impulse responses, out-of-sample forecast evaluation (rolling windows).",
+                    "Stack: FastAPI backend + React front-end; CI for nightly data pulls & retraining.",
+                    "Publishing: public repo + roadmap on GitHub; monthly dev logs on LinkedIn.",
                 ],
                 links: [
                     { label: "Nord Pool", href: L.NORDPOOL },
@@ -139,8 +142,8 @@ const phases: Phase[] = [
             {
                 heading: "🌍 Languages",
                 bullets: [
-                    "Start German A1–A2 (Goethe-Institut).",
-                    "Begin Norwegian A1 (Folkeuniversitetet / FutureLearn).",
+                    "German A1→A2 with Goethe-Institut (online or in-person).",
+                    "Norwegian A1 with Folkeuniversitetet or FutureLearn.",
                 ],
                 links: [
                     { label: "Goethe-Institut", href: L.GOETHE },
@@ -149,11 +152,20 @@ const phases: Phase[] = [
                 ],
             },
         ],
+        meta: [
+            { label: "Focus", value: "Foundations + visible portfolio" },
+            { label: "Training", value: "6–8 h/wk endurance" },
+        ],
+        kpis: [
+            "CFA Level I: PASS",
+            "Dashboard v1 live with demo dataset",
+            "2 short posts or 1 working paper on methodology",
+            "German A2 · Norwegian A1",
+        ],
         outcomes: [
-            "MoF nearly complete; CFA I passed.",
-            "Working prototype dashboard (public).",
-            "Python/R/Stata certs.",
-            "German A2 + Norwegian A1.",
+            "Master of Finance almost complete",
+            "Prototype dashboard (public)",
+            "Python/R/Stata certifications",
         ],
     },
     {
@@ -164,38 +176,58 @@ const phases: Phase[] = [
         icon: <BookOpen className="h-5 w-5" />,
         sections: [
             {
-                heading: "🎓 Goals",
+                heading: "🎓 Goals & Track",
                 bullets: [
-                    "MSc in Energy, Natural Resources & Environment (econ, sustainability, geopolitics).",
-                    "Internship at Equinor, Statkraft, or DNV (data/strategy).",
-                    "Thesis evolves the dashboard into academic econometric research.",
+                    "MSc ENE with focus on energy economics, sustainability, geopolitics.",
+                    "Internship: Equinor / Statkraft / DNV in data-strategy or market analytics.",
+                    "Thesis: extend dashboard into academic-grade econometric research (replication package).",
                 ],
                 links: [
-                    { label: "NHH MSc ENE", href: L.NHH_ENE },
+                    { label: "NHH — MSc ENE", href: L.NHH_ENE },
                     { label: "Equinor", href: L.EQUINOR },
                     { label: "Statkraft", href: L.STATKRAFT },
                     { label: "DNV", href: L.DNV },
                 ],
             },
             {
-                heading: "🌍 Languages",
-                bullets: ["Advance to German B1; Norwegian B1–B2 (NHH Norsk)."],
+                heading: "🔬 Research & Productization",
+                bullets: [
+                    "Add exogenous shocks (weather regime indices, GPR, carbon prices).",
+                    "Forecast dashboard v2: scenario analysis + confidence bands + API.",
+                    "Seminar presentation; submit extended abstract to IAEE student paper session.",
+                ],
+                links: [
+                    { label: "IAEE", href: L.IAEE },
+                ],
+            },
+            {
+                heading: "🌍 Language Progress",
+                bullets: ["German B1; Norwegian B1→B2 via NHH Norsk courses."],
                 links: [
                     { label: "Goethe-Institut", href: L.GOETHE },
-                    { label: "NHH Norwegian Courses", href: L.NHH_NORSK },
+                    { label: "NHH — Norwegian Courses", href: L.NHH_NORSK },
                 ],
             },
             {
                 heading: "🏃 Activities",
-                bullets: ["8–10 h/wk with BSI Cycling & Athletics.", "Local triathlons or Bergen Marathon."],
+                bullets: ["8–10 h/wk with BSI Cycling & Athletics.", "Local tris or Bergen Marathon."],
                 links: [
                     { label: "BSI Sport (Bergen)", href: L.BSI },
                     { label: "Bergen Marathon", href: L.BERGEN_MARATHON },
                 ],
             },
         ],
+        meta: [
+            { label: "Output", value: "Distinction + applied thesis" },
+            { label: "Languages", value: "B1–B2 (DE/NO)" },
+        ],
+        kpis: [
+            "Internship secured & completed",
+            "Thesis submitted w/ code & data appendix",
+            "Dashboard v2 (scenarios + API)",
+        ],
         outcomes: [
-            "MSc distinction + industry contact",
+            "MSc with distinction",
             "Dual language capability",
             "Portfolio project recognised as applied research",
         ],
@@ -208,34 +240,47 @@ const phases: Phase[] = [
         icon: <Briefcase className="h-5 w-5" />,
         sections: [
             {
-                heading: "💼 Career",
+                heading: "💼 Roles & Scope",
                 bullets: [
-                    "Energy/ESG Analyst → Associate → Strategist (Statkraft, DNV, Ørsted, or finance).",
-                    "Apply CFA to ESG & transition-finance work.",
-                    "Sit CFA III (2030) → Charter (2031) + CFA ESG Certificate.",
+                    "Analyst → Associate → Strategist (Statkraft, DNV, Ørsted, or finance).",
+                    "ESG/transition-finance analytics: abatement curves, portfolio emissions, green bond frameworks.",
+                    "Lead quarterly market notes leveraging dashboard insights.",
                 ],
                 links: [
                     { label: "Statkraft", href: L.STATKRAFT },
                     { label: "DNV", href: L.DNV },
                     { label: "Ørsted", href: L.ORSTED },
-                    { label: "CFA Institute", href: L.CFA },
-                    { label: "CFA ESG Certificate", href: L.CFA_ESG },
                 ],
             },
             {
-                heading: "📈 Development",
-                bullets: ["Publish at least one professional article.", "Maintain the dashboard; automate forecasts."],
+                heading: "🎓 Professional Credentials",
+                bullets: ["Sit CFA Level III (2030) → Charter (2031).", "Add CFA ESG Certificate."],
+                links: [
+                    { label: "CFA Institute", href: L.CFA },
+                    { label: "CFA — ESG Certificate", href: L.CFA_ESG },
+                ],
             },
-            { heading: "🌍 Languages", bullets: ["Maintain German B2 and Norwegian B2."] },
+            {
+                heading: "🛠 Platform Continuity",
+                bullets: [
+                    "Dashboard v3: near-real-time pipelines; alerting; scheduled forecast jobs.",
+                    "Publish one professional article (markets or policy); present at internal forums.",
+                ],
+            },
         ],
         meta: [
-            { label: "Salary (guide)", value: "NOK 650–850k (≈ AUD 95–125k)" },
-            { label: "Training", value: "8–10 h/wk (stable)" },
+            { label: "Comp (guide)", value: "NOK 650–850k (≈ AUD 95–125k)" },
+            { label: "Languages", value: "Maintain DE/NO at B2" },
+        ],
+        kpis: [
+            "CFA Charterholder by 2031",
+            "1 external publication",
+            "Dashboard v3 (automated pipeline + alerts)",
         ],
         outcomes: [
-            "Full CFA Charterholder",
-            "Recognised technical + strategic analyst",
-            "Real-world proof of forecasting/analytics",
+            "CFA Charterholder",
+            "Recognised as technical + strategic analyst",
+            "Operational forecasting platform in production context",
         ],
     },
     {
@@ -246,27 +291,40 @@ const phases: Phase[] = [
         icon: <Target className="h-5 w-5" />,
         sections: [
             {
-                heading: "🎓 Focus",
+                heading: "🎓 Program & Topic",
                 bullets: [
                     "Industrial-PhD partnership (Equinor, DNV, or policy agency).",
                     "Dissertation: energy security, geopolitics, market integration.",
-                    "Dashboard as research/teaching tool.",
-                    "Publish 2–3 papers; present at IAEE/European conferences.",
+                    "Integrate dashboard as research/teaching tool; reproducible code.",
                 ],
                 links: [
                     { label: "University of Oslo (UiO)", href: L.UIO },
+                ],
+            },
+            {
+                heading: "📚 Publishing & Conferences",
+                bullets: [
+                    "2–3 papers targeted at Energy Economics / Applied Energy / SFI.",
+                    "Present at IAEE + European energy conferences.",
+                ],
+                links: [
+                    { label: "Energy Economics", href: L.JOURNAL_ENERGY_ECON },
+                    { label: "Applied Energy", href: L.JOURNAL_APPLIED_ENERGY },
+                    { label: "Sustainable Finance & Investment", href: L.JOURNAL_SFI },
                     { label: "IAEE", href: L.IAEE },
-                    { label: "Energy Economics (journal)", href: L.JOURNAL_ENERGY_ECON },
-                    { label: "Applied Energy (journal)", href: L.JOURNAL_APPLIED_ENERGY },
-                    { label: "Sustainable Finance & Investment (journal)", href: L.JOURNAL_SFI },
                 ],
             },
         ],
         meta: [
             { label: "Stipend (guide)", value: "NOK 550–650k (AUD 80–95k)" },
-            { label: "Training", value: "~6 h/wk (family years)" },
+            { label: "Mode", value: "Industrial partnership" },
         ],
-        outcomes: "PhD + CFA + real-world portfolio = unique hybrid profile.",
+        kpis: [
+            "PhD proposal approved (Y1) · defense (Y4)",
+            "≥2 peer-reviewed publications",
+            "Teaching/demo package using dashboard",
+        ],
+        outcomes: "PhD + CFA + production-grade portfolio = practitioner-researcher profile.",
     },
     {
         title: "Phase 5 — Senior Corporate / Strategy Leadership",
@@ -279,8 +337,8 @@ const phases: Phase[] = [
                 heading: "🏢 Roles",
                 bullets: [
                     "Senior Energy Economist / Strategy Manager (Equinor, DNV, Ørsted).",
-                    "ESG or Sustainability Strategy Lead (finance/industry).",
-                    "Pivot home to Australia: AEMO, ARENA, CSIRO, major banks.",
+                    "ESG/Sustainability Strategy Lead (finance/industry).",
+                    "Option to pivot to AU: AEMO, ARENA, CSIRO, major banks.",
                 ],
                 links: [
                     { label: "Equinor", href: L.EQUINOR },
@@ -291,13 +349,24 @@ const phases: Phase[] = [
                     { label: "CSIRO (AU)", href: L.CSIRO },
                 ],
             },
+            {
+                heading: "📈 Impact",
+                bullets: [
+                    "Own multi-year transition strategy workstreams; quantify decarbonization options.",
+                    "Mentor analysts; internal methods guild on forecasting + policy modeling.",
+                ],
+            },
         ],
         meta: [
-            { label: "Salary (guide)", value: "NOK 1.2–1.6M (AUD 180–240k)" },
-            { label: "Languages", value: "Norwegian B2/C1 · German B2 maintained" },
+            { label: "Comp (guide)", value: "NOK 1.2–1.6M (AUD 180–240k)" },
+            { label: "Languages", value: "Norwegian B2/C1 · German B2" },
         ],
-        outcomes:
-            "Global energy-finance strategist with economic, technical, and geopolitical depth.",
+        kpis: [
+            "Lead 2+ strategy initiatives to execution",
+            "Manager/Lead title attained",
+            "External speaking slots (industry panels)",
+        ],
+        outcomes: "High-impact strategy leader shaping energy transition direction.",
     },
     {
         title: "Phase 6 — Executive & Thought Leadership",
@@ -307,11 +376,11 @@ const phases: Phase[] = [
         icon: <Sparkles className="h-5 w-5" />,
         sections: [
             {
-                heading: "🎯 Goals",
+                heading: "🎯 Executive Goals",
                 bullets: [
                     "Executive Director / Head of Strategy / Policy Advisor.",
-                    "Contribute to public discourse; mentor rising professionals.",
-                    "Consider executive energy-transition program for global network.",
+                    "Contribute to public discourse; mentor next-gen professionals.",
+                    "Optional: Exec program in Energy Transition (Oxford/INSEAD).",
                 ],
                 links: [
                     { label: "INSEAD — Energy Transition (Exec Ed)", href: L.INSEAD_ENERGY },
@@ -320,11 +389,14 @@ const phases: Phase[] = [
             },
         ],
         meta: [
-            { label: "Lifestyle", value: "Endurance training as a lifestyle anchor" },
-            { label: "Financial", value: "Financial independence" },
+            { label: "Mode", value: "Executive influence & public voice" },
         ],
-        outcomes:
-            "International thought leader; balanced across work, life, and health.",
+        kpis: [
+            "Executive or policy-advisor appointment",
+            "Regular thought-leadership cadence",
+            "Active mentorship network",
+        ],
+        outcomes: "Internationally visible strategy/policy leader with durable impact.",
     },
 ];
 
@@ -422,23 +494,66 @@ export default function FuturePlanPage() {
                 </div>
             </Section>
 
-            {/* Phases — Accordion */}
+            {/* Phases — Accordion with enhanced UX */}
             <Section id="phases" title="Phases (collapsible)" icon={<Layers className="h-5 w-5 text-current" />}>
                 <div className="space-y-3">
-                    {phases.map((p) => (
-                        <details key={p.title} className="rounded-2xl border border-current shadow-sm">
+                    {phases.map((p, idx) => (
+                        <details
+                            key={p.title}
+                            open={idx === 0}
+                            className={[
+                                "group rounded-2xl border border-current shadow-sm transition-colors",
+                                // rotate chevron when open
+                                "[&[open]>summary_svg.chev]:rotate-180",
+                                // brighten border on open/focus
+                                "[&[open]]:border-2",
+                                "focus-within:border-2",
+                            ].join(" ")}
+                        >
                             <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
                                 <span className="text-current">{p.icon}</span>
                                 <span className="font-semibold">{p.title}</span>
-                                <span className="ml-2 rounded-full border border-current px-2 py-0.5 text-xs">{p.years}</span>
-                                <span className="ml-2 hidden rounded-full px-2 py-0.5 text-xs sm:inline">{p.location}</span>
-                                <span className="ml-2 rounded-full px-2 py-0.5 text-xs">{p.age} yrs</span>
+
+                                {/* badges */}
+                                <span className="ml-2 inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs">
+                                    {p.years}
+                                </span>
+                                <span className="ml-2 hidden sm:inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs">
+                                    {p.location}
+                                </span>
+                                <span className="ml-2 inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs">
+                                    {p.age} yrs
+                                </span>
+
+                                {/* chevron */}
+                                <ChevronDown
+                                    className="chev ml-auto h-5 w-5 shrink-0 transition-transform duration-300"
+                                    aria-hidden
+                                />
                             </summary>
 
                             <div className="px-4 pb-4">
+                                {/* quick meta row */}
+                                {p.meta?.length ? (
+                                    <div className="mb-3 flex flex-wrap gap-2">
+                                        {p.meta.map((m) => (
+                                            <span
+                                                key={m.label + m.value}
+                                                className="inline-flex items-center gap-1 rounded-full border border-current px-3 py-1 text-xs font-semibold"
+                                            >
+                                                <span className="opacity-80">{m.label}:</span> {m.value}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : null}
+
+                                {/* grid content */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {p.sections.map((s) => (
-                                        <article key={s.heading} className="rounded-xl border border-current/60 p-4">
+                                        <article
+                                            key={s.heading}
+                                            className="rounded-xl border border-current/60 p-4"
+                                        >
                                             <h4 className="mb-2 font-semibold">{s.heading}</h4>
                                             {s.bullets && (
                                                 <ul className="list-disc pl-5 space-y-1 text-sm">
@@ -456,27 +571,31 @@ export default function FuturePlanPage() {
                                             ) : null}
                                         </article>
                                     ))}
+
+                                    {/* KPIs/Milestones */}
+                                    {p.kpis?.length ? (
+                                        <article className="rounded-xl border border-current/60 p-4 lg:col-span-2">
+                                            <h4 className="mb-2 font-semibold">🎯 Milestones & KPIs</h4>
+                                            <ul className="list-disc pl-5 space-y-1 text-sm">
+                                                {p.kpis.map((k) => <li key={k}>{k}</li>)}
+                                            </ul>
+                                        </article>
+                                    ) : null}
+
+                                    {/* Outcomes banner */}
+                                    {p.outcomes ? (
+                                        <article className="rounded-xl border-2 border-current p-4 lg:col-span-2">
+                                            <h4 className="mb-2 font-semibold">✅ Outcomes</h4>
+                                            {Array.isArray(p.outcomes) ? (
+                                                <ul className="list-disc pl-5 space-y-1 text-sm">
+                                                    {p.outcomes.map((o) => <li key={o}>{o}</li>)}
+                                                </ul>
+                                            ) : (
+                                                <p className="text-sm">{p.outcomes}</p>
+                                            )}
+                                        </article>
+                                    ) : null}
                                 </div>
-
-                                {p.meta?.length ? (
-                                    <div className="mt-4 flex flex-wrap gap-2">
-                                        {p.meta.map((m) => (
-                                            <span key={m.label + m.value} className="rounded-full border border-current px-3 py-1 text-xs font-semibold">
-                                                {m.label}: {m.value}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : null}
-
-                                {p.outcomes ? (
-                                    <div className="mt-4 rounded-xl border-2 border-current px-4 py-3 text-sm font-semibold">
-                                        {Array.isArray(p.outcomes) ? (
-                                            <ul className="list-disc pl-5">{p.outcomes.map((o) => <li key={o}>{o}</li>)}</ul>
-                                        ) : (
-                                            <span>Outcome: {p.outcomes}</span>
-                                        )}
-                                    </div>
-                                ) : null}
                             </div>
                         </details>
                     ))}
@@ -549,14 +668,20 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 
 /* -------------------------------- TIMELINE UI ------------------------------ */
 
+type TimelineItem = {
+    years: string;
+    phase: string;
+    focus: string;
+    deliverables: string;
+};
+
 function Timeline({ items }: { items: TimelineItem[] }) {
     return (
         <ol className="relative ml-3 border-s-2 border-current/60">
             {items.map((t, idx) => (
                 <li key={t.phase} className="ms-6 pb-6 last:pb-0">
-                    {/* node */}
                     <span
-                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-current bg-[Canvas] "
+                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-current bg-[Canvas]"
                         aria-hidden
                     />
                     <div className="flex flex-wrap items-center gap-2">
