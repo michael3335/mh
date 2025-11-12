@@ -16,7 +16,7 @@ import {
 /**
  * Future Plan — 18-year master plan (2025–2043)
  * Server component. Contrast-safe via system colors (Canvas/CanvasText/LinkText).
- * Collapsible phases with richer detail and improved UX.
+ * Minimalist phase UI inspired by ANKA/KLIM/Heide: big type, hairline rules, airy spacing.
  */
 
 export const metadata = {
@@ -123,8 +123,8 @@ const phases: Phase[] = [
             {
                 heading: "💻 Major Project — Econometric Energy Forecast Dashboard",
                 bullets: [
-                    "Datasets: Nord Pool prices, ENTSO-E load/gen, EIA fundamentals, Geopolitical Risk Index, weather.",
-                    "Models: VAR/SVAR, impulse responses, out-of-sample forecast evaluation (rolling windows).",
+                    "Datasets: Nord Pool prices; ENTSO-E load/gen; EIA fundamentals; Geopolitical Risk Index; weather.",
+                    "Models: VAR/SVAR, impulse responses, rolling OOS evaluation and MAPE/RMSE dashboards.",
                     "Stack: FastAPI backend + React front-end; CI for nightly data pulls & retraining.",
                     "Publishing: public repo + roadmap on GitHub; monthly dev logs on LinkedIn.",
                 ],
@@ -141,10 +141,7 @@ const phases: Phase[] = [
             },
             {
                 heading: "🌍 Languages",
-                bullets: [
-                    "German A1→A2 with Goethe-Institut (online or in-person).",
-                    "Norwegian A1 with Folkeuniversitetet or FutureLearn.",
-                ],
+                bullets: ["German A1→A2 (Goethe-Institut).", "Norwegian A1 (Folkeuniversitetet or FutureLearn)."],
                 links: [
                     { label: "Goethe-Institut", href: L.GOETHE },
                     { label: "Folkeuniversitetet (NO)", href: L.FOLKE },
@@ -178,9 +175,9 @@ const phases: Phase[] = [
             {
                 heading: "🎓 Goals & Track",
                 bullets: [
-                    "MSc ENE with focus on energy economics, sustainability, geopolitics.",
-                    "Internship: Equinor / Statkraft / DNV in data-strategy or market analytics.",
-                    "Thesis: extend dashboard into academic-grade econometric research (replication package).",
+                    "MSc ENE focusing on energy economics, sustainability, geopolitics.",
+                    "Internship: Equinor / Statkraft / DNV (data-strategy / market analytics).",
+                    "Thesis extends dashboard into academic econometric research (replication package).",
                 ],
                 links: [
                     { label: "NHH — MSc ENE", href: L.NHH_ENE },
@@ -192,17 +189,15 @@ const phases: Phase[] = [
             {
                 heading: "🔬 Research & Productization",
                 bullets: [
-                    "Add exogenous shocks (weather regime indices, GPR, carbon prices).",
-                    "Forecast dashboard v2: scenario analysis + confidence bands + API.",
-                    "Seminar presentation; submit extended abstract to IAEE student paper session.",
+                    "Exogenous shocks: weather regimes, GPR, EUA carbon prices.",
+                    "Dashboard v2: scenario analysis, confidence bands, public API.",
+                    "Seminar talk; submit extended abstract to IAEE student paper session.",
                 ],
-                links: [
-                    { label: "IAEE", href: L.IAEE },
-                ],
+                links: [{ label: "IAEE", href: L.IAEE }],
             },
             {
                 heading: "🌍 Language Progress",
-                bullets: ["German B1; Norwegian B1→B2 via NHH Norsk courses."],
+                bullets: ["German B1; Norwegian B1→B2 (NHH Norsk)."],
                 links: [
                     { label: "Goethe-Institut", href: L.GOETHE },
                     { label: "NHH — Norwegian Courses", href: L.NHH_NORSK },
@@ -210,7 +205,7 @@ const phases: Phase[] = [
             },
             {
                 heading: "🏃 Activities",
-                bullets: ["8–10 h/wk with BSI Cycling & Athletics.", "Local tris or Bergen Marathon."],
+                bullets: ["8–10 h/wk with BSI Cycling & Athletics.", "Local triathlons or Bergen Marathon."],
                 links: [
                     { label: "BSI Sport (Bergen)", href: L.BSI },
                     { label: "Bergen Marathon", href: L.BERGEN_MARATHON },
@@ -223,14 +218,10 @@ const phases: Phase[] = [
         ],
         kpis: [
             "Internship secured & completed",
-            "Thesis submitted w/ code & data appendix",
+            "Thesis submitted (code & data appendix)",
             "Dashboard v2 (scenarios + API)",
         ],
-        outcomes: [
-            "MSc with distinction",
-            "Dual language capability",
-            "Portfolio project recognised as applied research",
-        ],
+        outcomes: ["MSc with distinction", "Dual language capability", "Applied research recognition"],
     },
     {
         title: "Phase 3 — Early Corporate Career + CFA Level III",
@@ -243,8 +234,8 @@ const phases: Phase[] = [
                 heading: "💼 Roles & Scope",
                 bullets: [
                     "Analyst → Associate → Strategist (Statkraft, DNV, Ørsted, or finance).",
-                    "ESG/transition-finance analytics: abatement curves, portfolio emissions, green bond frameworks.",
-                    "Lead quarterly market notes leveraging dashboard insights.",
+                    "ESG/transition-finance: abatement curves, portfolio emissions, green bond frameworks.",
+                    "Quarterly market notes leveraging dashboard insights.",
                 ],
                 links: [
                     { label: "Statkraft", href: L.STATKRAFT },
@@ -264,7 +255,7 @@ const phases: Phase[] = [
                 heading: "🛠 Platform Continuity",
                 bullets: [
                     "Dashboard v3: near-real-time pipelines; alerting; scheduled forecast jobs.",
-                    "Publish one professional article (markets or policy); present at internal forums.",
+                    "Publish one professional article and present internally.",
                 ],
             },
         ],
@@ -274,13 +265,13 @@ const phases: Phase[] = [
         ],
         kpis: [
             "CFA Charterholder by 2031",
-            "1 external publication",
+            "≥1 external publication",
             "Dashboard v3 (automated pipeline + alerts)",
         ],
         outcomes: [
             "CFA Charterholder",
-            "Recognised as technical + strategic analyst",
-            "Operational forecasting platform in production context",
+            "Recognised technical + strategic analyst",
+            "Operational forecasting platform",
         ],
     },
     {
@@ -295,18 +286,13 @@ const phases: Phase[] = [
                 bullets: [
                     "Industrial-PhD partnership (Equinor, DNV, or policy agency).",
                     "Dissertation: energy security, geopolitics, market integration.",
-                    "Integrate dashboard as research/teaching tool; reproducible code.",
+                    "Dashboard embedded as reproducible teaching/research tool.",
                 ],
-                links: [
-                    { label: "University of Oslo (UiO)", href: L.UIO },
-                ],
+                links: [{ label: "University of Oslo (UiO)", href: L.UIO }],
             },
             {
                 heading: "📚 Publishing & Conferences",
-                bullets: [
-                    "2–3 papers targeted at Energy Economics / Applied Energy / SFI.",
-                    "Present at IAEE + European energy conferences.",
-                ],
+                bullets: ["2–3 papers (Energy Economics / Applied Energy / SFI).", "Present at IAEE + European conferences."],
                 links: [
                     { label: "Energy Economics", href: L.JOURNAL_ENERGY_ECON },
                     { label: "Applied Energy", href: L.JOURNAL_APPLIED_ENERGY },
@@ -319,11 +305,7 @@ const phases: Phase[] = [
             { label: "Stipend (guide)", value: "NOK 550–650k (AUD 80–95k)" },
             { label: "Mode", value: "Industrial partnership" },
         ],
-        kpis: [
-            "PhD proposal approved (Y1) · defense (Y4)",
-            "≥2 peer-reviewed publications",
-            "Teaching/demo package using dashboard",
-        ],
+        kpis: ["PhD proposal ✓ (Y1) · defense (Y4)", "≥2 peer-reviewed publications", "Teaching/demo package"],
         outcomes: "PhD + CFA + production-grade portfolio = practitioner-researcher profile.",
     },
     {
@@ -352,8 +334,8 @@ const phases: Phase[] = [
             {
                 heading: "📈 Impact",
                 bullets: [
-                    "Own multi-year transition strategy workstreams; quantify decarbonization options.",
-                    "Mentor analysts; internal methods guild on forecasting + policy modeling.",
+                    "Own multi-year transition workstreams; quantify decarbonization options.",
+                    "Mentor analysts; run internal methods guild on forecasting/policy modeling.",
                 ],
             },
         ],
@@ -361,11 +343,7 @@ const phases: Phase[] = [
             { label: "Comp (guide)", value: "NOK 1.2–1.6M (AUD 180–240k)" },
             { label: "Languages", value: "Norwegian B2/C1 · German B2" },
         ],
-        kpis: [
-            "Lead 2+ strategy initiatives to execution",
-            "Manager/Lead title attained",
-            "External speaking slots (industry panels)",
-        ],
+        kpis: ["Lead 2+ strategy initiatives", "Manager/Lead title", "External speaking slots"],
         outcomes: "High-impact strategy leader shaping energy transition direction.",
     },
     {
@@ -379,8 +357,8 @@ const phases: Phase[] = [
                 heading: "🎯 Executive Goals",
                 bullets: [
                     "Executive Director / Head of Strategy / Policy Advisor.",
-                    "Contribute to public discourse; mentor next-gen professionals.",
-                    "Optional: Exec program in Energy Transition (Oxford/INSEAD).",
+                    "Public discourse + mentorship cadence.",
+                    "Optional: Exec energy-transition program (Oxford/INSEAD).",
                 ],
                 links: [
                     { label: "INSEAD — Energy Transition (Exec Ed)", href: L.INSEAD_ENERGY },
@@ -388,14 +366,8 @@ const phases: Phase[] = [
                 ],
             },
         ],
-        meta: [
-            { label: "Mode", value: "Executive influence & public voice" },
-        ],
-        kpis: [
-            "Executive or policy-advisor appointment",
-            "Regular thought-leadership cadence",
-            "Active mentorship network",
-        ],
+        meta: [{ label: "Mode", value: "Executive influence & public voice" }],
+        kpis: ["Executive/policy appointment", "Regular thought-leadership", "Active mentorship network"],
         outcomes: "Internationally visible strategy/policy leader with durable impact.",
     },
 ];
@@ -410,182 +382,151 @@ type TimelineItem = {
 };
 
 const timeline: TimelineItem[] = [
-    {
-        years: "2025–26",
-        phase: "Phase 1",
-        focus: "Master + CFA I + Dashboard + Data/Lang Certs",
-        deliverables: "Portfolio project + German/Norwegian basics",
-    },
-    {
-        years: "2027–29",
-        phase: "Phase 2",
-        focus: "MSc ENE + Internship + Lang B1–B2",
-        deliverables: "Distinction + applied thesis",
-    },
-    {
-        years: "2029–32",
-        phase: "Phase 3",
-        focus: "Corporate roles + CFA III + ESG Cert",
-        deliverables: "CFA Charter + Analyst→Strategist",
-    },
-    {
-        years: "2032–36",
-        phase: "Phase 4",
-        focus: "PhD Energy Econ",
-        deliverables: "Publications + industry collaboration",
-    },
-    {
-        years: "2036–40",
-        phase: "Phase 5",
-        focus: "Senior Strategy / ESG Leadership",
-        deliverables: "Senior corporate role / pivot home",
-    },
-    {
-        years: "2040–43",
-        phase: "Phase 6",
-        focus: "Executive / Policy Leadership",
-        deliverables: "Director-level / thought leader",
-    },
+    { years: "2025–26", phase: "Phase 1", focus: "Master + CFA I + Dashboard + Data/Lang Certs", deliverables: "Portfolio + DE/NO basics" },
+    { years: "2027–29", phase: "Phase 2", focus: "MSc ENE + Internship + Lang B1–B2", deliverables: "Distinction + applied thesis" },
+    { years: "2029–32", phase: "Phase 3", focus: "Corporate roles + CFA III + ESG Cert", deliverables: "CFA Charter + Analyst→Strategist" },
+    { years: "2032–36", phase: "Phase 4", focus: "PhD Energy Econ", deliverables: "Publications + industry collab" },
+    { years: "2036–40", phase: "Phase 5", focus: "Senior Strategy / ESG Leadership", deliverables: "Senior role / pivot home" },
+    { years: "2040–43", phase: "Phase 6", focus: "Executive / Policy Leadership", deliverables: "Director-level / thought leader" },
 ];
 
 /* --------------------------------- PAGE UI -------------------------------- */
 
 export default function FuturePlanPage() {
     return (
-        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-8 bg-[Canvas] text-[CanvasText]">
+        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-10 bg-[Canvas] text-[CanvasText]">
             {/* Header */}
             <header className="flex flex-wrap items-center gap-3">
-                <Compass className="h-7 w-7 text-current" />
-                <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Future Plan</h1>
+                <Compass className="h-8 w-8 text-current" />
+                <h1 className="text-4xl font-semibold tracking-tight">Future Plan</h1>
                 <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-current px-3 py-1 text-sm font-semibold">
                     <span role="img" aria-label="crystal ball">🔮</span>
                     2025 → 2043
                 </span>
             </header>
 
-            {/* Sticky in-page nav */}
-            <nav
-                aria-label="Section navigation"
-                className="sticky top-2 z-10 -mx-2 overflow-x-auto rounded-xl border border-current bg-[Canvas] p-2 shadow-sm"
-            >
-                <ul className="flex gap-2 text-sm">
-                    {[
-                        ["overview", "Overview"],
-                        ["phases", "Phases"],
-                        ["timeline", "Timeline"],
-                    ].map(([id, label]) => (
-                        <li key={id}>
-                            <a
-                                href={`#${id}`}
-                                className="inline-block rounded-lg border border-current px-3 py-1 font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[CanvasText]"
-                            >
-                                {label}
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-
             {/* Overview */}
             <Section id="overview" title="Overview of 18-Year Career Master Plan" icon={<Compass className="h-5 w-5 text-current" />}>
-                <p className="opacity-95">{overviewText}</p>
-                <div className="mt-4">
+                <p className="text-lg leading-relaxed">{overviewText}</p>
+                <div className="mt-6">
                     <KVGrid rows={overviewRows} />
                 </div>
             </Section>
 
-            {/* Phases — Accordion with enhanced UX */}
-            <Section id="phases" title="Phases (collapsible)" icon={<Layers className="h-5 w-5 text-current" />}>
-                <div className="space-y-3">
-                    {phases.map((p, idx) => (
-                        <details
-                            key={p.title}
-                            open={idx === 0}
-                            className={[
-                                "group rounded-2xl border border-current shadow-sm transition-colors",
-                                // rotate chevron when open
-                                "[&[open]>summary_svg.chev]:rotate-180",
-                                // brighten border on open/focus
-                                "[&[open]]:border-2",
-                                "focus-within:border-2",
-                            ].join(" ")}
-                        >
-                            <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
-                                <span className="text-current">{p.icon}</span>
-                                <span className="font-semibold">{p.title}</span>
+            {/* Phases — Minimalist, airy, with toolbar & sticky meta column */}
+            <section id="phases" className="scroll-mt-24">
+                <div className="mb-4 flex items-end justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                        <Layers className="h-5 w-5" />
+                        <h2 className="text-2xl font-semibold">Phases</h2>
+                    </div>
 
-                                {/* badges */}
-                                <span className="ml-2 inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs">
-                                    {p.years}
-                                </span>
-                                <span className="ml-2 hidden sm:inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs">
-                                    {p.location}
-                                </span>
-                                <span className="ml-2 inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs">
-                                    {p.age} yrs
-                                </span>
+                    {/* Toolbar: Expand/Collapse All (no client component needed) */}
+                    <div className="flex items-center gap-2">
+                        <button data-phase-toggle="expand" className="inline-flex items-center gap-2 rounded-full border border-current px-3 py-1 text-sm font-medium hover:underline">
+                            Expand all
+                        </button>
+                        <button data-phase-toggle="collapse" className="inline-flex items-center gap-2 rounded-full border border-current px-3 py-1 text-sm font-medium hover:underline">
+                            Collapse all
+                        </button>
+                    </div>
+                </div>
 
-                                {/* chevron */}
-                                <ChevronDown
-                                    className="chev ml-auto h-5 w-5 shrink-0 transition-transform duration-300"
-                                    aria-hidden
-                                />
-                            </summary>
+                {/* Two-column layout: sticky meta rail on wide screens */}
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+                    {/* Sticky outline of phases */}
+                    <aside className="lg:col-span-3 lg:sticky lg:top-20 space-y-2">
+                        {phases.map((p, i) => (
+                            <a key={p.title} href={`#phase-${i + 1}`} className="block rounded-md px-2 py-1 text-sm hover:underline">
+                                <span className="mr-2 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                                {p.years}
+                            </a>
+                        ))}
+                    </aside>
 
-                            <div className="px-4 pb-4">
-                                {/* quick meta row */}
-                                {p.meta?.length ? (
-                                    <div className="mb-3 flex flex-wrap gap-2">
-                                        {p.meta.map((m) => (
-                                            <span
-                                                key={m.label + m.value}
-                                                className="inline-flex items-center gap-1 rounded-full border border-current px-3 py-1 text-xs font-semibold"
-                                            >
-                                                <span className="opacity-80">{m.label}:</span> {m.value}
-                                            </span>
+                    {/* Accordions */}
+                    <div className="lg:col-span-9 space-y-6">
+                        {phases.map((p, idx) => (
+                            <details
+                                key={p.title}
+                                id={`phase-${idx + 1}`}
+                                className={[
+                                    "group rounded-2xl border border-current/80 transition-colors",
+                                    "[&[open]>summary>svg.chev]:rotate-180",
+                                ].join(" ")}
+                                open={idx === 0}
+                            >
+                                <summary className="flex items-start gap-4 px-5 py-4 cursor-pointer list-none">
+                                    {/* Number + meta block */}
+                                    <div className="min-w-16 text-sm">
+                                        <div className="font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</div>
+                                        <div className="mt-1 inline-flex items-center rounded-full border border-current/80 px-2 py-0.5 text-xs">{p.years}</div>
+                                    </div>
+
+                                    {/* Title + badges */}
+                                    <div className="flex-1">
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                            <span className="text-current">{p.icon}</span>
+                                            <h3 className="text-xl font-semibold">{p.title}</h3>
+                                            <span className="inline-flex items-center rounded-full border border-current/80 px-2 py-0.5 text-xs">{p.location}</span>
+                                            <span className="inline-flex items-center rounded-full border border-current/80 px-2 py-0.5 text-xs">{p.age} yrs</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Chevron */}
+                                    <ChevronDown className="chev mt-1 h-5 w-5 shrink-0 transition-transform duration-300" aria-hidden />
+                                </summary>
+
+                                {/* Body */}
+                                <div className="px-5 pb-5">
+                                    {/* Meta badges row */}
+                                    {p.meta?.length ? (
+                                        <div className="mb-5 flex flex-wrap gap-2 border-t border-current/40 pt-4">
+                                            {p.meta.map((m) => (
+                                                <span key={m.label + m.value} className="inline-flex items-center gap-1 rounded-full border border-current px-3 py-1 text-xs font-semibold">
+                                                    <span className="opacity-80">{m.label}:</span> {m.value}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : null}
+
+                                    {/* Sections grid */}
+                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                        {p.sections.map((s) => (
+                                            <article key={s.heading} className="rounded-xl border border-current/60 p-4">
+                                                <h4 className="mb-3 text-base font-semibold">{s.heading}</h4>
+                                                {s.bullets && (
+                                                    <ul className="list-disc pl-5 space-y-1 text-sm">
+                                                        {s.bullets.map((b) => <li key={b}>{b}</li>)}
+                                                    </ul>
+                                                )}
+                                                {s.links?.length ? (
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        {s.links.map((lnk) => (
+                                                            <ExternalLink key={lnk.href} href={lnk.href}>
+                                                                {lnk.label}
+                                                            </ExternalLink>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
+                                            </article>
                                         ))}
                                     </div>
-                                ) : null}
 
-                                {/* grid content */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    {p.sections.map((s) => (
-                                        <article
-                                            key={s.heading}
-                                            className="rounded-xl border border-current/60 p-4"
-                                        >
-                                            <h4 className="mb-2 font-semibold">{s.heading}</h4>
-                                            {s.bullets && (
-                                                <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                    {s.bullets.map((b) => <li key={b}>{b}</li>)}
-                                                </ul>
-                                            )}
-                                            {s.links?.length ? (
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                    {s.links.map((lnk) => (
-                                                        <ExternalLink key={lnk.href} href={lnk.href}>
-                                                            {lnk.label}
-                                                        </ExternalLink>
-                                                    ))}
-                                                </div>
-                                            ) : null}
-                                        </article>
-                                    ))}
-
-                                    {/* KPIs/Milestones */}
+                                    {/* KPIs */}
                                     {p.kpis?.length ? (
-                                        <article className="rounded-xl border border-current/60 p-4 lg:col-span-2">
-                                            <h4 className="mb-2 font-semibold">🎯 Milestones & KPIs</h4>
+                                        <div className="mt-6 rounded-xl border border-current/80 p-4">
+                                            <h4 className="mb-2 text-base font-semibold">🎯 Milestones & KPIs</h4>
                                             <ul className="list-disc pl-5 space-y-1 text-sm">
                                                 {p.kpis.map((k) => <li key={k}>{k}</li>)}
                                             </ul>
-                                        </article>
+                                        </div>
                                     ) : null}
 
-                                    {/* Outcomes banner */}
+                                    {/* Outcomes */}
                                     {p.outcomes ? (
-                                        <article className="rounded-xl border-2 border-current p-4 lg:col-span-2">
-                                            <h4 className="mb-2 font-semibold">✅ Outcomes</h4>
+                                        <div className="mt-6 rounded-xl border-2 border-current p-4">
+                                            <h4 className="mb-2 text-base font-semibold">✅ Outcomes</h4>
                                             {Array.isArray(p.outcomes) ? (
                                                 <ul className="list-disc pl-5 space-y-1 text-sm">
                                                     {p.outcomes.map((o) => <li key={o}>{o}</li>)}
@@ -593,14 +534,30 @@ export default function FuturePlanPage() {
                                             ) : (
                                                 <p className="text-sm">{p.outcomes}</p>
                                             )}
-                                        </article>
+                                        </div>
                                     ) : null}
                                 </div>
-                            </div>
-                        </details>
-                    ))}
+                            </details>
+                        ))}
+                    </div>
                 </div>
-            </Section>
+
+                {/* Expand/Collapse All script (no "use client") */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `
+(function () {
+  const root = document.getElementById('phases');
+  if (!root) return;
+  function setAll(open) {
+    root.querySelectorAll('details').forEach(d => { d.open = open; });
+  }
+  root.querySelector('[data-phase-toggle="expand"]')?.addEventListener('click', () => setAll(true));
+  root.querySelector('[data-phase-toggle="collapse"]')?.addEventListener('click', () => setAll(false));
+})();`,
+                    }}
+                />
+            </section>
 
             {/* Timeline */}
             <Section id="timeline" title="Timeline" icon={<CalendarDays className="h-5 w-5 text-current" />}>
@@ -630,11 +587,11 @@ function Section({
 }) {
     return (
         <section id={id} className="scroll-mt-24">
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-4 flex items-center gap-2">
                 <span className="text-current">{icon ?? <Compass className="h-5 w-5 text-current" />}</span>
                 <h2 className="text-2xl font-semibold">{title}</h2>
             </div>
-            <div className="rounded-2xl border border-current p-4 shadow-sm">{children}</div>
+            <div className="rounded-2xl border border-current p-5">{children}</div>
         </section>
     );
 }
@@ -643,9 +600,9 @@ function KVGrid({ rows }: { rows: Array<[string, string]> }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rows.map(([k, v]) => (
-                <div key={k} className="rounded-xl border border-current p-3">
-                    <p className="text-xs uppercase tracking-wide opacity-90">{k}</p>
-                    <p className="font-semibold">{v}</p>
+                <div key={k} className="rounded-xl border border-current p-4">
+                    <p className="text-[11px] uppercase tracking-wider opacity-80">{k}</p>
+                    <p className="mt-1 text-base font-semibold leading-snug">{v}</p>
                 </div>
             ))}
         </div>
@@ -667,27 +624,21 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 }
 
 /* -------------------------------- TIMELINE UI ------------------------------ */
+
 function Timeline({ items }: { items: TimelineItem[] }) {
     return (
         <ol className="relative ml-3 border-s-2 border-current/60">
-            {items.map((t, idx) => (
+            {items.map((t) => (
                 <li key={t.phase} className="ms-6 pb-6 last:pb-0">
-                    <span
-                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-current bg-[Canvas]"
-                        aria-hidden
-                    />
+                    <span className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-current bg-[Canvas]" aria-hidden />
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center rounded-full border border-current px-2 py-0.5 text-xs font-semibold">
                             {t.years}
                         </span>
                         <span className="text-sm font-semibold">{t.phase}</span>
                     </div>
-                    <p className="mt-2 text-sm">
-                        <span className="font-medium">Focus:</span> {t.focus}
-                    </p>
-                    <p className="text-sm">
-                        <span className="font-medium">Key deliverables:</span> {t.deliverables}
-                    </p>
+                    <p className="mt-2 text-sm"><span className="font-medium">Focus:</span> {t.focus}</p>
+                    <p className="text-sm"><span className="font-medium">Key deliverables:</span> {t.deliverables}</p>
                 </li>
             ))}
         </ol>
