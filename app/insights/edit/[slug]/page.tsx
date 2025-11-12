@@ -271,7 +271,10 @@ export default function EditDraftPage({ params }: { params: { slug: string } }) 
             <section className="editorSection" data-color-mode="light" ref={editorWrapRef}>
                 <div className="toolbar" role="toolbar" aria-label="Editor actions">
                     <div className="left">
-                        <button className="btn" type="button" onClick={() => (document.activeElement as HTMLElement)?.blur() || undefined} aria-label="Editor menu">•••</button>
+                        <button className="btn" type="button" onClick={() => {
+                            const el = document.activeElement as HTMLElement | null;
+                            el?.blur();
+                        }} aria-label="Editor menu">•••</button>
                     </div>
                     <div className="middle">
                         <span className="meter" aria-live="polite">{words} words • {chars} chars</span>
