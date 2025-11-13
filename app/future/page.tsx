@@ -80,6 +80,17 @@ const L = {
     INSEAD_ENERGY: "https://www.insead.edu/executive-education/energy-transition",
     OXFORD_SAID:
         "https://www.sbs.ox.ac.uk/programmes/executive-education/open-programmes",
+
+    // Graduate programmes (more detailed)
+    COLOGNE_EWI: "https://www.ewi.uni-koeln.de/en/",
+    COLOGNE_MSC_ECON_RESEARCH:
+        "https://wiso.uni-koeln.de/en/studies/application/master/master-economic-research",
+    COPENHAGEN_ECON:
+        "https://www.ku.dk/studies/masters/economics/",
+    COPENHAGEN_ENV_ECON:
+        "https://science.ku.dk/english/study-at-science/masters-programmes/environment-and-development/",
+    UIO_ECON_MSC:
+        "https://www.uio.no/english/studies/programmes/economics-master/",
 };
 
 /* ------------------------- PHASE (ACCORDION) CONTENT ----------------------- */
@@ -109,7 +120,7 @@ const phases: Phase[] = [
             {
                 heading: "🎓 Academics & Qualifications",
                 bullets: [
-                    "Continue Master of Finance (target completion: 2026).",
+                    "Continue Master of Finance at Melbourne (target completion: Dec 2026).",
                     "Sit CFA Level I (mid-2026); begin Level II prep (early 2027).",
                     "Certificate sprint: IBM Python for Data Science, Data Analyst with R (DataCamp), LSE Stata.",
                 ],
@@ -160,7 +171,7 @@ const phases: Phase[] = [
             "German A2 · Norwegian A1",
         ],
         outcomes: [
-            "Master of Finance almost complete",
+            "Master of Finance almost complete (Dec 2026)",
             "Prototype dashboard (public)",
             "Python/R/Stata certifications",
         ],
@@ -372,6 +383,167 @@ const phases: Phase[] = [
     },
 ];
 
+/* -------------------------------- GRAD OPTIONS ---------------------------- */
+
+type UniOption = {
+    key: string;
+    name: string;
+    city: string;
+    country: string;
+    primaryProgramme: string;
+    altProgrammes?: string[];
+    intake: string;
+    appWindow: string;
+    decisionWindow: string;
+    notes: string[];
+    links: LinkItem[];
+};
+
+const uniOptions: UniOption[] = [
+    {
+        key: "nhh",
+        name: "NHH — Norwegian School of Economics",
+        city: "Bergen",
+        country: "Norway",
+        primaryProgramme:
+            "MSc in Economics and Business Administration — Major in Energy, Natural Resources and the Environment (ENE)",
+        altProgrammes: [],
+        intake: "Autumn 2027 (2-year programme, 2027–2029)",
+        appWindow: "Typical international window: Oct 2026 – Jan 2027",
+        decisionWindow: "Offers typically by Apr–May 2027",
+        notes: [
+            "Entry: requires a bachelor’s-equivalent with ~90 ECTS in economics/business; competitive GPA (around B-level) and GMAT/GRE plus proof of English (e.g. IELTS/TOEFL).",
+            "Curriculum: dedicated energy, environment and resource economics track — courses in electricity markets, climate economics, petroleum & energy transition, and sustainable energy.",
+            "Reputation: Norway’s flagship business school; very strong brand in Nordic energy, shipping and finance ecosystems.",
+            "Student life: small, focused campus; Bergen is compact, outdoorsy, with easy access to mountains and fjords; strong sports culture (BSI, local cycling and running clubs).",
+            "Career prospects: pipelines into Equinor, Statkraft, DNV, Norwegian ministries and consulting; solid platform for applied PhD in energy economics later.",
+            "Salary: typical early-career packages in Norway ~NOK 650–850k within a few years post-MSc, with high upside in energy and strategy roles.",
+        ],
+        links: [{ label: "NHH — MSc ENE", href: L.NHH_ENE }],
+    },
+    {
+        key: "cologne",
+        name: "University of Cologne / EWI",
+        city: "Cologne",
+        country: "Germany",
+        primaryProgramme:
+            "MSc Economic Research or MSc Economics with energy & climate/market courses via EWI and WiSo Faculty",
+        altProgrammes: [
+            "MSc Economics (energy & environmental economics specialisation)",
+        ],
+        intake: "Winter Semester 2027/28 (start around Oct 2027)",
+        appWindow: "Most applications: Jan – Mar 2027 for Oct 2027 start",
+        decisionWindow: "Offers commonly by Apr–Jun 2027",
+        notes: [
+            "Entry: econ/finance bachelor-equivalent with substantial ECTS in economics plus statistics/econometrics; proof of English (e.g. TOEFL iBT around 90–95 / IELTS around 6.5–7) and sometimes GRE/GMAT.",
+            "Curriculum: heavy on micro-based energy and climate policy, market design, competition and regulation; strong quantitative and modelling emphasis through EWI.",
+            "Reputation: one of Europe’s strongest energy-economics clusters; excellent for those targeting market modelling, regulation, and PhD pathways.",
+            "Student life: Cologne is a big, lively city with a large student population, lots of culture, and easy rail links across Germany, the Netherlands and Belgium.",
+            "Career prospects: strong placement into German and EU utilities, TSOs, regulators, consultancies and research institutes working on power markets and energy transition.",
+            "Salary: German energy/consulting roles typically start slightly below Nordic packages but catch up with experience; cost of living lower than Norway/Denmark.",
+        ],
+        links: [
+            { label: "WiSo — Master Economic Research", href: L.COLOGNE_MSC_ECON_RESEARCH },
+            { label: "EWI — Institute of Energy Economics", href: L.COLOGNE_EWI },
+        ],
+    },
+    {
+        key: "copenhagen",
+        name: "University of Copenhagen",
+        city: "Copenhagen",
+        country: "Denmark",
+        primaryProgramme:
+            "MSc in Economics (with electives in energy, environmental and climate economics/ESG)",
+        altProgrammes: [
+            "MSc Environment and Development (more policy & environment focus)",
+        ],
+        intake: "Autumn 2027 (2-year programme, 2027–2029)",
+        appWindow: "Typical deadlines: Nov 2026 – Jan 2027",
+        decisionWindow: "Decisions usually by Mar–Apr 2027",
+        notes: [
+            "Entry: usually requires a bachelor-equivalent in economics (or very close) with solid coverage of micro, macro, maths and econometrics; English requirement typically around IELTS 6.5+ or equivalent.",
+            "Curriculum: rigorous core in micro, macro, and econometrics plus specialised courses in environmental/energy/climate economics and policy evaluation.",
+            "Reputation: top Nordic university; very strong in economics and methods — well regarded by central banks, ministries, international organisations and ESG-focused finance.",
+            "Student life: Copenhagen is bike-centric, international, and very liveable; vibrant café and culture scene with easy access to Sweden and the rest of Europe.",
+            "Career prospects: excellent for ESG/transition finance, consulting, macro/climate policy roles, and PhD entry; strong signalling value combined with CFA.",
+            "Salary: Danish graduate roles in government, finance and energy typically start around the same ballpark as Norway (slightly lower net, but still high relative to cost of living).",
+        ],
+        links: [
+            { label: "UCPH — MSc in Economics", href: L.COPENHAGEN_ECON },
+            { label: "UCPH — Environment & Development", href: L.COPENHAGEN_ENV_ECON },
+        ],
+    },
+    {
+        key: "oslo",
+        name: "University of Oslo (UiO)",
+        city: "Oslo",
+        country: "Norway",
+        primaryProgramme:
+            "Master's in Economics (with energy, environmental and climate economics focus)",
+        altProgrammes: ["Master's in Environmental and Development Economics"],
+        intake: "Autumn 2027 (2-year programme, 2027–2029)",
+        appWindow: "International applications often close Nov 2026 – Jan 2027",
+        decisionWindow: "Offers typically by Apr 2027",
+        notes: [
+            "Entry: requires a solid specialisation in economics (around 80 ECTS) with a minimum grade average comparable to Norwegian C or better, plus English proficiency (e.g. TOEFL ~90 / IELTS ~6.5 or above).",
+            "Curriculum: strong theoretical economics base with options in environmental, energy and climate economics, public economics and policy analysis.",
+            "Reputation: Norway’s leading comprehensive university; respected for research in economics and strong links to ministries, the central bank, and public agencies.",
+            "Student life: Oslo combines capital-city amenities with immediate access to forests, ski trails and the fjord; highly outdoorsy and active student culture.",
+            "Career prospects: ideal if you lean toward energy/climate policy, regulation, central bank or ministry roles, and research institutes; also a good launchpad for a policy-leaning PhD.",
+            "Salary: public-sector roles pay below top corporate packages but are still strong by international standards, with high job security and work–life balance.",
+        ],
+        links: [
+            { label: "UiO — Master's in Economics", href: L.UIO_ECON_MSC },
+            { label: "UiO — Main site", href: L.UIO },
+        ],
+    },
+];
+
+type UniTimelineItem = {
+    period: string;
+    label: string;
+    detail: string;
+};
+
+const uniTimeline: UniTimelineItem[] = [
+    {
+        period: "Jan–Jun 2026",
+        label: "Positioning & references",
+        detail:
+            "Consolidate dashboard v1, line up academic and professional referees, and confirm that you will apply to all four programmes (NHH, Cologne/EWI, Copenhagen, Oslo).",
+    },
+    {
+        period: "Jul–Sep 2026",
+        label: "Application materials",
+        detail:
+            "Draft a core statement of purpose tailored for energy economics/markets, then customise for each school; gather official UniMelb transcripts and any updated CV / portfolio links.",
+    },
+    {
+        period: "Oct 2026 – Jan 2027",
+        label: "Submit all four applications",
+        detail:
+            "Submit complete applications for the Autumn 2027 intake at NHH, University of Cologne, University of Copenhagen and University of Oslo, including English test scores if required.",
+    },
+    {
+        period: "Feb–Apr 2027",
+        label: "Offers, funding & choice",
+        detail:
+            "Review admissions decisions, scholarship options and living costs; compare programme fit (markets vs policy vs finance) and confirm final MSc destination.",
+    },
+    {
+        period: "May–Jul 2027",
+        label: "Visas, housing & logistics",
+        detail:
+            "Complete visa/residence permit processes, secure housing, and plan relocation from Australia to your chosen European city; align training and language routines with the move.",
+    },
+    {
+        period: "Aug–Sep 2027",
+        label: "Arrival & orientation",
+        detail:
+            "Arrive in Europe, complete orientation, register for core and energy-related electives, and embed the dashboard as a flagship project for the 2027–2029 MSc phase.",
+    },
+];
+
 /* -------------------------------- TIMELINE --------------------------------- */
 
 type TimelineItem = {
@@ -382,12 +554,42 @@ type TimelineItem = {
 };
 
 const timeline: TimelineItem[] = [
-    { years: "2025–26", phase: "Phase 1", focus: "Master + CFA I + Dashboard + Data/Lang Certs", deliverables: "Portfolio + DE/NO basics" },
-    { years: "2027–29", phase: "Phase 2", focus: "MSc ENE + Internship + Lang B1–B2", deliverables: "Distinction + applied thesis" },
-    { years: "2029–32", phase: "Phase 3", focus: "Corporate roles + CFA III + ESG Cert", deliverables: "CFA Charter + Analyst→Strategist" },
-    { years: "2032–36", phase: "Phase 4", focus: "PhD Energy Econ", deliverables: "Publications + industry collab" },
-    { years: "2036–40", phase: "Phase 5", focus: "Senior Strategy / ESG Leadership", deliverables: "Senior role / pivot home" },
-    { years: "2040–43", phase: "Phase 6", focus: "Executive / Policy Leadership", deliverables: "Director-level / thought leader" },
+    {
+        years: "2025–26",
+        phase: "Phase 1",
+        focus: "Master + CFA I + Dashboard + Data/Lang Certs",
+        deliverables: "Portfolio + DE/NO basics",
+    },
+    {
+        years: "2027–29",
+        phase: "Phase 2",
+        focus: "MSc ENE + Internship + Lang B1–B2",
+        deliverables: "Distinction + applied thesis",
+    },
+    {
+        years: "2029–32",
+        phase: "Phase 3",
+        focus: "Corporate roles + CFA III + ESG Cert",
+        deliverables: "CFA Charter + Analyst→Strategist",
+    },
+    {
+        years: "2032–36",
+        phase: "Phase 4",
+        focus: "PhD Energy Econ",
+        deliverables: "Publications + industry collab",
+    },
+    {
+        years: "2036–40",
+        phase: "Phase 5",
+        focus: "Senior Strategy / ESG Leadership",
+        deliverables: "Senior role / pivot home",
+    },
+    {
+        years: "2040–43",
+        phase: "Phase 6",
+        focus: "Executive / Policy Leadership",
+        deliverables: "Director-level / thought leader",
+    },
 ];
 
 /* --------------------------------- PAGE UI -------------------------------- */
@@ -400,16 +602,106 @@ export default function FuturePlanPage() {
                 <Compass className="h-8 w-8" />
                 <h1 className="text-4xl font-bold tracking-tight">Future Plan</h1>
                 <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-semibold">
-                    <span role="img" aria-label="crystal ball">🔮</span>
+                    <span role="img" aria-label="crystal ball">
+                        🔮
+                    </span>
                     2025 → 2043
                 </span>
             </header>
 
             {/* Overview */}
-            <Section id="overview" title="Overview of 18-Year Career Master Plan" icon={<Compass className="h-5 w-5" />}>
+            <Section
+                id="overview"
+                title="Overview of 18-Year Career Master Plan"
+                icon={<Compass className="h-5 w-5" />}
+            >
                 <p className="text-lg leading-relaxed">{overviewText}</p>
                 <div className="mt-6">
                     <KVGrid rows={overviewRows} />
+                </div>
+            </Section>
+
+            {/* New section: European graduate study options */}
+            <Section
+                id="graduate-options"
+                title="European Graduate Study Options (Post-2026)"
+                icon={<BookOpen className="h-5 w-5" />}
+            >
+                <div className="space-y-6">
+                    <p className="text-sm leading-relaxed">
+                        You complete the Master of Finance at Melbourne in{" "}
+                        <strong>Dec 2026</strong>. The next step in the plan is a European MSc starting in
+                        the <strong>Autumn 2027 intake</strong>. The strategy is to{" "}
+                        <strong>apply to all four priority programmes</strong> — NHH, University of Cologne
+                        (EWI), University of Copenhagen, and University of Oslo — and then choose the offer
+                        that best aligns with energy economics, markets, and your longer-term PhD and
+                        leadership goals.
+                    </p>
+
+                    {/* University cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {uniOptions.map((u) => (
+                            <article
+                                key={u.key}
+                                className="flex flex-col rounded-2xl border border-black/20 p-4 space-y-3"
+                            >
+                                <header className="space-y-1">
+                                    <h3 className="text-base font-bold">{u.name}</h3>
+                                    <p className="text-xs uppercase tracking-wide opacity-70">
+                                        {u.city}, {u.country}
+                                    </p>
+                                </header>
+                                <div className="space-y-2 text-sm">
+                                    <p>
+                                        <span className="font-semibold">Primary programme:</span>{" "}
+                                        {u.primaryProgramme}
+                                    </p>
+                                    {u.altProgrammes?.length ? (
+                                        <p>
+                                            <span className="font-semibold">Alternatives:</span>{" "}
+                                            {u.altProgrammes.join(" · ")}
+                                        </p>
+                                    ) : null}
+                                    <p>
+                                        <span className="font-semibold">Intake target:</span> {u.intake}
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">Application window (for you):</span>{" "}
+                                        {u.appWindow}
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">Decision window:</span>{" "}
+                                        {u.decisionWindow}
+                                    </p>
+                                </div>
+                                <ul className="mt-1 list-disc pl-5 space-y-1 text-xs">
+                                    {u.notes.map((n) => (
+                                        <li key={n}>{n}</li>
+                                    ))}
+                                </ul>
+                                {u.links.length ? (
+                                    <div className="pt-2 flex flex-wrap gap-2">
+                                        {u.links.map((lnk) => (
+                                            <ExternalLink key={lnk.href} href={lnk.href}>
+                                                {lnk.label}
+                                            </ExternalLink>
+                                        ))}
+                                    </div>
+                                ) : null}
+                            </article>
+                        ))}
+                    </div>
+
+                    {/* Intake timeline */}
+                    <div className="mt-4 rounded-2xl border border-black/20 p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            <h3 className="text-sm font-bold">
+                                Application & Intake Timeline (MFin completion → European MSc start)
+                            </h3>
+                        </div>
+                        <UniTimeline items={uniTimeline} />
+                    </div>
                 </div>
             </Section>
 
@@ -448,7 +740,9 @@ export default function FuturePlanPage() {
                                 href={`#phase-${i + 1}`}
                                 className="block rounded-md px-2 py-1 text-sm hover:underline"
                             >
-                                <span className="mr-2 tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                                <span className="mr-2 tabular-nums">
+                                    {String(i + 1).padStart(2, "0")}
+                                </span>
                                 {p.years}
                             </a>
                         ))}
@@ -469,7 +763,9 @@ export default function FuturePlanPage() {
                                 <summary className="flex items-start gap-4 px-5 py-4 cursor-pointer list-none">
                                     {/* Number + meta block */}
                                     <div className="min-w-16 text-sm">
-                                        <div className="font-bold tabular-nums">{String(idx + 1).padStart(2, "0")}</div>
+                                        <div className="font-bold tabular-nums">
+                                            {String(idx + 1).padStart(2, "0")}
+                                        </div>
                                         <div className="mt-1 inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
                                             {p.years}
                                         </div>
@@ -490,7 +786,10 @@ export default function FuturePlanPage() {
                                     </div>
 
                                     {/* Chevron */}
-                                    <ChevronDown className="chev mt-1 h-5 w-5 shrink-0 transition-transform duration-300" aria-hidden />
+                                    <ChevronDown
+                                        className="chev mt-1 h-5 w-5 shrink-0 transition-transform duration-300"
+                                        aria-hidden
+                                    />
                                 </summary>
 
                                 {/* Body */}
@@ -503,7 +802,8 @@ export default function FuturePlanPage() {
                                                     key={m.label + m.value}
                                                     className="inline-flex items-center gap-1 rounded-full border border-black/20 px-3 py-1 text-xs font-semibold"
                                                 >
-                                                    <span className="opacity-80">{m.label}:</span> {m.value}
+                                                    <span className="opacity-80">{m.label}:</span>{" "}
+                                                    {m.value}
                                                 </span>
                                             ))}
                                         </div>
@@ -512,7 +812,10 @@ export default function FuturePlanPage() {
                                     {/* Sections grid */}
                                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                         {p.sections.map((s) => (
-                                            <article key={s.heading} className="rounded-xl border border-black/20 p-4">
+                                            <article
+                                                key={s.heading}
+                                                className="rounded-xl border border-black/20 p-4"
+                                            >
                                                 <h4 className="mb-3 text-base font-bold">{s.heading}</h4>
                                                 {s.bullets && (
                                                     <ul className="list-disc pl-5 space-y-1 text-sm">
@@ -537,7 +840,9 @@ export default function FuturePlanPage() {
                                     {/* KPIs */}
                                     {p.kpis?.length ? (
                                         <div className="mt-6 rounded-xl border border-black/20 p-4">
-                                            <h4 className="mb-2 text-base font-bold">🎯 Milestones & KPIs</h4>
+                                            <h4 className="mb-2 text-base font-bold">
+                                                🎯 Milestones & KPIs
+                                            </h4>
                                             <ul className="list-disc pl-5 space-y-1 text-sm">
                                                 {p.kpis.map((k) => (
                                                     <li key={k}>{k}</li>
@@ -645,6 +950,30 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
             <LinkIcon className="h-3.5 w-3.5" />
             {children}
         </a>
+    );
+}
+
+/* --------------------------- UNIVERSITY TIMELINE UI ------------------------ */
+
+function UniTimeline({ items }: { items: UniTimelineItem[] }) {
+    return (
+        <ol className="relative ml-3 border-s-2 border-black/20">
+            {items.map((t) => (
+                <li key={t.label + t.period} className="ms-6 pb-4 last:pb-0">
+                    <span
+                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-black bg-white"
+                        aria-hidden
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px] font-semibold">
+                            {t.period}
+                        </span>
+                        <span className="text-xs font-bold">{t.label}</span>
+                    </div>
+                    <p className="mt-1 text-xs leading-snug">{t.detail}</p>
+                </li>
+            ))}
+        </ol>
     );
 }
 
