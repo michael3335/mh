@@ -564,40 +564,52 @@ type UniTimelineItem = {
 
 const uniTimeline: UniTimelineItem[] = [
     {
-        period: "Jan–Jun 2026",
-        label: "Positioning & references",
+        period: "By 1 Oct 2026",
+        label: "Tests, transcripts & references ready",
         detail:
-            "Consolidate dashboard v1, line up academic and professional referees, and confirm that you will apply to all four programmes (NHH, Cologne/EWI, Copenhagen, Oslo).",
+            "Have GMAT/GRE, English test scores, Uni Melb transcripts, and 2–3 referees lined up so you can move fast once all portals open.",
     },
     {
-        period: "Jul–Sep 2026",
-        label: "Application materials",
+        period: "1 Dec 2026",
+        label: "University of Oslo (UiO) MSc Economics – application opens/early deadline",
         detail:
-            "Draft a core statement of purpose tailored for energy economics/markets, then customise for each school; gather official UniMelb transcripts and any updated CV / portfolio links.",
+            "Submit your application via the UiO portal by 1 Dec 2026 for the autumn 2027 intake. Study-start in August. See: https://www.uio.no/english/studies/programmes/economics-master/ (link) ",
     },
     {
-        period: "Oct 2026 – Jan 2027",
-        label: "Submit all four applications",
+        period: "1 Dec 2026 – 9 Jan 2027",
+        label: "Aalto University MSc Advanced Energy Solutions – application window",
         detail:
-            "Submit complete applications for the Autumn 2027 intake at NHH, University of Cologne, University of Copenhagen and University of Oslo, including English test scores if required.",
+            "Application period for 2026 intake was 1 Dec – 2 Jan; documents deadline 9 Jan. So for 2027 intake assume similar: open 1 Dec 2026, close early Jan 2027. See: https://www.aalto.fi/en/study-at-aalto/apply-to-masters-programmes (link)  [oai_citation:0‡Aalto University](https://www.aalto.fi/en/study-at-aalto/apply-to-masters-programmes?utm_source=chatgpt.com)",
     },
     {
-        period: "Feb–Apr 2027",
-        label: "Offers, funding & choice",
+        period: "15 Jan 2027 at 23:59 CET",
+        label: "University of Copenhagen (UCPH) & Lund University international intake deadlines",
         detail:
-            "Review admissions decisions, scholarship options and living costs; compare programme fit (markets vs policy vs finance) and confirm final MSc destination.",
+            "UCPH MSc in Economics deadline 15 Jan; Lund University via universityadmissions.se upload by 15 Jan. See UCPH: https://www.ku.dk/studies/masters/economics/ (link) and Lund: https://www.lunduniversity.lu.se/lubas/i-uoh-lu-TAREE (link).",
     },
     {
-        period: "May–Jul 2027",
-        label: "Visas, housing & logistics",
+        period: "15 Feb 2027 (midnight CET)",
+        label: "Norwegian School of Economics (NHH) MSc ENE – application deadline",
         detail:
-            "Complete visa/residence permit processes, secure housing, and plan relocation from Australia to your chosen European city; align training and language routines with the move.",
+            "Non-Norwegian bachelor’s applicants apply via Søknadsweb by 15 Feb. See: https://www.nhh.no/en/study-programmes/application-and-admission/admission-msc-in-economics-and-business-administration/ (link)  [oai_citation:1‡NHH](https://www.nhh.no/en/study-programmes/application-and-admission/admission-msc-in-economics-and-business-administration/?utm_source=chatgpt.com)",
     },
     {
-        period: "Aug–Sep 2027",
-        label: "Arrival & orientation",
+        period: "31 Mar 2027",
+        label: "University of Cologne / WiSo Faculty – MSc Economic Research application deadline",
         detail:
-            "Arrive in Europe, complete orientation, register for core and energy-related electives, and embed the dashboard as a flagship project for the 2027–2029 MSc phase.",
+            "Submit application by 31 Mar 2027 (KLIPS 2.0) for winter semester intake. See: https://www.wiso.uni-koeln.de/en/studies/application/master/master-economic-research/ (link)",
+    },
+    {
+        period: "Apr – May 2027",
+        label: "Offer decisions & acceptance deadlines",
+        detail:
+            "Most universities (Aalto: 8 Apr; NHH: end April; Copenhagen: ~1 May) publish decisions and require acceptance within 2-4 weeks. Refer to each programme’s offer letter.",
+    },
+    {
+        period: "Aug – Oct 2027",
+        label: "Arrival, orientation & semester start",
+        detail:
+            "NHH & UiO start mid-August; Aalto & Lund late August; UCPH early September; Cologne winter semester begins 1 Oct with mid-Oct lectures. Plan relocation accordingly.",
     },
 ];
 
