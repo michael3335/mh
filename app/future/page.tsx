@@ -497,6 +497,63 @@ const uniOptions: UniOption[] = [
             { label: "UiO — Main site", href: L.UIO },
         ],
     },
+    {
+        key: "aalto",
+        name: "Aalto University",
+        city: "Espoo (Helsinki region)",
+        country: "Finland",
+        primaryProgramme:
+            "MSc in Advanced Energy Solutions — Major in Sustainable Energy Systems and Markets",
+        altProgrammes: [
+            "MSc in Energy Systems and Technologies",
+            "MSc in Sustainable Energy Engineering (engineering-leaning)",
+        ],
+        intake: "Autumn 2027 (2-year programme, 2027–2029)",
+        appWindow: "Typical deadlines: Dec 2026 – Jan 2027",
+        decisionWindow: "Offers typically by Apr–May 2027",
+        notes: [
+            "Entry: strong preference for engineering/natural-science backgrounds; however, quantitative applicants from economics/finance can be admitted if math/econometrics and programming skills are well-demonstrated.",
+            "Curriculum: integrates energy systems modelling, electricity markets, regulation, optimisation, and climate policy; good balance of technical and market components.",
+            "Reputation: Aalto is Finland’s top technical university with a strong European profile in energy systems, smart grids, and sustainability innovation.",
+            "Student life: Helsinki/Esboo area is modern, international, and tech-forward; strong startup culture; excellent cycling, forests, islands and winter sports.",
+            "Career prospects: access to Finnish utilities, TSOs, consultancies (Fortum, Fingrid, AFRY), plus EU-level energy transition roles; strong systems + policy contribution.",
+            "Salary: Finland offers solid early-career salaries with relatively low living costs compared to Norway/Denmark; good quality-of-life and work–life culture.",
+        ],
+        links: [
+            {
+                label: "Aalto — MSc Advanced Energy Solutions",
+                href: "https://www.aalto.fi/en/study-options/masters-programme-in-advanced-energy-solutions",
+            },
+        ],
+    },
+    {
+        key: "lund",
+        name: "Lund University",
+        city: "Lund",
+        country: "Sweden",
+        primaryProgramme:
+            "MSc in Sustainable Energy Engineering (technical, systems-focused)",
+        altProgrammes: [
+            "MSc in Environmental Management and Policy (more policy/management)",
+        ],
+        intake: "Autumn 2027 (2-year programme, 2027–2029)",
+        appWindow: "Sweden national round: Oct 2026 – Jan 2027",
+        decisionWindow: "Admissions results typically by Mar–Apr 2027",
+        notes: [
+            "Entry: requires an engineering-related bachelor’s background with strong calculus/physics/thermodynamics; applicants from finance/economics must show exceptional quantitative preparation, so this is a stretch option.",
+            "Curriculum: energy conversion, distribution, heat & power systems, renewables, hydrogen, energy efficiency; heavy technical/systems orientation with some policy integration.",
+            "Reputation: Lund is one of Sweden’s top universities, highly respected in engineering, sustainability, and climate-related research.",
+            "Student life: vibrant student-town atmosphere with the renowned ‘Nations’; close to Malmö and Copenhagen; strong cycling culture and outdoors access.",
+            "Career prospects: excellent for engineering-centric energy roles (R&D, system modelling, energy planning, technical consulting); less aligned for energy-econ/markets unless supplemented with your own research focus.",
+            "Salary: Swedish energy engineering roles offer good early-career packages with strong social benefits and a high quality of life.",
+        ],
+        links: [
+            {
+                label: "Lund — MSc Sustainable Energy Engineering",
+                href: "https://www.lunduniversity.lu.se/lubas/i-uoh-lu-TAREE",
+            },
+        ],
+    },
 ];
 
 type UniTimelineItem = {
