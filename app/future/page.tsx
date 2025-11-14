@@ -27,16 +27,31 @@ export const metadata = {
 /* ----------------------------- OVERVIEW COPY ------------------------------ */
 
 const overviewText =
-    "Building a globally oriented career at the intersection of energy economics, sustainability strategy, and finance — underpinned by technical fluency, language capability, and a disciplined, endurance-sport lifestyle. By age 40, you aim to be a senior energy-economics / ESG strategy leader who bridges finance, data analytics, and policy to guide the global energy transition. The plan integrates academic excellence, multilingual fluency, and endurance athletics to sustain long-term performance and balance.";
+    "Building a globally oriented career at the intersection of energy economics, sustainability strategy, and finance — anchored by a flagship econometric energy-forecast dashboard, technical fluency, language capability, and a disciplined endurance-sport lifestyle. By age 40, the goal is to be a senior energy/ESG strategy or policy leader with a global profile, bridging finance, data analytics, and policy to guide the energy transition. The plan emphasises execution discipline, option value at each transition, and long-term performance through academic excellence, multilingual fluency, and endurance athletics.";
 
 const overviewRows: Array<[string, string]> = [
-    ["Identity", "Energy-economics & sustainability strategist with finance + data expertise"],
-    ["Education", "Master of Finance → CFA I–III → MSc ENE @ NHH → PhD (Energy Econ)"],
-    ["Technical", "Python · R · Stata certified + forecasting dashboard"],
+    [
+        "Identity",
+        "Energy-economics & sustainability strategist with finance + data expertise",
+    ],
+    [
+        "Education",
+        "Master of Finance → CFA I–III → European MSc (energy/ESG) → Applied PhD (Energy Econ, preferred but optional)",
+    ],
+    [
+        "Technical",
+        "Python · R · Stata certified + Econometric Energy Forecast Dashboard (flagship platform)",
+    ],
     ["Languages", "German (B2) · Norwegian (B2/C1)"],
-    ["Career Arc", "Student → Analyst → Strategist → Executive / Policy Advisor"],
+    [
+        "Career Arc",
+        "Student → Analyst → Strategist → Senior Leader / Policy Advisor",
+    ],
     ["Lifestyle", "Structured endurance-sport routine · family · balance"],
-    ["Vision by 40", "Senior energy/ESG strategy or policy leader; financial independence"],
+    [
+        "Vision by 40",
+        "Senior energy/ESG strategy or policy leader with global profile and financial independence",
+    ],
 ];
 
 /* --------------------------------- LINKS ---------------------------------- */
@@ -85,8 +100,7 @@ const L = {
     COLOGNE_EWI: "https://www.ewi.uni-koeln.de/en/",
     COLOGNE_MSC_ECON_RESEARCH:
         "https://wiso.uni-koeln.de/en/studies/application/master/master-economic-research",
-    COPENHAGEN_ECON:
-        "https://www.ku.dk/studies/masters/economics/",
+    COPENHAGEN_ECON: "https://www.ku.dk/studies/masters/economics/",
     COPENHAGEN_ENV_ECON:
         "https://science.ku.dk/english/study-at-science/masters-programmes/environment-and-development/",
     UIO_ECON_MSC:
@@ -120,9 +134,10 @@ const phases: Phase[] = [
             {
                 heading: "🎓 Academics & Qualifications",
                 bullets: [
-                    "Continue Master of Finance at Melbourne (target completion: Dec 2026).",
-                    "Sit CFA Level I (mid-2026); begin Level II prep (early 2027).",
-                    "Certificate sprint: IBM Python for Data Science, Data Analyst with R (DataCamp), LSE Stata.",
+                    "Maintain strong Master of Finance grades, prioritising econometrics, derivatives and core finance subjects (target completion: Dec 2026).",
+                    "Sit CFA Level I in mid-2026 with structured prep from late 2025.",
+                    "Complete IBM Python for Data Science, Data Analyst with R (DataCamp), and LSE Stata certificates by end-2026 (with flexibility to push one into early 2027 if workload spikes).",
+                    "Tier 1 priorities: MFin performance, CFA I, Dashboard v1, German A1–A2 & Norwegian A1. Tier 2: extra blog posts or early additional certs.",
                 ],
                 links: [
                     { label: "IBM Python for Data Science (Coursera)", href: L.IBM_PY_DS },
@@ -132,12 +147,12 @@ const phases: Phase[] = [
                 ],
             },
             {
-                heading: "💻 Major Project — Econometric Energy Forecast Dashboard",
+                heading: "💻 Flagship Project — Econometric Energy Forecast Dashboard",
                 bullets: [
-                    "Datasets: Nord Pool prices; ENTSO-E load/gen; EIA fundamentals; Geopolitical Risk Index; weather.",
-                    "Models: VAR/SVAR, impulse responses, rolling OOS evaluation and MAPE/RMSE dashboards.",
-                    "Stack: FastAPI backend + React front-end; CI for nightly data pulls & retraining.",
-                    "Publishing: public repo + roadmap on GitHub; monthly dev logs on LinkedIn.",
+                    "2025: V0 — build clean pipelines for a few Nord Pool / ENTSO-E series and simple baseline models (e.g. ARIMA or small VAR) for day-ahead prices.",
+                    "2026: V1 — extend to multi-variable VAR/SVAR integrating fuel prices, macro indicators and geopolitical risk; add basic evaluation metrics (MAPE/RMSE) and charts.",
+                    "Stack: FastAPI (or similar) backend serving forecasts as JSON with a minimal dashboard UI (Dash/Streamlit/React) deployed publicly.",
+                    "Documentation: clear README, architecture notes and at least one substantial blog post or working-paper-style PDF explaining methodology, data, and limitations.",
                 ],
                 links: [
                     { label: "Nord Pool", href: L.NORDPOOL },
@@ -152,11 +167,21 @@ const phases: Phase[] = [
             },
             {
                 heading: "🌍 Languages",
-                bullets: ["German A1→A2 (Goethe-Institut).", "Norwegian A1 (Folkeuniversitetet or FutureLearn)."],
+                bullets: [
+                    "German A1→A2 (Goethe-Institut), aiming to sit A2 toward late 2026 if pacing allows.",
+                    "Norwegian A1 via Folkeuniversitetet or FutureLearn, with consistent light input (NRK, simple podcasts, apps).",
+                ],
                 links: [
                     { label: "Goethe-Institut", href: L.GOETHE },
                     { label: "Folkeuniversitetet (NO)", href: L.FOLKE },
                     { label: "FutureLearn — Norwegian", href: L.FUTURELEARN_NO },
+                ],
+            },
+            {
+                heading: "🏃 Lifestyle & Events",
+                bullets: [
+                    "6–8 h/wk training with a stable base: at least one long endurance session, one intensity/tempo session, and one strength session per week.",
+                    "Enter and complete at least one sprint triathlon or Gran Fondo by end-2026, as proof of consistency rather than peak performance.",
                 ],
             },
         ],
@@ -166,18 +191,18 @@ const phases: Phase[] = [
         ],
         kpis: [
             "CFA Level I: PASS",
-            "Dashboard v1 live with demo dataset",
-            "2 short posts or 1 working paper on methodology",
+            "Dashboard v1 live with public demo",
+            "≥1 substantive post or working paper on methodology",
             "German A2 · Norwegian A1",
         ],
         outcomes: [
             "Master of Finance almost complete (Dec 2026)",
-            "Prototype dashboard (public)",
+            "Public, working prototype dashboard (V1)",
             "Python/R/Stata certifications",
         ],
     },
     {
-        title: "Phase 2 — MSc ENE @ NHH",
+        title: "Phase 2 — MSc ENE @ NHH (or equivalent)",
         years: "2027–2029",
         location: "Bergen, Norway",
         age: "24–26",
@@ -186,9 +211,9 @@ const phases: Phase[] = [
             {
                 heading: "🎓 Goals & Track",
                 bullets: [
-                    "MSc ENE focusing on energy economics, sustainability, geopolitics.",
-                    "Internship: Equinor / Statkraft / DNV (data-strategy / market analytics).",
-                    "Thesis extends dashboard into academic econometric research (replication package).",
+                    "MSc ENE at NHH focusing on energy economics, sustainability and geopolitics, with comparable European programmes (Copenhagen, Cologne, Oslo, etc.) as viable alternatives.",
+                    "Secure an energy/market analytics or data-strategy internship (Equinor, Statkraft, DNV or similar).",
+                    "Thesis extends the dashboard into formal academic econometric research with a replication package (code + data appendix).",
                 ],
                 links: [
                     { label: "NHH — MSc ENE", href: L.NHH_ENE },
@@ -200,15 +225,18 @@ const phases: Phase[] = [
             {
                 heading: "🔬 Research & Productization",
                 bullets: [
-                    "Exogenous shocks: weather regimes, GPR, EUA carbon prices.",
-                    "Dashboard v2: scenario analysis, confidence bands, public API.",
-                    "Seminar talk; submit extended abstract to IAEE student paper session.",
+                    "Model exogenous shocks from weather regimes, geopolitical risk, and carbon prices into European power and gas markets.",
+                    "Dashboard v2: scenario analysis, confidence bands and a simple public API for selected forecasts.",
+                    "Give at least one seminar talk; submit an extended abstract to an IAEE student/young professional session.",
                 ],
                 links: [{ label: "IAEE", href: L.IAEE }],
             },
             {
                 heading: "🌍 Language Progress",
-                bullets: ["German B1; Norwegian B1→B2 (NHH Norsk)."],
+                bullets: [
+                    "German A2→B1, targeting Goethe B1 by the end of the MSc window if feasible.",
+                    "Norwegian B1→B2 via NHH Norsk and immersion; able to operate socially and semi-professionally in Norwegian.",
+                ],
                 links: [
                     { label: "Goethe-Institut", href: L.GOETHE },
                     { label: "NHH — Norwegian Courses", href: L.NHH_NORSK },
@@ -216,7 +244,10 @@ const phases: Phase[] = [
             },
             {
                 heading: "🏃 Activities",
-                bullets: ["8–10 h/wk with BSI Cycling & Athletics.", "Local triathlons or Bergen Marathon."],
+                bullets: [
+                    "8–10 h/wk training with BSI Cycling & Athletics or equivalent local clubs.",
+                    "Race local triathlons and/or Bergen Marathon as annual anchors.",
+                ],
                 links: [
                     { label: "BSI Sport (Bergen)", href: L.BSI },
                     { label: "Bergen Marathon", href: L.BERGEN_MARATHON },
@@ -229,10 +260,14 @@ const phases: Phase[] = [
         ],
         kpis: [
             "Internship secured & completed",
-            "Thesis submitted (code & data appendix)",
+            "Thesis submitted with code/data appendix",
             "Dashboard v2 (scenarios + API)",
         ],
-        outcomes: ["MSc with distinction", "Dual language capability", "Applied research recognition"],
+        outcomes: [
+            "MSc with distinction (target)",
+            "Dual language capability (DE/NO)",
+            "Dashboard recognised as applied research tool",
+        ],
     },
     {
         title: "Phase 3 — Early Corporate Career + CFA Level III",
@@ -244,9 +279,9 @@ const phases: Phase[] = [
             {
                 heading: "💼 Roles & Scope",
                 bullets: [
-                    "Analyst → Associate → Strategist (Statkraft, DNV, Ørsted, or finance).",
-                    "ESG/transition-finance: abatement curves, portfolio emissions, green bond frameworks.",
-                    "Quarterly market notes leveraging dashboard insights.",
+                    "Energy / ESG / Market Analyst → Associate → Strategist in utilities, TSOs, consultancies (Statkraft, DNV, Ørsted, etc.) or transition-focused finance roles.",
+                    "Apply CFA skills to transition-finance, project evaluation, and portfolio decarbonisation work.",
+                    "Produce quarterly market notes or strategy memos that leverage dashboard outputs for internal stakeholders.",
                 ],
                 links: [
                     { label: "Statkraft", href: L.STATKRAFT },
@@ -256,7 +291,10 @@ const phases: Phase[] = [
             },
             {
                 heading: "🎓 Professional Credentials",
-                bullets: ["Sit CFA Level III (2030) → Charter (2031).", "Add CFA ESG Certificate."],
+                bullets: [
+                    "Complete CFA Levels II and III on schedule (e.g. L2 ~2027/28, L3 ~2030) and obtain the CFA Charter by ~2031.",
+                    "Add the CFA ESG Certificate around 2031–2032.",
+                ],
                 links: [
                     { label: "CFA Institute", href: L.CFA },
                     { label: "CFA — ESG Certificate", href: L.CFA_ESG },
@@ -265,8 +303,8 @@ const phases: Phase[] = [
             {
                 heading: "🛠 Platform Continuity",
                 bullets: [
-                    "Dashboard v3: near-real-time pipelines; alerting; scheduled forecast jobs.",
-                    "Publish one professional article and present internally.",
+                    "Dashboard v3: near-real-time pipelines, automated forecast jobs and alerting for key risk events.",
+                    "Publish at least one external professional article (industry publication, journal, or think-tank note) and present internally on methods and lessons learned.",
                 ],
             },
         ],
@@ -275,35 +313,38 @@ const phases: Phase[] = [
             { label: "Languages", value: "Maintain DE/NO at B2" },
         ],
         kpis: [
-            "CFA Charterholder by 2031",
+            "CFA Charterholder by ~2031",
             "≥1 external publication",
             "Dashboard v3 (automated pipeline + alerts)",
         ],
         outcomes: [
-            "CFA Charterholder",
+            "CFA Charterholder with ESG credential",
             "Recognised technical + strategic analyst",
-            "Operational forecasting platform",
+            "Operational forecasting platform embedded in workflow",
         ],
     },
     {
-        title: "Phase 4 — Applied PhD in Energy Economics",
+        title: "Phase 4 — Applied PhD in Energy Economics (preferred) / Alternative Track",
         years: "2032–2036",
         location: "NHH / UiO / EU partner",
         age: "29–33",
         icon: <Target className="h-5 w-5" />,
         sections: [
             {
-                heading: "🎓 Program & Topic",
+                heading: "🎓 Program & Topic (Preferred Path)",
                 bullets: [
-                    "Industrial-PhD partnership (Equinor, DNV, or policy agency).",
-                    "Dissertation: energy security, geopolitics, market integration.",
-                    "Dashboard embedded as reproducible teaching/research tool.",
+                    "Industrial or applied PhD partnership (Equinor, DNV, Statkraft, TSO, or policy agency).",
+                    "Dissertation on energy security, market integration and geopolitics (e.g. shock transmission across power, gas and carbon markets).",
+                    "Dashboard embedded as a reproducible research and teaching platform (labs, student projects, demos).",
                 ],
                 links: [{ label: "University of Oslo (UiO)", href: L.UIO }],
             },
             {
                 heading: "📚 Publishing & Conferences",
-                bullets: ["2–3 papers (Energy Economics / Applied Energy / SFI).", "Present at IAEE + European conferences."],
+                bullets: [
+                    "Publish 2–3 peer-reviewed papers (Energy Economics, Applied Energy, Sustainable Finance & Investment or similar).",
+                    "Present at IAEE and key European energy conferences; maintain at least occasional practitioner-facing writing.",
+                ],
                 links: [
                     { label: "Energy Economics", href: L.JOURNAL_ENERGY_ECON },
                     { label: "Applied Energy", href: L.JOURNAL_APPLIED_ENERGY },
@@ -311,13 +352,26 @@ const phases: Phase[] = [
                     { label: "IAEE", href: L.IAEE },
                 ],
             },
+            {
+                heading: "🔁 Alternative Track (If PhD Is Delayed or Skipped)",
+                bullets: [
+                    "Continue in senior analyst/manager roles in corporate or policy settings while co-authoring papers with academics or think-tanks.",
+                    "Use the dashboard as a base for industry white papers and thought-leadership pieces to build a practitioner-research profile without a formal PhD.",
+                    "Target roles in regulators, central banks or international organisations that value applied modelling and policy insight over formal academic credentials.",
+                ],
+            },
         ],
         meta: [
             { label: "Stipend (guide)", value: "NOK 550–650k (AUD 80–95k)" },
-            { label: "Mode", value: "Industrial partnership" },
+            { label: "Mode", value: "Industrial PhD or senior practitioner track" },
         ],
-        kpis: ["PhD proposal ✓ (Y1) · defense (Y4)", "≥2 peer-reviewed publications", "Teaching/demo package"],
-        outcomes: "PhD + CFA + production-grade portfolio = practitioner-researcher profile.",
+        kpis: [
+            "PhD proposal approved (Y1) & defense (Y4), or equivalent senior-practitioner promotion",
+            "≥2 peer-reviewed or equivalent high-quality publications",
+            "Dashboard leveraged as recognised research/teaching or industry tool",
+        ],
+        outcomes:
+            "Preferred: PhD + CFA + production-grade portfolio = practitioner-researcher profile. Alternative: senior practitioner with strong publications and recognised modelling platform.",
     },
     {
         title: "Phase 5 — Senior Corporate / Strategy Leadership",
@@ -329,9 +383,9 @@ const phases: Phase[] = [
             {
                 heading: "🏢 Roles",
                 bullets: [
-                    "Senior Energy Economist / Strategy Manager (Equinor, DNV, Ørsted).",
-                    "ESG/Sustainability Strategy Lead (finance/industry).",
-                    "Option to pivot to AU: AEMO, ARENA, CSIRO, major banks.",
+                    "Senior Energy Economist, Head of Market Analysis, or Strategy Manager in major energy companies, TSOs, or advisory firms (Equinor, DNV, Ørsted, etc.).",
+                    "ESG/Sustainability Strategy Lead or Head of Transition Finance in banks, asset managers, or infrastructure funds.",
+                    "Option to pivot to Australia into roles at AEMO, ARENA, CSIRO, CEFC, or major banks/super funds.",
                 ],
                 links: [
                     { label: "Equinor", href: L.EQUINOR },
@@ -343,10 +397,18 @@ const phases: Phase[] = [
                 ],
             },
             {
-                heading: "📈 Impact",
+                heading: "📈 Impact & Positioning",
                 bullets: [
-                    "Own multi-year transition workstreams; quantify decarbonization options.",
-                    "Mentor analysts; run internal methods guild on forecasting/policy modeling.",
+                    "Own multi-year transition workstreams (e.g. decarbonisation roadmaps, security-of-supply strategies, grid or asset investment plans).",
+                    "Lead teams of analysts; run an internal methods guild/community around forecasting, energy economics and policy modelling.",
+                    "Clarify and lean into your preferred archetype: corporate strategy leader (firm-level impact) or policy/think-tank leader (system-level impact).",
+                ],
+            },
+            {
+                heading: "🏃 Lifestyle & Balance",
+                bullets: [
+                    "Maintain 6–8 h/wk training with one major event per year (Ironman 70.3, Gran Fondo, or marathon).",
+                    "Deliberately protect family and recovery time; design systems for sustainable high performance rather than constant sprinting.",
                 ],
             },
         ],
@@ -354,8 +416,13 @@ const phases: Phase[] = [
             { label: "Comp (guide)", value: "NOK 1.2–1.6M (AUD 180–240k)" },
             { label: "Languages", value: "Norwegian B2/C1 · German B2" },
         ],
-        kpis: ["Lead 2+ strategy initiatives", "Manager/Lead title", "External speaking slots"],
-        outcomes: "High-impact strategy leader shaping energy transition direction.",
+        kpis: [
+            "Hold a Senior/Lead/Head title in strategy/analytics",
+            "Lead 2+ major transition or strategy initiatives",
+            "Regular external speaking slots (conferences, panels, media)",
+        ],
+        outcomes:
+            "High-impact strategy leader shaping major energy transition decisions in corporate or policy settings.",
     },
     {
         title: "Phase 6 — Executive & Thought Leadership",
@@ -367,19 +434,37 @@ const phases: Phase[] = [
             {
                 heading: "🎯 Executive Goals",
                 bullets: [
-                    "Executive Director / Head of Strategy / Policy Advisor.",
-                    "Public discourse + mentorship cadence.",
-                    "Optional: Exec energy-transition program (Oxford/INSEAD).",
+                    "Executive Director, Head of Strategy, Chief Economist or Senior Policy Advisor role in a major energy, financial, or policy institution.",
+                    "Contribute regularly to public discourse on the energy transition (op-eds, reports, podcasts, conferences).",
+                    "Maintain a structured mentorship habit (1:1s, internal cohorts, or guest lectures at universities).",
+                ],
+            },
+            {
+                heading: "🎓 Executive Education & Network",
+                bullets: [
+                    "Optionally complete an executive energy-transition or leadership program (INSEAD, Oxford or similar) to deepen network and broaden perspective.",
                 ],
                 links: [
                     { label: "INSEAD — Energy Transition (Exec Ed)", href: L.INSEAD_ENERGY },
                     { label: "Oxford Saïd — Executive Education", href: L.OXFORD_SAID },
                 ],
             },
+            {
+                heading: "🏃 Lifestyle & Independence",
+                bullets: [
+                    "Financial independence or close to it; work becomes primarily impact- and interest-driven.",
+                    "Endurance training (6–8 h/wk) remains a lifestyle anchor, supporting clarity and longevity.",
+                ],
+            },
         ],
         meta: [{ label: "Mode", value: "Executive influence & public voice" }],
-        kpis: ["Executive/policy appointment", "Regular thought-leadership", "Active mentorship network"],
-        outcomes: "Internationally visible strategy/policy leader with durable impact.",
+        kpis: [
+            "Executive or top-tier policy/thought-leadership appointment",
+            "Sustained, visible contribution to energy transition discourse",
+            "Active mentorship network and stable endurance routine",
+        ],
+        outcomes:
+            "Internationally visible strategy/policy leader with durable impact, financial independence, and a sustainable, family-centred lifestyle.",
     },
 ];
 
@@ -579,7 +664,7 @@ const uniTimeline: UniTimelineItem[] = [
         period: "1 Dec 2026 – 9 Jan 2027",
         label: "Aalto University MSc Advanced Energy Solutions – application window",
         detail:
-            "Application period for 2026 intake was 1 Dec – 2 Jan; documents deadline 9 Jan. So for 2027 intake assume similar: open 1 Dec 2026, close early Jan 2027. See: https://www.aalto.fi/en/study-at-aalto/apply-to-masters-programmes (link)  [oai_citation:0‡Aalto University](https://www.aalto.fi/en/study-at-aalto/apply-to-masters-programmes?utm_source=chatgpt.com)",
+            "Application period for 2026 intake was 1 Dec – 2 Jan; documents deadline 9 Jan. So for 2027 intake assume similar: open 1 Dec 2026, close early Jan 2027. See: https://www.aalto.fi/en/study-at-aalto/apply-to-masters-programmes (link)",
     },
     {
         period: "15 Jan 2027 at 23:59 CET",
@@ -591,7 +676,7 @@ const uniTimeline: UniTimelineItem[] = [
         period: "15 Feb 2027 (midnight CET)",
         label: "Norwegian School of Economics (NHH) MSc ENE – application deadline",
         detail:
-            "Non-Norwegian bachelor’s applicants apply via Søknadsweb by 15 Feb. See: https://www.nhh.no/en/study-programmes/application-and-admission/admission-msc-in-economics-and-business-administration/ (link)  [oai_citation:1‡NHH](https://www.nhh.no/en/study-programmes/application-and-admission/admission-msc-in-economics-and-business-administration/?utm_source=chatgpt.com)",
+            "Non-Norwegian bachelor’s applicants apply via Søknadsweb by 15 Feb. See: https://www.nhh.no/en/study-programmes/application-and-admission/admission-msc-in-economics-and-business-administration/ (link)",
     },
     {
         period: "31 Mar 2027",
@@ -603,7 +688,7 @@ const uniTimeline: UniTimelineItem[] = [
         period: "Apr – May 2027",
         label: "Offer decisions & acceptance deadlines",
         detail:
-            "Most universities (Aalto: 8 Apr; NHH: end April; Copenhagen: ~1 May) publish decisions and require acceptance within 2-4 weeks. Refer to each programme’s offer letter.",
+            "Most universities (Aalto: early April; NHH: end April; Copenhagen: ~1 May) publish decisions and require acceptance within 2–4 weeks. Refer to each programme’s offer letter.",
     },
     {
         period: "Aug – Oct 2027",
@@ -626,38 +711,38 @@ const timeline: TimelineItem[] = [
     {
         years: "2025–26",
         phase: "Phase 1",
-        focus: "Master + CFA I + Dashboard + Data/Lang Certs",
-        deliverables: "Portfolio + DE/NO basics",
+        focus: "Master + CFA I + Dashboard v1 + Data/Lang Foundations",
+        deliverables: "Public portfolio project + DE/NO basics",
     },
     {
         years: "2027–29",
         phase: "Phase 2",
-        focus: "MSc ENE + Internship + Lang B1–B2",
-        deliverables: "Distinction + applied thesis",
+        focus: "European MSc (ENE focus) + Internship + Lang B1–B2",
+        deliverables: "Distinction-target MSc + applied thesis using dashboard",
     },
     {
         years: "2029–32",
         phase: "Phase 3",
-        focus: "Corporate roles + CFA III + ESG Cert",
-        deliverables: "CFA Charter + Analyst→Strategist",
+        focus: "Corporate roles + CFA II–III + ESG Cert",
+        deliverables: "CFA Charter + analyst→strategist progression",
     },
     {
         years: "2032–36",
         phase: "Phase 4",
-        focus: "PhD Energy Econ",
-        deliverables: "Publications + industry collab",
+        focus: "Applied PhD in Energy Econ (preferred) or senior practitioner track",
+        deliverables: "Publications + industry collab or equivalent thought-leadership",
     },
     {
         years: "2036–40",
         phase: "Phase 5",
         focus: "Senior Strategy / ESG Leadership",
-        deliverables: "Senior role / pivot home",
+        deliverables: "Senior role in Europe or AU; lead major transition initiatives",
     },
     {
         years: "2040–43",
         phase: "Phase 6",
-        focus: "Executive / Policy Leadership",
-        deliverables: "Director-level / thought leader",
+        focus: "Executive / Policy Leadership & Thought Leadership",
+        deliverables: "Director-level / public voice + financial independence trajectory",
     },
 ];
 
@@ -690,6 +775,35 @@ export default function FuturePlanPage() {
                 </div>
             </Section>
 
+            {/* Execution Principles */}
+            <Section
+                id="execution-principles"
+                title="Execution Principles"
+                icon={<Target className="h-5 w-5" />}
+            >
+                <ul className="list-disc pl-5 space-y-2 text-sm">
+                    <li>
+                        <span className="font-semibold">One big thing at a time:</span> at most one
+                        formal degree, one major exam (CFA level), and one flagship side project (the
+                        dashboard) in any given period.
+                    </li>
+                    <li>
+                        <span className="font-semibold">Model before UI:</span> prioritise robust data
+                        pipelines and econometric models before investing heavily in interface polish.
+                    </li>
+                    <li>
+                        <span className="font-semibold">Endurance as anchor:</span> keep 3 non-negotiable
+                        weekly sessions (endurance, intensity, strength) to protect long-term physical and
+                        mental capacity.
+                    </li>
+                    <li>
+                        <span className="font-semibold">Option value at each transition:</span> for each
+                        major phase (MSc, PhD, leadership) maintain at least one strong alternative path
+                        that still fits the core identity and long-term direction.
+                    </li>
+                </ul>
+            </Section>
+
             {/* New section: European graduate study options */}
             <Section
                 id="graduate-options"
@@ -701,10 +815,10 @@ export default function FuturePlanPage() {
                         You complete the Master of Finance at Melbourne in{" "}
                         <strong>Dec 2026</strong>. The next step in the plan is a European MSc starting in
                         the <strong>Autumn 2027 intake</strong>. The strategy is to{" "}
-                        <strong>apply to all four priority programmes</strong> — NHH, University of Cologne
-                        (EWI), University of Copenhagen, and University of Oslo — and then choose the offer
-                        that best aligns with energy economics, markets, and your longer-term PhD and
-                        leadership goals.
+                        <strong>apply to multiple priority programmes</strong> — NHH, University of Cologne
+                        (EWI), University of Copenhagen, University of Oslo, and selected technical energy
+                        programmes — and then choose the offer that best aligns with energy economics,
+                        markets, and your longer-term PhD and leadership goals.
                     </p>
 
                     {/* University cards */}
