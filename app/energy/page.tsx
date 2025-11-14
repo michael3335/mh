@@ -327,7 +327,132 @@ export default function EnergyPage() {
           </ul>
         </Card>
 
-        {/* 7. KPIs & navigation */}
+        {/* 7. Codebase layout & modules */}
+        <Card title="Codebase layout & modules" icon="📂">
+          <p>
+            One Python package and one Next.js app, structured by region (EU/AU) and
+            by the four layers. This is the canonical map when wiring new code.
+          </p>
+          <ul className="list">
+            <li>
+              <strong>Python package:</strong>{" "}
+              <code>energy/</code> with:
+              <ul>
+                <li>
+                  <code>core/</code> — shared logic, split into{" "}
+                  <code>l1_data</code>, <code>l2_forecast</code>,{" "}
+                  <code>l3_strategy</code>, <code>l4_execution</code> modules.
+                </li>
+                <li>
+                  <code>eu/</code> — Europe-specific{" "}
+                  <code>l1_data/etl_*</code>, <code>l2_forecast/factors_eu.py</code>{" "}
+                  & model files, <code>l3_strategy/strategies_*.py</code>,{" "}
+                  <code>l4_execution/backtests_eu.py</code>.
+                </li>
+                <li>
+                  <code>au/</code> — Australia-specific ETL for NEM/ASX, AU factors &
+                  regimes, AU strategies and backtests in the same four-layer layout.
+                </li>
+                <li>
+                  <code>api/</code> — FastAPI routers per layer:{" "}
+                  <code>l1_data_api.py</code>, <code>l2_forecast_api.py</code>,{" "}
+                  <code>l3_strategy_api.py</code>, <code>l4_execution_api.py</code>.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Layer mapping in code:</strong>{" "}
+              <code>core/l1_data</code> handles DB/storage & QC;{" "}
+              <code>core/l2_forecast</code> wraps VAR/VECM & factor builders;{" "}
+              <code>core/l3_strategy</code> holds signal/portfolio/risk helpers;{" "}
+              <code>core/l4_execution</code> runs backtests, P&amp;L and reports.
+            </li>
+            <li>
+              <strong>Front-end (Next.js):</strong>{" "}
+              <code>dash/app/</code> with:
+              <ul>
+                <li>
+                  <code>l1-data/eu</code> &amp; <code>l1-data/au</code> — data & infra
+                  dashboards.
+                </li>
+                <li>
+                  <code>l2-forecast/eu</code> &amp; <code>l2-forecast/au</code> —
+                  factors, regimes, forecast vs realised.
+                </li>
+                <li>
+                  <code>l3-strategy/eu</code> &amp; <code>l3-strategy/au</code> —
+                  strategy complexes, signals, targets.
+                </li>
+                <li>
+                  <code>l4-execution/eu</code> &amp; <code>l4-execution/au</code> —
+                  backtests, P&amp;L, drawdowns and regime buckets.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Shared UI components:</strong>{" "}
+              <code>dash/app/components/</code> for{" "}
+              <code>RegionSelector</code>, <code>LayerTabs</code>,{" "}
+              <code>FactorHeatmap</code>, <code>RegimeTimeline</code>,{" "}
+              <code>StrategyTable</code>, <code>PerformanceChart</code>.
+            </li>
+          </ul>
+        </Card>
+
+        {/* 8. AWS backbone & deployment */}
+        <Card title="AWS backbone & deployment" icon="☁️">
+          <p>
+            AWS is the storage and compute grid under the four logical layers. Aim for
+            a small, opinionated stack that is cheap to run and easy to extend.
+          </p>
+          <ul className="list">
+            <li>
+              <strong>Region & network:</strong> primary in{" "}
+              <code>ap-southeast-2</code> (Sydney) with a single VPC; private subnets
+              for databases and ECS/Fargate, public subnets only for load balancers /
+              CloudFront origins. Optional EU footprint later if data residency is
+              needed.
+            </li>
+            <li>
+              <strong>Layer 1 — Data & infra:</strong> S3 as the data lake for{" "}
+              <code>raw/</code> and <code>clean/</code> Parquet; Lambda + ECS Fargate
+              (and optionally Step Functions) for ETL; EventBridge for crons; DynamoDB
+              or Aurora Postgres for dataset metadata, coverage and QC KPIs.
+            </li>
+            <li>
+              <strong>Layer 2 — Forecast & factors:</strong> containerised Python
+              (statsmodels, Polars, DuckDB) on ECS Fargate or AWS Batch for model
+              runs; outputs (factors, forecasts, regimes) written back to S3 and/or
+              Aurora/Redshift; FastAPI L2 endpoints exposed via API Gateway or an
+              internal ALB.
+            </li>
+            <li>
+              <strong>Layer 3 — Strategy & risk:</strong> FastAPI service on ECS or
+              Lambda using L2 outputs to compute signals and targets; Aurora Postgres
+              or DynamoDB for strategy configs, risk limits and current targets; S3 for
+              historical signal archives.
+            </li>
+            <li>
+              <strong>Layer 4 — Execution & evaluation:</strong> backtests and
+              simulations on AWS Batch/ECS; positions, trades and P&amp;L stored in S3
+              (detail) plus Aurora (summaries); FastAPI L4 endpoints for retrieving
+              backtest runs, equity curves, regime-bucket performance, etc.
+            </li>
+            <li>
+              <strong>Front door:</strong> Next.js dashboard built in CI and deployed
+              to either AWS Amplify or S3 + CloudFront. UI talks only to the versioned
+              layer APIs, not directly to data stores.
+            </li>
+            <li>
+              <strong>Cross-cutting:</strong> IAM roles per service (least-privilege
+              access to S3 buckets and databases); Secrets Manager / SSM for API keys
+              and DB creds; CloudWatch Logs &amp; Metrics for ETL and API health;
+              CloudWatch Alarms on feed staleness, error rates and key KPIs.
+            </li>
+          </ul>
+        </Card>
+
+        {/* 9. KPIs & navigation */}
         <Card title="KPIs & navigation" icon="🧭">
           <div className="kpis">
             <KPI
