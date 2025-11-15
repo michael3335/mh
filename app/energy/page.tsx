@@ -346,11 +346,11 @@ export default function EnergyPage() {
                 <li>
                   <code>eu/</code> — Europe-specific{" "}
                   <code>l1_data/etl_*</code>, <code>l2_forecast/factors_eu.py</code>{" "}
-                  & model files, <code>l3_strategy/strategies_*.py</code>,{" "}
+                  &amp; model files, <code>l3_strategy/strategies_*.py</code>,{" "}
                   <code>l4_execution/backtests_eu.py</code>.
                 </li>
                 <li>
-                  <code>au/</code> — Australia-specific ETL for NEM/ASX, AU factors &
+                  <code>au/</code> — Australia-specific ETL for NEM/ASX, AU factors &amp;
                   regimes, AU strategies and backtests in the same four-layer layout.
                 </li>
                 <li>
@@ -362,8 +362,8 @@ export default function EnergyPage() {
             </li>
             <li>
               <strong>Layer mapping in code:</strong>{" "}
-              <code>core/l1_data</code> handles DB/storage & QC;{" "}
-              <code>core/l2_forecast</code> wraps VAR/VECM & factor builders;{" "}
+              <code>core/l1_data</code> handles DB/storage &amp; QC;{" "}
+              <code>core/l2_forecast</code> wraps VAR/VECM &amp; factor builders;{" "}
               <code>core/l3_strategy</code> holds signal/portfolio/risk helpers;{" "}
               <code>core/l4_execution</code> runs backtests, P&amp;L and reports.
             </li>
@@ -372,7 +372,7 @@ export default function EnergyPage() {
               <code>dash/app/</code> with:
               <ul>
                 <li>
-                  <code>l1-data/eu</code> &amp; <code>l1-data/au</code> — data & infra
+                  <code>l1-data/eu</code> &amp; <code>l1-data/au</code> — data &amp; infra
                   dashboards.
                 </li>
                 <li>
@@ -452,7 +452,350 @@ export default function EnergyPage() {
           </ul>
         </Card>
 
-        {/* 9. KPIs & navigation */}
+        {/* 9. L1–L4 data map & APIs */}
+        <Card title="L1–L4 data map & APIs" icon="🧵">
+          <p>
+            Working map from the four logical layers into concrete datasets and APIs.
+            Use as a reference when wiring ETL jobs and FastAPI routers.
+          </p>
+          <ul className="list">
+            <li>
+              <strong>Layer 1 — Data & infra:</strong> pulls external feeds into
+              versioned tables in S3/DuckDB/Postgres.
+              <ul>
+                <li>
+                  <strong>EU power:</strong> ENTSO-E Transparency API for load,
+                  generation, day-ahead prices, outages, cross-border flows, hydro.
+                </li>
+                <li>
+                  <strong>EU gas &amp; storage:</strong> ENTSOG Transparency API for
+                  flows &amp; capacity; GIE AGSI+/ALSI for storage &amp; LNG.
+                </li>
+                <li>
+                  <strong>AU power (NEM):</strong> AEMO Nemweb CSVs + OpenElectricity
+                  JSON API.
+                </li>
+                <li>
+                  <strong>Weather &amp; hydro:</strong> Copernicus CDS (ERA5, HDD/CDD)
+                  + Open-Meteo forecasts + ENTSO-E hydro reservoir series.
+                </li>
+                <li>
+                  <strong>Policy &amp; ETS:</strong> EU ETS data viewer exports +
+                  EUR-Lex/Cellar APIs for tagged legal events.
+                </li>
+                <li>
+                  <strong>Geopolitics &amp; risk:</strong> GDELT v2 events &amp; DOC
+                  APIs, optional sanctions API, UN/Eurostat/ECB macro/FX.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Layer 2 — Forecast & factors:</strong> no new external data;
+              builds forecast &amp; factor tables on top of L1.
+              <ul>
+                <li>
+                  VAR/VECM/SVAR models for prices, spreads, curves, load, generation.
+                </li>
+                <li>
+                  Factor tables for fuels, carbon, weather, grid stress, storage,
+                  geopolitics, macro/FX.
+                </li>
+                <li>
+                  Outputs: forecasts, confidence intervals, regime labels, mispricing
+                  estimates.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Layer 3 — Strategy & risk:</strong> internal-only; consumes L2
+              outputs.
+              <ul>
+                <li>
+                  Signal tables per complex (stack, basis, curve, events, transition).
+                </li>
+                <li>
+                  Risk configs &amp; limits, target positions and portfolio views.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Layer 4 — Execution & evaluation:</strong> backtests and
+              performance analytics.
+              <ul>
+                <li>
+                  Simulated trades, positions, P&amp;L, drawdowns, regime attribution.
+                </li>
+                <li>
+                  All on top of L3 signals; no new external data.
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </Card>
+
+        {/* 10. L1 data sources & endpoints */}
+        <Card title="L1 data sources & endpoints" icon="🌍">
+          <p>
+            Concrete, free-first data plan for the L1 backbone. Use this as a checklist
+            when implementing <code>core/l1_data</code> and{" "}
+            <code>api/l1_data_api.py</code>.
+          </p>
+          <ul className="list">
+            <li>
+              <strong>EU power — ENTSO-E Transparency Platform</strong>
+              <ul>
+                <li>
+                  Base URL: <code>https://web-api.tp.entsoe.eu/api</code>
+                </li>
+                <li>
+                  Auth: <code>?securityToken=YOUR_TOKEN</code> (free key).
+                </li>
+                <li>
+                  Day-ahead prices: <code>documentType=A44</code>,{" "}
+                  <code>in_Domain/out_Domain</code> = bidding zone EIC codes,{" "}
+                  <code>periodStart/periodEnd=YYYYMMDDHHMM</code>.
+                </li>
+                <li>
+                  Load &amp; load forecast: <code>documentType=A65/A71</code>.
+                </li>
+                <li>
+                  Generation by type: <code>documentType=A73/A75</code>.
+                </li>
+                <li>
+                  Cross-border flows &amp; capacity: <code>documentType=A11/A12</code>.
+                </li>
+                <li>
+                  Water reservoirs / hydro storage: <code>documentType=A72</code>.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>EU gas — ENTSOG Transparency Platform</strong>
+              <ul>
+                <li>
+                  Base: <code>https://transparency.entsog.eu/api/v1/</code>
+                </li>
+                <li>
+                  Example: <code>operationalData.json</code> with query params{" "}
+                  <code>from</code>, <code>to</code>, <code>indicator</code>{" "}
+                  (e.g. <code>PhysicalFlow</code>), <code>pointKey</code>,{" "}
+                  <code>direction</code>.
+                </li>
+                <li>
+                  Use for physical flows, nominations, technical &amp; firm capacity.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>EU storage &amp; LNG — GIE AGSI+ / ALSI</strong>
+              <ul>
+                <li>
+                  Storage: <code>https://agsi.gie.eu/api</code>
+                </li>
+                <li>
+                  LNG: <code>https://alsi.gie.eu/api</code>
+                </li>
+                <li>
+                  Auth: <code>?apikey=YOUR_KEY</code>.
+                </li>
+                <li>
+                  Example:{" "}
+                  <code>
+                    ?type=eu&amp;from=YYYY-MM-DD&amp;to=YYYY-MM-DD&amp;apikey=...
+                  </code>{" "}
+                  for EU aggregates; <code>?facility=ID</code> for facility-level.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>AU power — AEMO Nemweb + OpenElectricity</strong>
+              <ul>
+                <li>
+                  Nemweb: structured CSV directories under{" "}
+                  <code>https://nemweb.com.au/Reports/Current/</code> (e.g.{" "}
+                  <code>Dispatch_SCADA</code>, <code>PRICE</code>,{" "}
+                  <code>TRADING_IS</code>).
+                </li>
+                <li>
+                  ETL pattern: scheduled download, unzip, normalise to Parquet in{" "}
+                  <code>s3://.../raw/nemweb/</code>.
+                </li>
+                <li>
+                  OpenElectricity API: e.g.{" "}
+                  <code>
+                    https://api.opennem.org.au/v3/stats/au/NEM/fueltech/energy:all
+                  </code>{" "}
+                  with <code>?period=7d</code>, <code>?group=interval</code> options.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Weather, RES &amp; climate — CDS + Open-Meteo</strong>
+              <ul>
+                <li>
+                  ERA5 via <code>cdsapi</code> Python client; dataset name{" "}
+                  <code>"reanalysis-era5-single-levels"</code>, variables like{" "}
+                  <code>2m_temperature</code>, <code>10m_wind</code>.
+                </li>
+                <li>
+                  HDD/CDD via C3S HDD/CDD datasets or toolbox; store as daily indices
+                  per region.
+                </li>
+                <li>
+                  Open-Meteo forecasts:{" "}
+                  <code>https://api.open-meteo.com/v1/forecast</code> with{" "}
+                  <code>latitude</code>, <code>longitude</code>,{" "}
+                  <code>hourly=...</code>, <code>forecast_days</code>.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Policy &amp; ETS — EU ETS &amp; EUR-Lex/Cellar</strong>
+              <ul>
+                <li>
+                  EU ETS: yearly CSV/Excel exports from the EU ETS Data Viewer; ingest
+                  into <code>l1_data</code> with fields for country, sector, emissions,
+                  allowances.
+                </li>
+                <li>
+                  EUR-Lex/Cellar: SRU/REST interface, e.g.{" "}
+                  <code>/sru?operation=searchRetrieve&amp;query=...</code> for querying
+                  documents with keywords like &quot;emissions trading&quot;, &quot;capacity
+                  mechanism&quot;, &quot;CBAM&quot;.
+                </li>
+                <li>
+                  Store as a <code>policy_events</code> table with IDs, dates, tags and
+                  text snippets.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Geopolitics &amp; risk — GDELT</strong>
+              <ul>
+                <li>
+                  DOC 2.0 API:{" "}
+                  <code>https://api.gdeltproject.org/api/v2/doc/doc</code> with{" "}
+                  <code>?query=...</code>, <code>?mode=ArtList</code>,{" "}
+                  <code>?maxrecords</code>, <code>?format=json</code>.
+                </li>
+                <li>
+                  Use queries like <code>pipeline AND explosion</code> or{" "}
+                  <code>gas AND sanctions</code> to tag events.
+                </li>
+                <li>
+                  Aggregate to daily/weekly &quot;tension&quot; indices by region/fuel.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>FX &amp; macro — ECB &amp; Eurostat</strong>
+              <ul>
+                <li>
+                  ECB SDMX: e.g.{" "}
+                  <code>
+                    https://data.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A
+                  </code>{" "}
+                  for USD/EUR daily reference rate.
+                </li>
+                <li>
+                  Eurostat SDMX3: e.g.{" "}
+                  <code>https://api.europa.eu/eurostat/data/sdg_08_10</code> with{" "}
+                  <code>?time</code>, <code>?geo</code>.
+                </li>
+                <li>
+                  Use for CPI, industrial output, etc. as slow-moving factors.
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </Card>
+
+        {/* 11. Budget & costs */}
+        <Card title="Budget & costs (≤ $50/month)" icon="💸">
+          <p>
+            Working budget for a free-data, infra-limited implementation. All external
+            data licences are free; the monthly spend is primarily AWS.
+          </p>
+          <table className="budget">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Assumption</th>
+                <th>Est. monthly (AUD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Data licences</td>
+                <td>
+                  ENTSO-E, ENTSOG, GIE, AEMO, OpenElectricity, CDS, GDELT, ECB,
+                  Eurostat (free tiers)
+                </td>
+                <td>$0</td>
+              </tr>
+              <tr>
+                <td>S3 storage</td>
+                <td>200–400 GB, lifecycle to cheaper storage for old data</td>
+                <td>$3–8</td>
+              </tr>
+              <tr>
+                <td>Lambda ETL</td>
+                <td>Feed pulls &amp; light transforms (few thousand invokes/day)</td>
+                <td>$1–5</td>
+              </tr>
+              <tr>
+                <td>ECS Fargate / Batch</td>
+                <td>Nightly VAR/VECM &amp; factor jobs, ad hoc reruns</td>
+                <td>$5–10</td>
+              </tr>
+              <tr>
+                <td>DB layer</td>
+                <td>
+                  Tiny Postgres (RDS t4g.micro or small EC2) for metadata, configs,
+                  dashboards
+                </td>
+                <td>$10–15</td>
+              </tr>
+              <tr>
+                <td>CloudWatch</td>
+                <td>Logs &amp; metrics for ETL and APIs</td>
+                <td>$1–5</td>
+              </tr>
+              <tr>
+                <td>Front-end hosting</td>
+                <td>CloudFront/Amplify for Next.js dashboard, low traffic</td>
+                <td>$3–5</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={2}>
+                  <strong>Target total</strong>
+                </td>
+                <td>
+                  <strong>≈ $30–40</strong>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          <ul className="list" style={{ marginTop: "10px" }}>
+            <li>
+              <strong>Hard cap:</strong> keep infra spend under ~AUD $50/month by
+              tuning S3 lifecycle, log retention, and instance sizes.
+            </li>
+            <li>
+              <strong>No paid market data:</strong> all curve, intraday and news
+              signals in the early phase rely on synthetic forwards and free sources.
+            </li>
+            <li>
+              <strong>Upgrade path:</strong> if real-money trading ever becomes
+              relevant, add paid forward curves or real-time feeds as separate
+              line-items (outside this budget).
+            </li>
+          </ul>
+        </Card>
+
+        {/* 12. KPIs & navigation */}
         <Card title="KPIs & navigation" icon="🧭">
           <div className="kpis">
             <KPI
@@ -472,7 +815,7 @@ export default function EnergyPage() {
             />
             <KPI
               label="Strategy performance"
-              value="&gt; 1.0"
+              value="> 1.0"
               sub="Target backtested Sharpe, sane drawdowns"
             />
             <KPI
@@ -620,6 +963,26 @@ export default function EnergyPage() {
           font-size: 12px;
         }
         .footSymbol { font-size: 14px; }
+
+        .budget {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          font-size: 13px;
+        }
+        .budget th,
+        .budget td {
+          border: 1px solid var(--rule);
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: top;
+        }
+        .budget thead {
+          background: color-mix(in oklab, CanvasText 4%, Canvas 96%);
+        }
+        .budget tfoot td {
+          font-weight: 600;
+        }
 
         /* Responsive spans */
         @media (min-width: 720px) {
