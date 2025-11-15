@@ -584,6 +584,7 @@ export default function EnergyPage() {
                 <li>
                   Use for physical flows, nominations, technical &amp; firm capacity.
                 </li>
+                <li>No API key required for standard public usage.</li>
               </ul>
             </li>
             <li>
@@ -596,7 +597,7 @@ export default function EnergyPage() {
                   LNG: <code>https://alsi.gie.eu/api</code>
                 </li>
                 <li>
-                  Auth: <code>?apikey=YOUR_KEY</code>.
+                  Auth: <code>?apikey=YOUR_KEY</code> (shared <code>GIE_API_KEY</code>).
                 </li>
                 <li>
                   Example:{" "}
@@ -625,17 +626,19 @@ export default function EnergyPage() {
                   <code>
                     https://api.opennem.org.au/v3/stats/au/NEM/fueltech/energy:all
                   </code>{" "}
-                  with <code>?period=7d</code>, <code>?group=interval</code> options.
+                  with <code>?period=7d</code>, <code>?group=interval</code> options
+                  and <code>OPENELECTRICITY_API_KEY</code> set.
                 </li>
               </ul>
             </li>
             <li>
-              <strong>Weather, RES &amp; climate — CDS + Open-Meteo</strong>
+              <strong>Weather, RES &amp; climate — CDS + Open-Meteo + NOAA</strong>
               <ul>
                 <li>
                   ERA5 via <code>cdsapi</code> Python client; dataset name{" "}
                   <code>"reanalysis-era5-single-levels"</code>, variables like{" "}
-                  <code>2m_temperature</code>, <code>10m_wind</code>.
+                  <code>2m_temperature</code>, <code>10m_wind</code>. Uses{" "}
+                  <code>CDS_API_URL</code> and <code>CDS_API_KEY</code>.
                 </li>
                 <li>
                   HDD/CDD via C3S HDD/CDD datasets or toolbox; store as daily indices
@@ -645,7 +648,12 @@ export default function EnergyPage() {
                   Open-Meteo forecasts:{" "}
                   <code>https://api.open-meteo.com/v1/forecast</code> with{" "}
                   <code>latitude</code>, <code>longitude</code>,{" "}
-                  <code>hourly=...</code>, <code>forecast_days</code>.
+                  <code>hourly=...</code>, <code>forecast_days</code> — no key
+                  required.
+                </li>
+                <li>
+                  NOAA/NCEI CDO via <code>NOAA_TOKEN</code> for station-based
+                  observations where needed.
                 </li>
               </ul>
             </li>
@@ -685,6 +693,7 @@ export default function EnergyPage() {
                 <li>
                   Aggregate to daily/weekly &quot;tension&quot; indices by region/fuel.
                 </li>
+                <li>No API key required.</li>
               </ul>
             </li>
             <li>
@@ -703,14 +712,118 @@ export default function EnergyPage() {
                   <code>?time</code>, <code>?geo</code>.
                 </li>
                 <li>
-                  Use for CPI, industrial output, etc. as slow-moving factors.
+                  Use for CPI, industrial output, etc. as slow-moving factors. No keys
+                  required.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Global/US energy — EIA</strong>
+              <ul>
+                <li>
+                  EIA API via <code>EIA_API_KEY</code> for US and some global energy
+                  balances, storage, prices.
                 </li>
               </ul>
             </li>
           </ul>
         </Card>
 
-        {/* 11. Budget & costs */}
+        {/* 11. API keys & auth status (current) */}
+        <Card title="API keys & auth status" icon="🔐">
+          <p>
+            Snapshot of which keys are already wired into the platform vs. which feeds
+            are key-less or still optional. Use this as a quick checklist while
+            building <code>core/l1_data</code> and infra.
+          </p>
+          <ul className="list">
+            <li>
+              <strong>Configured keys (in all environments):</strong>
+              <ul>
+                <li>
+                  <code>EIA_API_KEY</code> — US/global energy fundamentals (EIA).
+                </li>
+                <li>
+                  <code>ENTSOE_TOKEN</code> — EU power (ENTSO-E Transparency).
+                </li>
+                <li>
+                  <code>GIE_API_KEY</code> — shared AGSI+/ALSI access for EU gas
+                  storage &amp; LNG.
+                </li>
+                <li>
+                  <code>CDS_API_URL</code>, <code>CDS_API_KEY</code> — Copernicus CDS
+                  (ERA5, HDD/CDD, climate).
+                </li>
+                <li>
+                  <code>NOAA_TOKEN</code> — NOAA/NCEI CDO weather &amp; climate.
+                </li>
+                <li>
+                  <code>OPENELECTRICITY_API_KEY</code> — AU/NEM via OpenElectricity.
+                </li>
+                <li>
+                  <code>AI_GATEWAY_API_KEY</code> — AI gateway for research tools.
+                </li>
+                <li>
+                  <code>S3_BUCKET</code> — primary data lake bucket.
+                </li>
+                <li>
+                  <code>DATABASE_URL</code> — primary DB (metadata, configs, dashboards).
+                </li>
+                <li>
+                  <code>SQS_RESEARCH_JOBS_URL</code> — queue for research/ETL jobs.
+                </li>
+                <li>
+                  <code>AUTH_RESEARCHERS</code> — access control / allowlist for
+                  dashboards and APIs.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Key-less feeds (no env secret required):</strong>
+              <ul>
+                <li>
+                  <strong>ENTSOG Transparency:</strong> gas flows &amp; capacity via
+                  public API.
+                </li>
+                <li>
+                  <strong>GDELT:</strong> geopolitics &amp; news events.
+                </li>
+                <li>
+                  <strong>Open-Meteo:</strong> forecast weather.
+                </li>
+                <li>
+                  <strong>ECB / Eurostat:</strong> FX &amp; macro SDMX APIs.
+                </li>
+                <li>
+                  <strong>AEMO Nemweb:</strong> NEM CSV reports.
+                </li>
+                <li>
+                  <strong>EU ETS Data Viewer / EUR-Lex / Cellar:</strong> policy &amp;
+                  ETS docs via downloads/REST.
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>Optional / future keys (not configured yet):</strong>
+              <ul>
+                <li>
+                  <code>FRED_API_KEY</code> — if US macro/financial series from FRED
+                  become useful.
+                </li>
+                <li>
+                  <code>OPENWEATHER_API_KEY</code> — if a city-centric weather API is
+                  needed in addition to CDS/NOAA/Open-Meteo.
+                </li>
+                <li>
+                  Any future specialist commodity/FX APIs can be added here as the
+                  platform grows.
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </Card>
+
+        {/* 12. Budget & costs */}
         <Card title="Budget & costs (≤ $50/month)" icon="💸">
           <p>
             Working budget for a free-data, infra-limited implementation. All external
@@ -795,7 +908,7 @@ export default function EnergyPage() {
           </ul>
         </Card>
 
-        {/* 12. KPIs & navigation */}
+        {/* 13. KPIs & navigation */}
         <Card title="KPIs & navigation" icon="🧭">
           <div className="kpis">
             <KPI
