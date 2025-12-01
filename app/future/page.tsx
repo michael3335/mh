@@ -1,5 +1,9 @@
-// app/future/page.tsx
+"use client";
+
 import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { signOut } from "next-auth/react";
 import {
     Compass,
     Layers,
@@ -15,14 +19,11 @@ import {
 
 /**
  * Future Plan — 18-year master plan (2025–2043)
- * Server component.
- * Global aesthetic: clean, bold, minimal, black on white.
+ * Client component:
+ * - Uses GSAP for subtle load-in animation
+ * - Typography + spacing consistent with michaelharrison.au
+ * - Quiet, print-like layout similar to kweishunyu.com / matthewporteous.com
  */
-
-export const metadata = {
-    title: "Future Plan",
-    description: "18-year master plan (2025–2043)",
-};
 
 /* ----------------------------- OVERVIEW COPY ------------------------------ */
 
@@ -92,7 +93,8 @@ const L = {
     AEMO: "https://www.aemo.com.au/",
     ARENA: "https://arena.gov.au/",
     CSIRO: "https://www.csiro.au/",
-    INSEAD_ENERGY: "https://www.insead.edu/executive-education/energy-transition",
+    INSEAD_ENERGY:
+        "https://www.insead.edu/executive-education/energy-transition",
     OXFORD_SAID:
         "https://www.sbs.ox.ac.uk/programmes/executive-education/open-programmes",
 
@@ -324,7 +326,8 @@ const phases: Phase[] = [
         ],
     },
     {
-        title: "Phase 4 — Applied PhD in Energy Economics (preferred) / Alternative Track",
+        title:
+            "Phase 4 — Applied PhD in Energy Economics (preferred) / Alternative Track",
         years: "2032–2036",
         location: "NHH / UiO / EU partner",
         age: "29–33",
@@ -528,7 +531,10 @@ const uniOptions: UniOption[] = [
             "Salary: German energy/consulting roles typically start slightly below Nordic packages but catch up with experience; cost of living lower than Norway/Denmark.",
         ],
         links: [
-            { label: "WiSo — Master Economic Research", href: L.COLOGNE_MSC_ECON_RESEARCH },
+            {
+                label: "WiSo — Master Economic Research",
+                href: L.COLOGNE_MSC_ECON_RESEARCH,
+            },
             { label: "EWI — Institute of Energy Economics", href: L.COLOGNE_EWI },
         ],
     },
@@ -555,7 +561,10 @@ const uniOptions: UniOption[] = [
         ],
         links: [
             { label: "UCPH — MSc in Economics", href: L.COPENHAGEN_ECON },
-            { label: "UCPH — Environment & Development", href: L.COPENHAGEN_ENV_ECON },
+            {
+                label: "UCPH — Environment & Development",
+                href: L.COPENHAGEN_ENV_ECON,
+            },
         ],
     },
     {
@@ -656,45 +665,49 @@ const uniTimeline: UniTimelineItem[] = [
     },
     {
         period: "1 Dec 2026",
-        label: "University of Oslo (UiO) MSc Economics – application opens/early deadline",
+        label:
+            "University of Oslo (UiO) MSc Economics – application opens/early deadline",
         detail:
-            "Submit your application via the UiO portal by 1 Dec 2026 for the autumn 2027 intake. Study-start in August. See: https://www.uio.no/english/studies/programmes/economics-master/ (link) ",
+            "Submit your application via the UiO portal by 1 Dec 2026 for the autumn 2027 intake. Study-start in August.",
     },
     {
         period: "1 Dec 2026 – 9 Jan 2027",
-        label: "Aalto University MSc Advanced Energy Solutions – application window",
+        label:
+            "Aalto University MSc Advanced Energy Solutions – application window",
         detail:
-            "Application period for 2026 intake was 1 Dec – 2 Jan; documents deadline 9 Jan. So for 2027 intake assume similar: open 1 Dec 2026, close early Jan 2027. See: https://www.aalto.fi/en/study-at-aalto/apply-to-masters-programmes (link)",
+            "Application period for 2026 intake was 1 Dec – 2 Jan; documents deadline 9 Jan. For 2027 intake assume similar timing.",
     },
     {
         period: "15 Jan 2027 at 23:59 CET",
-        label: "University of Copenhagen (UCPH) & Lund University international intake deadlines",
+        label:
+            "University of Copenhagen (UCPH) & Lund University international intake deadlines",
         detail:
-            "UCPH MSc in Economics deadline 15 Jan; Lund University via universityadmissions.se upload by 15 Jan. See UCPH: https://www.ku.dk/studies/masters/economics/ (link) and Lund: https://www.lunduniversity.lu.se/lubas/i-uoh-lu-TAREE (link).",
+            "UCPH MSc in Economics deadline 15 Jan; Lund University via universityadmissions.se upload by 15 Jan.",
     },
     {
         period: "15 Feb 2027 (midnight CET)",
         label: "Norwegian School of Economics (NHH) MSc ENE – application deadline",
         detail:
-            "Non-Norwegian bachelor’s applicants apply via Søknadsweb by 15 Feb. See: https://www.nhh.no/en/study-programmes/application-and-admission/admission-msc-in-economics-and-business-administration/ (link)",
+            "Non-Norwegian bachelor’s applicants apply via Søknadsweb by 15 Feb.",
     },
     {
         period: "31 Mar 2027",
-        label: "University of Cologne / WiSo Faculty – MSc Economic Research application deadline",
+        label:
+            "University of Cologne / WiSo Faculty – MSc Economic Research application deadline",
         detail:
-            "Submit application by 31 Mar 2027 (KLIPS 2.0) for winter semester intake. See: https://www.wiso.uni-koeln.de/en/studies/application/master/master-economic-research/ (link)",
+            "Submit application by 31 Mar 2027 (KLIPS 2.0) for winter semester intake.",
     },
     {
         period: "Apr – May 2027",
         label: "Offer decisions & acceptance deadlines",
         detail:
-            "Most universities (Aalto: early April; NHH: end April; Copenhagen: ~1 May) publish decisions and require acceptance within 2–4 weeks. Refer to each programme’s offer letter.",
+            "Most universities publish decisions and require acceptance within 2–4 weeks. Refer to each programme’s offer letter.",
     },
     {
         period: "Aug – Oct 2027",
         label: "Arrival, orientation & semester start",
         detail:
-            "NHH & UiO start mid-August; Aalto & Lund late August; UCPH early September; Cologne winter semester begins 1 Oct with mid-Oct lectures. Plan relocation accordingly.",
+            "NHH & UiO start mid-August; Aalto & Lund late August; UCPH early September; Cologne winter semester begins 1 Oct.",
     },
 ];
 
@@ -730,362 +743,437 @@ const timeline: TimelineItem[] = [
         years: "2032–36",
         phase: "Phase 4",
         focus: "Applied PhD in Energy Econ (preferred) or senior practitioner track",
-        deliverables: "Publications + industry collab or equivalent thought-leadership",
+        deliverables:
+            "Publications + industry collab or equivalent thought-leadership",
     },
     {
         years: "2036–40",
         phase: "Phase 5",
         focus: "Senior Strategy / ESG Leadership",
-        deliverables: "Senior role in Europe or AU; lead major transition initiatives",
+        deliverables:
+            "Senior role in Europe or AU; lead major transition initiatives",
     },
     {
         years: "2040–43",
         phase: "Phase 6",
         focus: "Executive / Policy Leadership & Thought Leadership",
-        deliverables: "Director-level / public voice + financial independence trajectory",
+        deliverables:
+            "Director-level / public voice + financial independence trajectory",
     },
 ];
 
 /* --------------------------------- PAGE UI -------------------------------- */
 
-export default function FuturePlanPage() {
+export default function FuturePlanClient() {
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    const detailsRefs = useRef<Array<HTMLDetailsElement | null>>([]);
+
+    useEffect(() => {
+        if (!rootRef.current) return;
+
+        const ctx = gsap.context(() => {
+            gsap.from(".fade-section", {
+                opacity: 0,
+                y: 16,
+                duration: 0.7,
+                stagger: 0.08,
+                ease: "power2.out",
+            });
+        }, rootRef);
+
+        return () => ctx.revert();
+    }, []);
+
+    const expandAll = () => {
+        detailsRefs.current.forEach((d) => {
+            if (d) d.open = true;
+        });
+    };
+
+    const collapseAll = () => {
+        detailsRefs.current.forEach((d) => {
+            if (d) d.open = false;
+        });
+    };
+
     return (
-        <div className="mx-auto max-w-3xl px-5 py-8 lg:py-12 space-y-10">
-            {/* Header */}
-            <header className="flex flex-wrap items-center gap-3">
-                <Compass className="h-6 w-6" />
-                <h1 className="text-xl font-medium tracking-[0.2em] uppercase">
-                    Future plan · 2025–2043
-                </h1>
-                <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-[11px] font-medium">
-                    <span role="img" aria-label="crystal ball">
-                        🔮
-                    </span>
-                    Long-horizon career map
-                </span>
-            </header>
-
-            {/* Overview */}
-            <Section
-                id="overview"
-                title="Overview of 18-Year Career Master Plan"
-                icon={<Compass className="h-5 w-5" />}
+        <main className="min-h-screen bg-zinc-50">
+            <div
+                ref={rootRef}
+                className="mx-auto max-w-5xl px-6 md:px-10 py-10 md:py-16"
             >
-                <p className="text-sm leading-relaxed">{overviewText}</p>
-                <div className="mt-6">
-                    <KVGrid rows={overviewRows} />
-                </div>
-            </Section>
-
-            {/* Execution Principles */}
-            <Section
-                id="execution-principles"
-                title="Execution Principles"
-                icon={<Target className="h-5 w-5" />}
-            >
-                <ul className="list-disc pl-5 space-y-2 text-sm">
-                    <li>
-                        <span className="font-semibold">One big thing at a time:</span> at most one
-                        formal degree, one major exam (CFA level), and one flagship side project (the
-                        dashboard) in any given period.
-                    </li>
-                    <li>
-                        <span className="font-semibold">Model before UI:</span> prioritise robust data
-                        pipelines and econometric models before investing heavily in interface polish.
-                    </li>
-                    <li>
-                        <span className="font-semibold">Endurance as anchor:</span> keep 3 non-negotiable
-                        weekly sessions (endurance, intensity, strength) to protect long-term physical and
-                        mental capacity.
-                    </li>
-                    <li>
-                        <span className="font-semibold">Option value at each transition:</span> for each
-                        major phase (MSc, PhD, leadership) maintain at least one strong alternative path
-                        that still fits the core identity and long-term direction.
-                    </li>
-                </ul>
-            </Section>
-
-            {/* New section: European graduate study options */}
-            <Section
-                id="graduate-options"
-                title="European Graduate Study Options (Post-2026)"
-                icon={<BookOpen className="h-5 w-5" />}
-            >
-                <div className="space-y-6">
-                    <p className="text-sm leading-relaxed">
-                        You complete the Master of Finance at Melbourne in{" "}
-                        <strong>Dec 2026</strong>. The next step in the plan is a European MSc starting in
-                        the <strong>Autumn 2027 intake</strong>. The strategy is to{" "}
-                        <strong>apply to multiple priority programmes</strong> — NHH, University of Cologne
-                        (EWI), University of Copenhagen, University of Oslo, and selected technical energy
-                        programmes — and then choose the offer that best aligns with energy economics,
-                        markets, and your longer-term PhD and leadership goals.
-                    </p>
-
-                    {/* University cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {uniOptions.map((u) => (
-                            <article
-                                key={u.key}
-                                className="flex flex-col rounded-2xl border border-black/20 p-4 space-y-3"
-                            >
-                                <header className="space-y-1">
-                                    <h3 className="text-base font-bold">{u.name}</h3>
-                                    <p className="text-xs uppercase tracking-wide opacity-70">
-                                        {u.city}, {u.country}
-                                    </p>
-                                </header>
-                                <div className="space-y-2 text-sm">
-                                    <p>
-                                        <span className="font-semibold">Primary programme:</span>{" "}
-                                        {u.primaryProgramme}
-                                    </p>
-                                    {u.altProgrammes?.length ? (
-                                        <p>
-                                            <span className="font-semibold">Alternatives:</span>{" "}
-                                            {u.altProgrammes.join(" · ")}
-                                        </p>
-                                    ) : null}
-                                    <p>
-                                        <span className="font-semibold">Intake target:</span> {u.intake}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold">Application window (for you):</span>{" "}
-                                        {u.appWindow}
-                                    </p>
-                                    <p>
-                                        <span className="font-semibold">Decision window:</span>{" "}
-                                        {u.decisionWindow}
-                                    </p>
-                                </div>
-                                <ul className="mt-1 list-disc pl-5 space-y-1 text-xs">
-                                    {u.notes.map((n) => (
-                                        <li key={n}>{n}</li>
-                                    ))}
-                                </ul>
-                                {u.links.length ? (
-                                    <div className="pt-2 flex flex-wrap gap-2">
-                                        {u.links.map((lnk) => (
-                                            <ExternalLink key={lnk.href} href={lnk.href}>
-                                                {lnk.label}
-                                            </ExternalLink>
-                                        ))}
-                                    </div>
-                                ) : null}
-                            </article>
-                        ))}
+                {/* Top bar: name + context + sign out */}
+                <header className="mb-10 md:mb-14 flex items-start justify-between text-xs md:text-sm">
+                    <div className="space-y-1">
+                        <p className="font-display tracking-[0.32em] uppercase text-[11px] text-ink-700">
+                            Michael Harrison
+                        </p>
+                        <p className="text-ink-500">
+                            Future plan · 18-year roadmap (private)
+                        </p>
                     </div>
-
-                    {/* Intake timeline */}
-                    <div className="mt-4 rounded-2xl border border-black/20 p-4">
-                        <div className="mb-3 flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4" />
-                            <h3 className="text-sm font-bold">
-                                Application & Intake Timeline (MFin completion → European MSc start)
-                            </h3>
-                        </div>
-                        <UniTimeline items={uniTimeline} />
-                    </div>
-                </div>
-            </Section>
-
-            {/* Phases — Minimalist, airy, with toolbar & sticky meta column */}
-            <section id="phases" className="scroll-mt-24">
-                <div className="mb-4 flex items-end justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                        <Layers className="h-5 w-5" />
-                        <h2 className="text-base font-semibold tracking-[0.16em] uppercase">
-                            Phases
-                        </h2>
-                    </div>
-
-                    {/* Toolbar: Expand/Collapse All (no client component needed) */}
-                    <div className="flex items-center gap-2">
+                    <div className="text-right space-y-1">
+                        <p className="text-[11px] uppercase tracking-[0.24em] text-ink-500">
+                            Melbourne, Australia
+                        </p>
                         <button
-                            data-phase-toggle="expand"
-                            className="inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-medium hover:underline"
+                            onClick={() => signOut()}
+                            className="text-[11px] uppercase tracking-[0.18em] text-ink-500 hover:text-ink-900"
                         >
-                            Expand all
-                        </button>
-                        <button
-                            data-phase-toggle="collapse"
-                            className="inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-medium hover:underline"
-                        >
-                            Collapse all
+                            Sign out
                         </button>
                     </div>
-                </div>
+                </header>
 
-                {/* Two-column layout: sticky meta rail on wide screens */}
-                <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-                    {/* Sticky outline of phases */}
-                    <aside className="lg:col-span-3 lg:sticky lg:top-20 space-y-2 text-xs">
-                        {phases.map((p, i) => (
-                            <a
-                                key={p.title}
-                                href={`#phase-${i + 1}`}
-                                className="block rounded-md px-2 py-1 text-sm hover:underline"
-                            >
-                                <span className="mr-2 tabular-nums">
-                                    {String(i + 1).padStart(2, "0")}
+                <div className="space-y-10 md:space-y-12 text-[11px] md:text-sm leading-relaxed text-ink-700">
+                    {/* Page header */}
+                    <section className="fade-section">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Compass className="h-6 w-6" />
+                            <h1 className="font-display text-base md:text-lg tracking-[0.2em] uppercase">
+                                Future plan · 2025–2043
+                            </h1>
+                            <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-[11px] font-medium">
+                                <span role="img" aria-label="crystal ball">
+                                    🔮
                                 </span>
-                                {p.years}
-                            </a>
-                        ))}
-                    </aside>
+                                Long-horizon career map
+                            </span>
+                        </div>
+                    </section>
 
-                    {/* Accordions */}
-                    <div className="lg:col-span-9 space-y-6">
-                        {phases.map((p, idx) => (
-                            <details
-                                key={p.title}
-                                id={`phase-${idx + 1}`}
-                                className={[
-                                    "group rounded-2xl border border-black/20 transition-colors",
-                                    "[&[open]>summary>svg.chev]:rotate-180",
-                                ].join(" ")}
-                                open={idx === 0}
-                            >
-                                <summary className="flex items-start gap-4 px-5 py-4 cursor-pointer list-none">
-                                    {/* Number + meta block */}
-                                    <div className="min-w-16 text-xs">
-                                        <div className="font-semibold tabular-nums">
-                                            {String(idx + 1).padStart(2, "0")}
+                    {/* Overview */}
+                    <Section
+                        id="overview"
+                        title="Overview of 18-Year Career Master Plan"
+                        icon={<Compass className="h-4 w-4" />}
+                        className="fade-section"
+                    >
+                        <p className="text-sm leading-relaxed">{overviewText}</p>
+                        <div className="mt-6">
+                            <KVGrid rows={overviewRows} />
+                        </div>
+                    </Section>
+
+                    {/* Execution Principles */}
+                    <Section
+                        id="execution-principles"
+                        title="Execution Principles"
+                        icon={<Target className="h-4 w-4" />}
+                        className="fade-section"
+                    >
+                        <ul className="list-disc pl-5 space-y-2 text-sm">
+                            <li>
+                                <span className="font-semibold">One big thing at a time:</span>{" "}
+                                at most one formal degree, one major exam (CFA level), and one
+                                flagship side project (the dashboard) in any given period.
+                            </li>
+                            <li>
+                                <span className="font-semibold">Model before UI:</span>{" "}
+                                prioritise robust data pipelines and econometric models before
+                                investing heavily in interface polish.
+                            </li>
+                            <li>
+                                <span className="font-semibold">Endurance as anchor:</span> keep
+                                3 non-negotiable weekly sessions (endurance, intensity,
+                                strength) to protect long-term physical and mental capacity.
+                            </li>
+                            <li>
+                                <span className="font-semibold">
+                                    Option value at each transition:
+                                </span>{" "}
+                                for each major phase (MSc, PhD, leadership) maintain at least
+                                one strong alternative path that still fits the core identity
+                                and long-term direction.
+                            </li>
+                        </ul>
+                    </Section>
+
+                    {/* European graduate options */}
+                    <Section
+                        id="graduate-options"
+                        title="European Graduate Study Options (Post-2026)"
+                        icon={<BookOpen className="h-4 w-4" />}
+                        className="fade-section"
+                    >
+                        <div className="space-y-6">
+                            <p className="text-sm leading-relaxed">
+                                You complete the Master of Finance at Melbourne in{" "}
+                                <strong>Dec 2026</strong>. The next step in the plan is a
+                                European MSc starting in the{" "}
+                                <strong>Autumn 2027 intake</strong>. The strategy is to{" "}
+                                <strong>apply to multiple priority programmes</strong> — NHH,
+                                University of Cologne (EWI), University of Copenhagen,
+                                University of Oslo, and selected technical energy programmes —
+                                and then choose the offer that best aligns with energy
+                                economics, markets, and your longer-term PhD and leadership
+                                goals.
+                            </p>
+
+                            {/* University cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {uniOptions.map((u) => (
+                                    <article
+                                        key={u.key}
+                                        className="flex flex-col rounded-xl border border-black/15 p-4 space-y-3"
+                                    >
+                                        <header className="space-y-1">
+                                            <h3 className="text-sm font-semibold">{u.name}</h3>
+                                            <p className="text-[11px] uppercase tracking-[0.14em] opacity-70">
+                                                {u.city}, {u.country}
+                                            </p>
+                                        </header>
+                                        <div className="space-y-2 text-sm">
+                                            <p>
+                                                <span className="font-semibold">Primary programme:</span>{" "}
+                                                {u.primaryProgramme}
+                                            </p>
+                                            {u.altProgrammes?.length ? (
+                                                <p>
+                                                    <span className="font-semibold">Alternatives:</span>{" "}
+                                                    {u.altProgrammes.join(" · ")}
+                                                </p>
+                                            ) : null}
+                                            <p>
+                                                <span className="font-semibold">Intake target:</span>{" "}
+                                                {u.intake}
+                                            </p>
+                                            <p>
+                                                <span className="font-semibold">
+                                                    Application window (for you):
+                                                </span>{" "}
+                                                {u.appWindow}
+                                            </p>
+                                            <p>
+                                                <span className="font-semibold">Decision window:</span>{" "}
+                                                {u.decisionWindow}
+                                            </p>
                                         </div>
-                                        <div className="mt-1 inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
-                                            {p.years}
-                                        </div>
-                                    </div>
-
-                                    {/* Title + badges */}
-                                    <div className="flex-1">
-                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                            <span>{p.icon}</span>
-                                            <h3 className="text-sm font-semibold">{p.title}</h3>
-                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
-                                                {p.location}
-                                            </span>
-                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
-                                                {p.age} yrs
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Chevron */}
-                                    <ChevronDown
-                                        className="chev mt-1 h-5 w-5 shrink-0 transition-transform duration-300"
-                                        aria-hidden
-                                    />
-                                </summary>
-
-                                {/* Body */}
-                                <div className="px-5 pb-5">
-                                    {/* Meta badges row */}
-                                    {p.meta?.length ? (
-                                        <div className="mb-5 flex flex-wrap gap-2 border-t border-black/10 pt-4">
-                                            {p.meta.map((m) => (
-                                                <span
-                                                    key={m.label + m.value}
-                                                    className="inline-flex items-center gap-1 rounded-full border border-black/20 px-3 py-1 text-xs font-semibold"
-                                                >
-                                                    <span className="opacity-80">{m.label}:</span>{" "}
-                                                    {m.value}
-                                                </span>
+                                        <ul className="mt-1 list-disc pl-5 space-y-1 text-xs">
+                                            {u.notes.map((n) => (
+                                                <li key={n}>{n}</li>
                                             ))}
-                                        </div>
-                                    ) : null}
+                                        </ul>
+                                        {u.links.length ? (
+                                            <div className="pt-2 flex flex-wrap gap-2">
+                                                {u.links.map((lnk) => (
+                                                    <ExternalLink key={lnk.href} href={lnk.href}>
+                                                        {lnk.label}
+                                                    </ExternalLink>
+                                                ))}
+                                            </div>
+                                        ) : null}
+                                    </article>
+                                ))}
+                            </div>
 
-                                    {/* Sections grid */}
-                                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                        {p.sections.map((s) => (
-                                            <article
-                                                key={s.heading}
-                                                className="rounded-xl border border-black/20 p-4"
-                                            >
-                                                <h4 className="mb-3 text-base font-bold">{s.heading}</h4>
-                                                {s.bullets && (
+                            {/* Intake timeline */}
+                            <div className="mt-4 rounded-xl border border-black/15 p-4">
+                                <div className="mb-3 flex items-center gap-2">
+                                    <CalendarDays className="h-4 w-4" />
+                                    <h3 className="text-sm font-semibold">
+                                        Application &amp; Intake Timeline (MFin → European MSc)
+                                    </h3>
+                                </div>
+                                <UniTimeline items={uniTimeline} />
+                            </div>
+                        </div>
+                    </Section>
+
+                    {/* Phases */}
+                    <section
+                        id="phases"
+                        className="fade-section scroll-mt-24 space-y-6"
+                    >
+                        <div className="flex items-end justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <Layers className="h-4 w-4" />
+                                <h2 className="font-display text-[13px] md:text-sm font-semibold tracking-[0.16em] uppercase">
+                                    Phases
+                                </h2>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs">
+                                <button
+                                    onClick={expandAll}
+                                    className="inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 hover:underline"
+                                >
+                                    Expand all
+                                </button>
+                                <button
+                                    onClick={collapseAll}
+                                    className="inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 hover:underline"
+                                >
+                                    Collapse all
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+                            {/* Outline */}
+                            <aside className="lg:col-span-3 lg:sticky lg:top-24 space-y-2 text-xs">
+                                {phases.map((p, i) => (
+                                    <a
+                                        key={p.title}
+                                        href={`#phase-${i + 1}`}
+                                        className="block rounded-md px-2 py-1 hover:underline"
+                                    >
+                                        <span className="mr-2 tabular-nums">
+                                            {String(i + 1).padStart(2, "0")}
+                                        </span>
+                                        {p.years}
+                                    </a>
+                                ))}
+                            </aside>
+
+                            {/* Accordions */}
+                            <div className="lg:col-span-9 space-y-6">
+                                {phases.map((p, idx) => (
+                                    <details
+                                        key={p.title}
+                                        id={`phase-${idx + 1}`}
+                                        className="group rounded-2xl border border-black/20 transition-colors bg-white"
+                                        open={idx === 0}
+                                        ref={(el) => {
+                                            detailsRefs.current[idx] = el;
+                                        }}
+                                    >
+                                        <summary className="flex items-start gap-4 px-5 py-4 cursor-pointer list-none">
+                                            {/* Number + years */}
+                                            <div className="min-w-16 text-[11px]">
+                                                <div className="font-semibold tabular-nums">
+                                                    {String(idx + 1).padStart(2, "0")}
+                                                </div>
+                                                <div className="mt-1 inline-flex items-center rounded-full border border-black/20 px-2 py-0.5">
+                                                    {p.years}
+                                                </div>
+                                            </div>
+
+                                            {/* Title & chips */}
+                                            <div className="flex-1">
+                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                    <span>{p.icon}</span>
+                                                    <h3 className="text-sm font-semibold">{p.title}</h3>
+                                                    <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
+                                                        {p.location}
+                                                    </span>
+                                                    <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
+                                                        {p.age} yrs
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <ChevronDown
+                                                className="mt-1 h-5 w-5 shrink-0 transition-transform duration-300 group-open:rotate-180"
+                                                aria-hidden
+                                            />
+                                        </summary>
+
+                                        <div className="px-5 pb-5">
+                                            {/* Meta */}
+                                            {p.meta?.length ? (
+                                                <div className="mb-5 flex flex-wrap gap-2 border-t border-black/10 pt-4">
+                                                    {p.meta.map((m) => (
+                                                        <span
+                                                            key={m.label + m.value}
+                                                            className="inline-flex items-center gap-1 rounded-full border border-black/20 px-3 py-1 text-xs font-semibold"
+                                                        >
+                                                            <span className="opacity-80">{m.label}:</span>{" "}
+                                                            {m.value}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+
+                                            {/* Sections */}
+                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                                {p.sections.map((s) => (
+                                                    <article
+                                                        key={s.heading}
+                                                        className="rounded-xl border border-black/15 p-4 bg-zinc-50"
+                                                    >
+                                                        <h4 className="mb-3 text-sm font-semibold">
+                                                            {s.heading}
+                                                        </h4>
+                                                        {s.bullets && (
+                                                            <ul className="list-disc pl-5 space-y-1 text-sm">
+                                                                {s.bullets.map((b) => (
+                                                                    <li key={b}>{b}</li>
+                                                                ))}
+                                                            </ul>
+                                                        )}
+                                                        {s.links?.length ? (
+                                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                                {s.links.map((lnk) => (
+                                                                    <ExternalLink
+                                                                        key={lnk.href}
+                                                                        href={lnk.href}
+                                                                    >
+                                                                        {lnk.label}
+                                                                    </ExternalLink>
+                                                                ))}
+                                                            </div>
+                                                        ) : null}
+                                                    </article>
+                                                ))}
+                                            </div>
+
+                                            {/* KPIs */}
+                                            {p.kpis?.length ? (
+                                                <div className="mt-6 rounded-xl border border-black/20 p-4">
+                                                    <h4 className="mb-2 text-sm font-semibold">
+                                                        🎯 Milestones &amp; KPIs
+                                                    </h4>
                                                     <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                        {s.bullets.map((b) => (
-                                                            <li key={b}>{b}</li>
+                                                        {p.kpis.map((k) => (
+                                                            <li key={k}>{k}</li>
                                                         ))}
                                                     </ul>
-                                                )}
-                                                {s.links?.length ? (
-                                                    <div className="mt-3 flex flex-wrap gap-2">
-                                                        {s.links.map((lnk) => (
-                                                            <ExternalLink key={lnk.href} href={lnk.href}>
-                                                                {lnk.label}
-                                                            </ExternalLink>
-                                                        ))}
-                                                    </div>
-                                                ) : null}
-                                            </article>
-                                        ))}
-                                    </div>
+                                                </div>
+                                            ) : null}
 
-                                    {/* KPIs */}
-                                    {p.kpis?.length ? (
-                                        <div className="mt-6 rounded-xl border border-black/20 p-4">
-                                            <h4 className="mb-2 text-base font-bold">
-                                                🎯 Milestones & KPIs
-                                            </h4>
-                                            <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                {p.kpis.map((k) => (
-                                                    <li key={k}>{k}</li>
-                                                ))}
-                                            </ul>
+                                            {/* Outcomes */}
+                                            {p.outcomes ? (
+                                                <div className="mt-6 rounded-xl border-2 border-black p-4 bg-white">
+                                                    <h4 className="mb-2 text-sm font-semibold">
+                                                        ✅ Outcomes
+                                                    </h4>
+                                                    {Array.isArray(p.outcomes) ? (
+                                                        <ul className="list-disc pl-5 space-y-1 text-sm">
+                                                            {p.outcomes.map((o) => (
+                                                                <li key={o}>{o}</li>
+                                                            ))}
+                                                        </ul>
+                                                    ) : (
+                                                        <p className="text-sm">{p.outcomes}</p>
+                                                    )}
+                                                </div>
+                                            ) : null}
                                         </div>
-                                    ) : null}
+                                    </details>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
 
-                                    {/* Outcomes */}
-                                    {p.outcomes ? (
-                                        <div className="mt-6 rounded-xl border-2 border-black p-4">
-                                            <h4 className="mb-2 text-base font-bold">✅ Outcomes</h4>
-                                            {Array.isArray(p.outcomes) ? (
-                                                <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                    {p.outcomes.map((o) => (
-                                                        <li key={o}>{o}</li>
-                                                    ))}
-                                                </ul>
-                                            ) : (
-                                                <p className="text-sm">{p.outcomes}</p>
-                                            )}
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </details>
-                        ))}
-                    </div>
+                    {/* Timeline */}
+                    <Section
+                        id="timeline"
+                        title="Timeline"
+                        icon={<CalendarDays className="h-4 w-4" />}
+                        className="fade-section"
+                    >
+                        <Timeline items={timeline} />
+                    </Section>
+
+                    {/* Footer */}
+                    <footer className="fade-section text-[11px] text-ink-500">
+                        Review quarterly; update annually. Last updated when content
+                        changes.
+                    </footer>
                 </div>
-
-                {/* Expand/Collapse All script (no "use client") */}
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: `
-(function () {
-  const root = document.getElementById('phases');
-  if (!root) return;
-  function setAll(open) {
-    root.querySelectorAll('details').forEach(d => { d.open = open; });
-  }
-  root.querySelector('[data-phase-toggle="expand"]')?.addEventListener('click', () => setAll(true));
-  root.querySelector('[data-phase-toggle="collapse"]')?.addEventListener('click', () => setAll(false));
-})();`,
-                    }}
-                />
-            </section>
-
-            {/* Timeline */}
-            <Section id="timeline" title="Timeline" icon={<CalendarDays className="h-5 w-5" />}>
-                <Timeline items={timeline} />
-            </Section>
-
-            {/* Footer */}
-            <footer className="text-xs">
-                Review quarterly; update annually. Last updated automatically when content changes.
-            </footer>
-        </div>
+            </div>
+        </main>
     );
 }
 
@@ -1096,21 +1184,23 @@ function Section({
     title,
     icon,
     children,
+    className,
 }: {
     id: string;
     title: string;
     icon?: ReactNode;
     children: ReactNode;
+    className?: string;
 }) {
     return (
-        <section id={id} className="scroll-mt-24">
-            <div className="mb-4 flex items-center gap-2">
-                <span>{icon ?? <Compass className="h-5 w-5" />}</span>
-                <h2 className="text-base font-semibold tracking-[0.16em] uppercase">
+        <section id={id} className={`scroll-mt-24 ${className ?? ""}`}>
+            <div className="mb-3 flex items-center gap-2">
+                <span>{icon ?? <Compass className="h-4 w-4" />}</span>
+                <h2 className="font-display text-[13px] md:text-sm font-semibold tracking-[0.16em] uppercase">
                     {title}
                 </h2>
             </div>
-            <div className="border-t border-black/20 pt-4">{children}</div>
+            <div className="border-t border-black/15 pt-4">{children}</div>
         </section>
     );
 }
@@ -1119,8 +1209,10 @@ function KVGrid({ rows }: { rows: Array<[string, string]> }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rows.map(([k, v]) => (
-                <div key={k} className="border-t border-black/20 pt-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] opacity-80">{k}</p>
+                <div key={k} className="border-t border-black/15 pt-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] opacity-80">
+                        {k}
+                    </p>
                     <p className="mt-1 text-sm font-medium leading-snug">{v}</p>
                 </div>
             ))}
@@ -1134,7 +1226,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-1 py-0.5 hover:underline"
+            className="inline-flex items-center gap-1 text-[11px] underline-offset-4 decoration-zinc-400 hover:underline"
         >
             <LinkIcon className="h-3.5 w-3.5" />
             {children}
@@ -1189,10 +1281,12 @@ function Timeline({ items }: { items: TimelineItem[] }) {
                         <span className="font-semibold">Focus:</span> {t.focus}
                     </p>
                     <p className="text-xs leading-snug">
-                        <span className="font-semibold">Key deliverables:</span> {t.deliverables}
+                        <span className="font-semibold">Key deliverables:</span>{" "}
+                        {t.deliverables}
                     </p>
                 </li>
             ))}
         </ol>
     );
 }
+

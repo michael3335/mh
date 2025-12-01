@@ -3,7 +3,6 @@ import "../../globals.css";
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/react';
 import AuthProvider from "@/components/AuthProvider";
-import BottomLeftControls from "@/components/BottomLeftControls";
 import { Space_Grotesk, Jost } from "next/font/google";
 
 const headingFont = Space_Grotesk({
@@ -81,7 +80,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="en" className={`${bodyFont.variable} ${headingFont.variable}`}>
             <body className="font-sans antialiased">
                 <AuthProvider>{children}
-                    <BottomLeftControls />
                 </AuthProvider>
                 {/* Vercel Analytics */}
                 <Analytics />

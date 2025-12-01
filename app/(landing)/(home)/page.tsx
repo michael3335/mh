@@ -2,130 +2,75 @@
 
 import Link from "next/link";
 import UserStatus from "@/components/UserStatus";
-import ContactLink from "@shared/components/ContactLink";
 
 export default function HomePage() {
-    return (
-        <main className="landing-shell">
-            <UserStatus />
+  return (
+    <main className="landing-shell">
+      <UserStatus />
 
-            <header className="landing-header">
-                <div className="landing-title-block">
-                    <p className="section-label">Michael Harrison</p>
-                    <h1 className="landing-heading">
-                        Energy, software, and long-horizon decision-making.
-                    </h1>
-                    <p className="landing-lede">
-                        Building a globally oriented career at the intersection of energy economics,
-                        sustainability strategy, and finance — with a strong emphasis on clear,
-                        durable tools rather than shiny interfaces.
-                    </p>
-                </div>
-            </header>
+      <header className="landing-header">
+        <div className="landing-title-block">
+          <p className="section-label">Michael Harrison</p>
+        </div>
+      </header>
 
-            <section className="landing-section">
-                <p className="section-label">About</p>
-                <p>
-                    I design and build research tools that sit close to real decisions — forecast
-                    dashboards, strategy workspaces, and data backbones that stay readable years
-                    from now. Most of the work here is deliberately simple: small typography, quiet
-                    hierarchies, and a focus on the underlying models and arguments rather than the
-                    UI itself.
-                </p>
-            </section>
+      <section className="landing-section">
+        <p className="section-label">Projects</p>
+        <ul className="landing-grid">
+          <li className="landing-item">
+            <Link href="/energy" className="landing-link">
+              <span className="landing-item-title">Energy hub</span>
+              <span className="landing-item-meta">
+                Data backbone, strategy complexes, and transition hypotheses.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
+            <Link href="/future" className="landing-link">
+              <span className="landing-item-title">18-year plan</span>
+              <span className="landing-item-meta">
+                2025–2043 roadmap across study, work, languages, and sport.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
+            <Link href="/insights" className="landing-link">
+              <span className="landing-item-title">Insights</span>
+              <span className="landing-item-meta">
+                Essays, notes, and case studies used to test ideas in public.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
+            <Link href="/models" className="landing-link">
+              <span className="landing-item-title">Model lab</span>
+              <span className="landing-item-meta">
+                Prototyping space for power, carbon, and macro models.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
+            <Link href="/commodities" className="landing-link">
+              <span className="landing-item-title">Commodities</span>
+              <span className="landing-item-meta">
+                Research around metals, fuels, and transition supply chains.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
+            <Link href="/notes" className="landing-link">
+              <span className="landing-item-title">Notes</span>
+              <span className="landing-item-meta">
+                Low-friction scratchpad for working ideas and references.
+              </span>
+            </Link>
+          </li>
+        </ul>
+      </section>
 
-            <section className="landing-section">
-                <p className="section-label">Selected work</p>
-                <ul className="landing-grid">
-                    <li className="landing-item">
-                        <Link href="/energy" className="landing-link">
-                            <span className="landing-item-title">Energy hub</span>
-                            <span className="landing-item-meta">
-                                Data backbone, strategy complexes, and transition hypotheses.
-                            </span>
-                        </Link>
-                    </li>
-                    <li className="landing-item">
-                        <Link href="/future" className="landing-link">
-                            <span className="landing-item-title">18-year plan</span>
-                            <span className="landing-item-meta">
-                                2025–2043 roadmap across study, work, languages, and sport.
-                            </span>
-                        </Link>
-                    </li>
-                    <li className="landing-item">
-                        <Link href="/insights" className="landing-link">
-                            <span className="landing-item-title">Insights</span>
-                            <span className="landing-item-meta">
-                                Essays, notes, and case studies used to test ideas in public.
-                            </span>
-                        </Link>
-                    </li>
-                    <li className="landing-item">
-                        <Link href="/models" className="landing-link">
-                            <span className="landing-item-title">Model lab</span>
-                            <span className="landing-item-meta">
-                                Prototyping space for power, carbon, and macro models.
-                            </span>
-                        </Link>
-                    </li>
-                    <li className="landing-item">
-                        <Link href="/commodities" className="landing-link">
-                            <span className="landing-item-title">Commodities</span>
-                            <span className="landing-item-meta">
-                                Research around metals, fuels, and transition supply chains.
-                            </span>
-                        </Link>
-                    </li>
-                    <li className="landing-item">
-                        <Link href="/notes" className="landing-link">
-                            <span className="landing-item-title">Notes</span>
-                            <span className="landing-item-meta">
-                                Low-friction scratchpad for working ideas and references.
-                            </span>
-                        </Link>
-                    </li>
-                </ul>
-            </section>
-
-            <section className="landing-section">
-                <p className="section-label">Skills & focus</p>
-                <ul className="landing-list">
-                    <li>
-                        <span className="landing-list-label">Energy & markets</span>
-                        <span className="landing-list-meta">
-                            Power, gas, carbon, and transition economics, with a pragmatic trading
-                            and policy lens.
-                        </span>
-                    </li>
-                    <li>
-                        <span className="landing-list-label">Quant & tooling</span>
-                        <span className="landing-list-meta">
-                            Python, R, statistics/econometrics, and data engineering for clean,
-                            reusable research pipelines.
-                        </span>
-                    </li>
-                    <li>
-                        <span className="landing-list-label">Product & writing</span>
-                        <span className="landing-list-meta">
-                            Translating models into interfaces, docs, and narratives that decision-makers can use.
-                        </span>
-                    </li>
-                </ul>
-            </section>
-
-            <section className="landing-section">
-                <p className="section-label">Contact</p>
-                <p className="landing-contact">
-                    Based in Sydney, working with a European and global orientation. For access,
-                    collaboration, or references, please{" "}
-                    <ContactLink />.
-                </p>
-            </section>
-
-            <style>{styles}</style>
-        </main>
-    );
+      <style>{styles}</style>
+    </main>
+  );
 }
 
 const styles = `

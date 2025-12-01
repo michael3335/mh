@@ -27,29 +27,6 @@ export default function UserStatus() {
                 pointerEvents: "none",
             }}
         >
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-end",
-                    gap: "0.1rem",
-                }}
-            >
-                <span>SYDNEY, AUSTRALIA</span>
-                <a
-                    href="mailto:contact@michaelharrison.au"
-                    style={{
-                        pointerEvents: "auto",
-                        textTransform: "none",
-                        letterSpacing: "0.16em",
-                        fontSize: "0.75rem",
-                        color: "var(--text-secondary)",
-                    }}
-                >
-                    contact@michaelharrison.au<span aria-hidden> ↗</span>
-                </a>
-            </div>
-
             {status === "authenticated" ? (
                 <span
                     style={{
@@ -59,9 +36,8 @@ export default function UserStatus() {
                         color: "var(--text-muted)",
                     }}
                 >
-                    {`Signed in as ${
-                        session.user?.name?.split(" ")[0] ?? "guest"
-                    }`}
+                    {`Signed in as ${session.user?.name?.split(" ")[0] ?? "guest"
+                        }`}
                 </span>
             ) : (
                 <button
