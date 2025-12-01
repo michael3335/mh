@@ -60,6 +60,22 @@ export default function UserStatus() {
                     Private access · Sign in
                 </button>
             )}
+            {status === "authenticated" ? (
+                <a
+                    href="https://www.michaelharrison.au"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                        pointerEvents: "auto",
+                        fontSize: "0.6rem",
+                        letterSpacing: "0.15em",
+                        textTransform: "uppercase",
+                        color: "var(--text-muted)",
+                    }}
+                >
+                    michaelharrison.au
+                </a>
+            ) : null}
         </div>
     );
 }
