@@ -1406,7 +1406,7 @@ function UniTimeline({ items }: { items: readonly UniTimelineItem[] }) {
 
 /* -------------------------------- TIMELINE UI ------------------------------ */
 
-function Timeline({ items }: { items: TimelineItem[] }) {
+function Timeline({ items }: { items: readonly TimelineItem[] }) {
     return (
         <ol className="relative ml-3 border-s border-black/20">
             {items.map((t) => (
