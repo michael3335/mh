@@ -134,10 +134,12 @@ function NotesContent() {
         <div
             style={{
                 minHeight: "100svh",
+                maxWidth: 720,
+                margin: "0 auto",
                 display: "grid",
                 gridTemplateRows: "auto auto auto 1fr auto",
                 gap: 12,
-                padding: "clamp(16px, 4vw, 32px)",
+                padding: "32px 20px 72px",
             }}
         >
             {/* Actions */}

@@ -750,16 +750,18 @@ const timeline: TimelineItem[] = [
 
 export default function FuturePlanPage() {
     return (
-        <div className="mx-auto max-w-6xl p-4 lg:p-8 space-y-10 bg-white text-black">
+        <div className="mx-auto max-w-3xl px-5 py-8 lg:py-12 space-y-10">
             {/* Header */}
             <header className="flex flex-wrap items-center gap-3">
-                <Compass className="h-8 w-8" />
-                <h1 className="text-4xl font-bold tracking-tight">Future Plan</h1>
-                <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-sm font-semibold">
+                <Compass className="h-6 w-6" />
+                <h1 className="text-xl font-medium tracking-[0.2em] uppercase">
+                    Future plan · 2025–2043
+                </h1>
+                <span className="ml-auto inline-flex items-center gap-2 rounded-full border border-black/20 px-3 py-1 text-[11px] font-medium">
                     <span role="img" aria-label="crystal ball">
                         🔮
                     </span>
-                    2025 → 2043
+                    Long-horizon career map
                 </span>
             </header>
 
@@ -769,7 +771,7 @@ export default function FuturePlanPage() {
                 title="Overview of 18-Year Career Master Plan"
                 icon={<Compass className="h-5 w-5" />}
             >
-                <p className="text-lg leading-relaxed">{overviewText}</p>
+                <p className="text-sm leading-relaxed">{overviewText}</p>
                 <div className="mt-6">
                     <KVGrid rows={overviewRows} />
                 </div>
@@ -893,7 +895,9 @@ export default function FuturePlanPage() {
                 <div className="mb-4 flex items-end justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <Layers className="h-5 w-5" />
-                        <h2 className="text-2xl font-bold">Phases</h2>
+                        <h2 className="text-base font-semibold tracking-[0.16em] uppercase">
+                            Phases
+                        </h2>
                     </div>
 
                     {/* Toolbar: Expand/Collapse All (no client component needed) */}
@@ -916,7 +920,7 @@ export default function FuturePlanPage() {
                 {/* Two-column layout: sticky meta rail on wide screens */}
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                     {/* Sticky outline of phases */}
-                    <aside className="lg:col-span-3 lg:sticky lg:top-20 space-y-2">
+                    <aside className="lg:col-span-3 lg:sticky lg:top-20 space-y-2 text-xs">
                         {phases.map((p, i) => (
                             <a
                                 key={p.title}
@@ -945,11 +949,11 @@ export default function FuturePlanPage() {
                             >
                                 <summary className="flex items-start gap-4 px-5 py-4 cursor-pointer list-none">
                                     {/* Number + meta block */}
-                                    <div className="min-w-16 text-sm">
-                                        <div className="font-bold tabular-nums">
+                                    <div className="min-w-16 text-xs">
+                                        <div className="font-semibold tabular-nums">
                                             {String(idx + 1).padStart(2, "0")}
                                         </div>
-                                        <div className="mt-1 inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
+                                        <div className="mt-1 inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
                                             {p.years}
                                         </div>
                                     </div>
@@ -958,11 +962,11 @@ export default function FuturePlanPage() {
                                     <div className="flex-1">
                                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                             <span>{p.icon}</span>
-                                            <h3 className="text-xl font-bold">{p.title}</h3>
-                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
+                                            <h3 className="text-sm font-semibold">{p.title}</h3>
+                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
                                                 {p.location}
                                             </span>
-                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs">
+                                            <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px]">
                                                 {p.age} yrs
                                             </span>
                                         </div>
@@ -1102,9 +1106,11 @@ function Section({
         <section id={id} className="scroll-mt-24">
             <div className="mb-4 flex items-center gap-2">
                 <span>{icon ?? <Compass className="h-5 w-5" />}</span>
-                <h2 className="text-2xl font-bold">{title}</h2>
+                <h2 className="text-base font-semibold tracking-[0.16em] uppercase">
+                    {title}
+                </h2>
             </div>
-            <div className="rounded-2xl border border-black/20 p-5">{children}</div>
+            <div className="border-t border-black/20 pt-4">{children}</div>
         </section>
     );
 }
@@ -1113,9 +1119,9 @@ function KVGrid({ rows }: { rows: Array<[string, string]> }) {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {rows.map(([k, v]) => (
-                <div key={k} className="rounded-xl border border-black/20 p-4">
-                    <p className="text-[11px] uppercase tracking-wider opacity-80">{k}</p>
-                    <p className="mt-1 text-base font-bold leading-snug">{v}</p>
+                <div key={k} className="border-t border-black/20 pt-3">
+                    <p className="text-[11px] uppercase tracking-[0.16em] opacity-80">{k}</p>
+                    <p className="mt-1 text-sm font-medium leading-snug">{v}</p>
                 </div>
             ))}
         </div>
@@ -1140,18 +1146,18 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 
 function UniTimeline({ items }: { items: UniTimelineItem[] }) {
     return (
-        <ol className="relative ml-3 border-s-2 border-black/20">
+        <ol className="relative ml-3 border-s border-black/20">
             {items.map((t) => (
                 <li key={t.label + t.period} className="ms-6 pb-4 last:pb-0">
                     <span
-                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-black bg-white"
+                        className="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-black bg-white"
                         aria-hidden
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px] font-semibold">
+                        <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px] font-medium">
                             {t.period}
                         </span>
-                        <span className="text-xs font-bold">{t.label}</span>
+                        <span className="text-xs font-medium">{t.label}</span>
                     </div>
                     <p className="mt-1 text-xs leading-snug">{t.detail}</p>
                 </li>
@@ -1164,23 +1170,25 @@ function UniTimeline({ items }: { items: UniTimelineItem[] }) {
 
 function Timeline({ items }: { items: TimelineItem[] }) {
     return (
-        <ol className="relative ml-3 border-s-2 border-black/20">
+        <ol className="relative ml-3 border-s border-black/20">
             {items.map((t) => (
                 <li key={t.phase} className="ms-6 pb-6 last:pb-0">
                     <span
-                        className="absolute -start-1.5 mt-1 h-3.5 w-3.5 rounded-full border-2 border-black bg-white"
+                        className="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-black bg-white"
                         aria-hidden
                     />
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-xs font-semibold">
+                        <span className="inline-flex items-center rounded-full border border-black/20 px-2 py-0.5 text-[11px] font-medium">
                             {t.years}
                         </span>
-                        <span className="text-sm font-bold">{t.phase}</span>
+                        <span className="text-xs font-medium uppercase tracking-[0.14em]">
+                            {t.phase}
+                        </span>
                     </div>
-                    <p className="mt-2 text-sm">
+                    <p className="mt-2 text-xs leading-snug">
                         <span className="font-semibold">Focus:</span> {t.focus}
                     </p>
-                    <p className="text-sm">
+                    <p className="text-xs leading-snug">
                         <span className="font-semibold">Key deliverables:</span> {t.deliverables}
                     </p>
                 </li>

@@ -203,101 +203,107 @@ export default async function NewsBriefingPage() {
       {/* NOTE: Plain <style> to avoid styled-jsx in Server Components */}
       <style>{`
         :root {
-          --bg: Canvas;
-          --fg: CanvasText;
-          --muted: color-mix(in oklab, CanvasText 60%, Canvas 40%);
-          --rule: color-mix(in oklab, CanvasText 15%, Canvas 85%);
-          --pill-bg: color-mix(in oklab, CanvasText 8%, Canvas 92%);
-          --pill-fg: LinkText;
+          --bg: var(--background);
+          --fg: var(--foreground);
+          --muted: var(--text-muted);
+          --rule: var(--rule);
+          --pill-bg: var(--background);
+          --pill-fg: var(--foreground);
         }
         .wrap {
           background: var(--bg);
           color: var(--fg);
-          padding: clamp(20px, 4vw, 40px);
-          max-width: 1200px;
+          padding: 32px 20px 72px;
+          max-width: 720px;
           margin: 0 auto;
+        }
+        @media (min-width: 900px) {
+          .wrap {
+            padding-top: 48px;
+            padding-bottom: 96px;
+          }
         }
         .hero {
           display: grid;
           grid-template-columns: auto 1fr;
-          gap: clamp(16px, 3vw, 28px);
+          gap: 16px;
           align-items: center;
-          padding-block: clamp(8px, 2vw, 20px);
-          border-bottom: 1px solid var(--rule);
+          padding-bottom: 16px;
+          border-bottom: var(--hairline) solid var(--rule);
         }
         .symbol {
-          inline-size: clamp(64px, 10vw, 96px);
-          block-size: clamp(64px, 10vw, 96px);
+          inline-size: 40px;
+          block-size: 40px;
           display: grid;
           place-items: center;
-          border-radius: 20px;
-          box-shadow: 0 1px 0 color-mix(in oklab, CanvasText 8%, transparent),
-            0 12px 40px color-mix(in oklab, CanvasText 8%, transparent);
-          background: color-mix(in oklab, CanvasText 6%, Canvas 94%);
+          border-radius: 999px;
+          border: var(--hairline) solid var(--rule);
         }
         .paper {
-          font-size: clamp(40px, 7vw, 56px);
+          font-size: 1.2rem;
           line-height: 1;
           display: block;
-          transform: translateY(1px);
         }
         .titleBlock h1 {
-          font-size: clamp(40px, 6vw, 72px);
-          letter-spacing: -0.02em;
           margin: 0;
         }
         .tagline { 
-          margin: 8px 0 0; 
-          font-size: clamp(14px, 1.7vw, 18px);
+          margin: 0; 
           color: var(--muted);
           max-width: 70ch;
         }
         .grid {
           display: grid;
-          grid-template-columns: repeat(12, 1fr);
-          gap: clamp(14px, 2vw, 22px);
-          padding-block: clamp(16px, 3vw, 28px);
+          grid-template-columns: 1fr;
+          gap: 18px;
+          padding-top: 24px;
         }
         .card {
-          grid-column: span 12;
-          border: 1px solid var(--rule);
-          border-radius: 16px;
-          padding: clamp(14px, 2vw, 22px);
-          background: color-mix(in oklab, Canvas 98%, CanvasText 2%);
+          grid-column: span 1;
+          padding-top: 1rem;
+          border-top: var(--hairline) solid var(--rule);
+          background: transparent;
         }
         .breaking {
           display: flex;
           align-items: center;
           gap: 8px;
           padding: 10px 12px;
-          border: 1px solid color-mix(in oklab, CanvasText 20%, Canvas 80%);
-          background: color-mix(in oklab, CanvasText 6%, Canvas 94%);
-          border-radius: 12px;
+          border-radius: 999px;
+          border: var(--hairline) solid var(--rule);
           margin-bottom: 12px;
           overflow: hidden;
           white-space: nowrap;
           text-overflow: ellipsis;
         }
-        .flash { color: #d00; font-size: 14px; animation: pulse 1.2s infinite; }
+        .flash { font-size: 0.75rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-secondary); }
         .b-label { font-weight: 700; letter-spacing: 0.02em; }
         .b-sep { opacity: 0.5; }
-        .b-headline { text-decoration: none; color: LinkText; font-weight: 600; }
+        .b-headline { text-decoration: none; color: var(--foreground); font-weight: 600; }
         .b-source { color: var(--muted); }
-        @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
 
         .cardHeader {
           display: flex; align-items: baseline; gap: 10px;
           margin: 0 0 8px 0;
         }
-        .cardTitle { font-size: clamp(18px, 2.2vw, 22px); margin: 0; }
+        .cardTitle { margin: 0; }
         .cardIcon { font-size: 18px; }
         .list { margin: 0; padding-left: 1.1em; }
         .list li { margin: 6px 0; }
         .links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
         .pill {
-          display: inline-block; padding: 8px 12px; border-radius: 999px;
-          background: var(--pill-bg); color: var(--pill-fg); text-decoration: none;
-          border: 1px solid var(--rule);
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-size: 0.75rem;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          text-decoration: none;
+          color: var(--text-secondary);
+          border: none;
+          padding: 0;
+          border-radius: 0;
+          background: transparent;
         }
         .tags {
           display: inline-flex;
@@ -333,26 +339,21 @@ export default async function NewsBriefingPage() {
         .small { font-size: 12px; }
         .foot { 
           display:flex; gap:8px; align-items:center; justify-content:flex-end; 
-          padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted);
+          padding-top: 18px; border-top: var(--hairline) solid var(--rule); color: var(--muted);
           font-size: 12px;
         }
         .footSymbol { font-size: 14px; }
 
         /* Responsive spans */
         @media (min-width: 720px) {
-          .card:nth-child(1) { grid-column: span 7; }
-          .card:nth-child(2) { grid-column: span 5; }
-          .card:nth-child(3) { grid-column: span 7; }
-          .card:nth-child(4) { grid-column: span 5; }
-          .card:nth-child(5) { grid-column: span 6; }
-          .card:nth-child(6) { grid-column: span 6; }
-
-          .metric { grid-column: span 6; }
+          .grid {
+            grid-template-columns: 1fr 1fr;
+          }
+          .metric { grid-column: span 1; }
         }
 
         /* Reduced motion */
         @media (prefers-reduced-motion: reduce) {
-          .paper { transform: none !important; }
         }
       `}</style>
     </main>

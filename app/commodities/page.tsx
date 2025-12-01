@@ -80,15 +80,15 @@ function MetricCard({
             type="button"
             onClick={onClick}
             style={{
-                border: "1px solid var(--card-border, rgba(255,255,255,0.08))",
+                border: "var(--hairline) solid var(--rule)",
                 borderRadius: 12,
-                padding: "12px 14px",
+                padding: "10px 12px",
                 display: "grid",
                 gap: 8,
                 minWidth: 0,
                 width: "100%",
                 textAlign: "left",
-                background: "transparent",
+                background: "var(--background)",
                 cursor: "pointer",
             }}
         >
@@ -116,7 +116,7 @@ function MetricCard({
             <strong style={{ fontSize: 22, letterSpacing: 0.2 }}>{value}</strong>
             <div
                 style={{
-                    color: isUp ? "var(--pos, #22c55e)" : "var(--neg, #ef4444)",
+                    color: "var(--text-muted)",
                 }}
             >
                 <Sparkline points={series} positive={isUp} />

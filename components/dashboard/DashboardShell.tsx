@@ -43,18 +43,17 @@ function DashboardLayout({
     const baseMainStyle: CSSProperties = {
         minHeight: "100svh",
         width: "100%",
-        display: "grid",
-        placeItems: "center",
-        padding: "2rem",
-        textAlign: "center",
-        background: "#111213",
-        color: "#f4f4f5",
+        background: "var(--background)",
+        color: "var(--foreground)",
+        padding: "32px 20px 72px",
     };
 
     const baseSectionStyle: CSSProperties = {
         display: "grid",
         gap: "1.5rem",
-        width: "min(100%, 1080px)",
+        width: "min(720px, 100%)",
+        margin: "0 auto",
+        textAlign: "left",
     };
 
     const resolvedHero =
@@ -89,20 +88,18 @@ function DashboardLayout({
 
                 {status === "unauthenticated" && (
                     <>
-                        <p>{unauthenticatedMessage}</p>
+                        <p style={{ margin: 0, color: "var(--text-secondary)" }}>{unauthenticatedMessage}</p>
                         <Link
                             href={"/api/auth/signin" as Route}
                             style={{
-                                padding: "0.7rem 1.2rem",
-                                borderRadius: 10,
-                                fontWeight: 800,
+                                fontSize: "0.75rem",
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
                                 textDecoration: "none",
-                                background: "#fff",
-                                color: "#111",
-                                boxShadow: "0 2px 10px rgba(0,0,0,.18)",
+                                color: "var(--text-secondary)",
                             }}
                         >
-                            Sign In
+                            Sign in<span aria-hidden> ↗</span>
                         </Link>
                     </>
                 )}
@@ -110,12 +107,23 @@ function DashboardLayout({
                 {status === "authenticated" && children}
 
                 {resolvedLinks.length > 0 && (
-                    <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 6 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 12,
+                            justifyContent: "flex-start",
+                            marginTop: 6,
+                            fontSize: "0.75rem",
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            color: "var(--text-muted)",
+                        }}
+                    >
                         {resolvedLinks.map((link) => (
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                style={{ opacity: 0.9, textDecoration: "none", color: "#e5e7eb" }}
+                                style={{ opacity: 0.9, textDecoration: "none", color: "inherit" }}
                             >
                                 {link.label}
                             </Link>

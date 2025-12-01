@@ -174,14 +174,9 @@ class AsciiFilter {
   }
 
   hue(time?: number) {
-    if (!this.interactive) {
-      const t = (time ?? 0) * 40;
-      this.domElement.style.filter = `hue-rotate(${t.toFixed(1)}deg)`;
-      return;
-    }
-    const deg = (Math.atan2(this.dy, this.dx) * 180) / Math.PI;
-    this.deg += (deg - this.deg) * 0.075;
-    this.domElement.style.filter = `hue-rotate(${this.deg.toFixed(1)}deg)`;
+    // Keep the effect strictly monochrome and calm.
+    void time;
+    this.domElement.style.filter = 'grayscale(1)';
   }
 
   asciify(ctx: CanvasRenderingContext2D, w: number, h: number) {
@@ -650,12 +645,9 @@ export default function ASCIIText({
           left: 50%;                         /* center it */
           top: 50%;
           transform: translate(-50%, -50%);
-          background-image: radial-gradient(circle, #ff6188 0%, #fc9867 50%, #ffd866 100%);
-          background-attachment: fixed;
-          -webkit-text-fill-color: transparent;
-          -webkit-background-clip: text;
           z-index: 9;
-          mix-blend-mode: difference;
+          color: #111111;
+          mix-blend-mode: normal;
           white-space: pre;
         }
       `}</style>

@@ -126,7 +126,6 @@ export default function Finder() {
                 placeItems: "center",
                 background: theme.pageBg,
                 color: theme.text,
-                fontFamily: '-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", Arial, sans-serif',
                 padding: 0,
             }}
             sectionStyle={{ display: "contents" }}

@@ -38,12 +38,20 @@ export default async function InsightsPage() {
     return (
         <main className="wrap">
             <header className="hero">
-                <div className="symbol" aria-hidden><span className="mark">✍️</span></div>
+                <div className="symbol" aria-hidden>
+                    <span className="mark">✍️</span>
+                </div>
                 <div className="titleBlock">
-                    <h1>Insights</h1>
-                    <p className="tagline">Long-form writing to demonstrate judgment and depth.</p>
+                    <p className="sectionLabel">Insights</p>
+                    <h1>Portfolio essays, notes, and case studies.</h1>
+                    <p className="tagline">
+                        Lightly edited writing used to test ideas in public — mostly around energy,
+                        markets, research process, and long-horizon decision-making.
+                    </p>
                     <nav className="links">
-                        <Link className="pill" href="/insights/new">New post</Link>
+                        <Link className="quietLink" href="/insights/new">
+                            New post<span aria-hidden> ↗</span>
+                        </Link>
                     </nav>
                 </div>
             </header>
@@ -51,15 +59,25 @@ export default async function InsightsPage() {
             <ul className="postGrid">
                 {posts.map((p) => (
                     <li key={p.slug} className="postCard">
-                        <h3><Link href={`/insights/${p.slug}`}>{p.title}</Link></h3>
+                        <h3>
+                            <Link href={`/insights/${p.slug}`}>{p.title}</Link>
+                        </h3>
                         <p className="meta">
                             <span>{formatMetaDate(p.date)}</span> • <span>{p.author}</span>
                             {p.tags?.length ? <> • {p.tags.join(", ")}</> : null}
                         </p>
-                        {p.summary ? <p>{p.summary}</p> : null}
+                        {p.summary ? <p className="summary">{p.summary}</p> : null}
                     </li>
                 ))}
-                {!posts.length && <p>No posts yet. <Link href="/insights/new">Create one</Link>.</p>}
+                {!posts.length && (
+                    <p className="empty">
+                        No posts yet.{" "}
+                        <Link href="/insights/new">
+                            Create one<span aria-hidden> ↗</span>
+                        </Link>
+                        .
+                    </p>
+                )}
             </ul>
 
             <style>{styles}</style>
@@ -67,17 +85,104 @@ export default async function InsightsPage() {
     );
 }
 const styles = `
-.wrap { max-width: 1000px; margin: 0 auto; padding: clamp(16px, 4vw, 32px); }
-.hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; border-bottom: 1px solid #e5e5e5; padding-bottom: 12px; }
-.symbol { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 16px; background: #f6f6f9; }
-.mark { font-size: 40px; }
-.titleBlock h1 { margin: 0; font-size: clamp(24px, 4vw, 40px); }
-.tagline { margin: 6px 0 0; color: #666; }
-.links { margin-top: 8px; }
-.pill { display: inline-block; padding: 8px 12px; border-radius: 999px; border: 1px solid #ddd; text-decoration: none; }
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 72px;
+}
 
-.postGrid { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 12px; }
-.postCard { border: 1px solid #eaeaea; border-radius: 12px; padding: 12px; }
-.postCard h3 { margin: 0 0 6px 0; }
-.meta { color: #666; font-size: 14px; margin: 0 0 6px 0; }
+@media (min-width: 900px) {
+  .wrap {
+    padding-top: 48px;
+    padding-bottom: 96px;
+  }
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: var(--hairline) solid var(--rule);
+  align-items: flex-start;
+}
+
+.symbol {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: var(--hairline) solid var(--rule);
+}
+
+.mark {
+  font-size: 1.2rem;
+}
+
+.titleBlock h1 {
+  margin: 0 0 0.4rem;
+}
+
+.sectionLabel {
+  font-family: var(--font-heading), var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.links {
+  margin-top: 0.75rem;
+}
+
+.quietLink {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+
+.postGrid {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.postCard {
+  padding-top: 0.9rem;
+  border-top: var(--hairline) solid var(--rule);
+}
+
+.postCard h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 0 0 0.25rem;
+}
+
+.summary {
+  margin: 0;
+}
+
+.empty {
+  margin-top: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
 `;
