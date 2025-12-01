@@ -65,6 +65,14 @@ export default function HomePage() {
                 </span>
               </Link>
             </li>
+            <li className="landing-item">
+              <Link href="https://www.michaelharrison.au" className="landing-link">
+                <span className="landing-item-title">Portfolio</span>
+                <span className="landing-item-meta">
+                  Professional work, projects, and case studies.
+                </span>
+              </Link>
+            </li>
           </ul>
         </section>
       </div>
