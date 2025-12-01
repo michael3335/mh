@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://michaelharrison.au"),
+  metadataBase: new URL("https://private.michaelharrison.au"),
   title: {
     default: "Michael Harrison",
     template: "%s",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    url: "https://michaelharrison.au",
+    url: "https://private.michaelharrison.au",
     title: "Michael Harrison",
     siteName: "Michael Harrison",
     description: "Michael Harrison",
