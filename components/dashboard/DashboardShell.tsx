@@ -90,7 +90,7 @@ function DashboardLayout({
                     <>
                         <p style={{ margin: 0, color: "var(--text-secondary)" }}>{unauthenticatedMessage}</p>
                         <Link
-                            href={"/api/auth/signin" as Route}
+                            href={"/auth/signin" as Route}
                             style={{
                                 fontSize: "0.75rem",
                                 letterSpacing: "0.18em",

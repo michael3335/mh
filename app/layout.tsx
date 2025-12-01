@@ -3,7 +3,6 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import AuthProvider from "@/components/AuthProvider";
-import BottomLeftControls from "@/components/BottomLeftControls";
 import { Space_Grotesk, Jost } from "next/font/google";
 import { CustomCursor } from "@/components/CustomCursor";
 
@@ -96,7 +95,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <AuthProvider>
           <main id="main">{children}</main>
-          <BottomLeftControls />
         </AuthProvider>
         <CustomCursor />
 

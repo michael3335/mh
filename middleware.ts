@@ -5,8 +5,12 @@ import type { NextRequest } from "next/server";
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // Allow NextAuth internals + auth error display so users can sign in.
-  if (pathname.startsWith("/api/auth") || pathname.startsWith("/auth/error")) {
+  // Allow NextAuth internals + auth pages so users can sign in.
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/auth/error") ||
+    pathname.startsWith("/auth/signin")
+  ) {
     return NextResponse.next();
   }
 
@@ -18,7 +22,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const url = new URL("/api/auth/signin", req.url);
+    const url = new URL("/auth/signin", req.url);
     url.searchParams.set("callbackUrl", `${pathname}${search}`);
     return NextResponse.redirect(url);
   }

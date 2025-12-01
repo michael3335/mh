@@ -8,7 +8,17 @@ export const metadata: Metadata = {
     robots: { index: false, follow: false },
 };
 
-export default function AuthErrorPage() {
+type AuthErrorPageProps = {
+    searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
+    const callbackUrl =
+        typeof searchParams?.callbackUrl === "string" ? searchParams.callbackUrl : undefined;
+    const signinHref = callbackUrl
+        ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`
+        : "/auth/signin";
+
     return (
         <main
             style={{
@@ -74,7 +84,7 @@ export default function AuthErrorPage() {
                 </div>
 
                 <Link
-                    href="/api/auth/signin"
+                    href={signinHref}
                     style={{
                         display: "inline-flex",
                         alignItems: "center",

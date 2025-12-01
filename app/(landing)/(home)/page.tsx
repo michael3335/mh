@@ -18,6 +18,22 @@ export default function HomePage() {
         <p className="section-label">Projects</p>
         <ul className="landing-grid">
           <li className="landing-item">
+            <Link href="/future" className="landing-link">
+              <span className="landing-item-title">The future</span>
+              <span className="landing-item-meta">
+                2025–2043 roadmap across study, work, languages, and sport.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
+            <Link href="/finder" className="landing-link">
+              <span className="landing-item-title">Finder</span>
+              <span className="landing-item-meta">
+                A place to store all my stuff.
+              </span>
+            </Link>
+          </li>
+          <li className="landing-item">
             <Link href="/energy" className="landing-link">
               <span className="landing-item-title">Energy hub</span>
               <span className="landing-item-meta">
@@ -26,10 +42,10 @@ export default function HomePage() {
             </Link>
           </li>
           <li className="landing-item">
-            <Link href="/future" className="landing-link">
-              <span className="landing-item-title">18-year plan</span>
+            <Link href="/commodities" className="landing-link">
+              <span className="landing-item-title">Commodities hub</span>
               <span className="landing-item-meta">
-                2025–2043 roadmap across study, work, languages, and sport.
+                Research around metals, fuels, and transition supply chains.
               </span>
             </Link>
           </li>
@@ -46,14 +62,6 @@ export default function HomePage() {
               <span className="landing-item-title">Model lab</span>
               <span className="landing-item-meta">
                 Prototyping space for power, carbon, and macro models.
-              </span>
-            </Link>
-          </li>
-          <li className="landing-item">
-            <Link href="/commodities" className="landing-link">
-              <span className="landing-item-title">Commodities</span>
-              <span className="landing-item-meta">
-                Research around metals, fuels, and transition supply chains.
               </span>
             </Link>
           </li>
