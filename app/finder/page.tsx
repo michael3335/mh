@@ -33,6 +33,83 @@ type SelectGesture = {
     shiftKey?: boolean;
 };
 
+type MenuState = { x: number; y: number; item: Item };
+
+const theme = {
+    pageBg: "var(--background)",
+    panelBg: "var(--card)",
+    toolbarBg: "var(--muted)",
+    surface: "var(--background)",
+    border: "var(--border)",
+    muted: "var(--muted-foreground)",
+    text: "var(--foreground)",
+    accent: "var(--accent)",
+    highlight: "var(--accent-soft)",
+    button: "var(--secondary)",
+};
+
+const controlButton: React.CSSProperties = {
+    padding: "6px 10px",
+    borderRadius: 8,
+    border: `1px solid ${theme.border}`,
+    background: theme.button,
+    color: theme.text,
+    cursor: "pointer",
+    transition: "transform 120ms ease, border-color 120ms ease",
+};
+
+const crumbButton: React.CSSProperties = {
+    cursor: "pointer",
+    padding: "4px 10px",
+    borderRadius: 999,
+    border: `1px solid ${theme.border}`,
+    background: "var(--secondary)",
+    color: theme.text,
+};
+
+const textInput: React.CSSProperties = {
+    width: "min(260px, 50vw)",
+    minWidth: 160,
+    padding: "6px 10px",
+    borderRadius: 8,
+    border: `1px solid ${theme.border}`,
+    background: "var(--card)",
+    color: theme.text,
+    outline: "none",
+};
+
+const panelStyle: React.CSSProperties = {
+    width: "min(1200px,95vw)",
+    height: "min(760px,92vh)",
+    background: theme.panelBg,
+    border: `1px solid ${theme.border}`,
+    borderRadius: 14,
+    display: "grid",
+    gridTemplateRows: "auto auto auto 1fr auto",
+    boxShadow: "0 12px 34px rgba(0,0,0,.5)",
+    overflow: "hidden",
+    position: "relative",
+};
+
+async function post(path: string, body: unknown) {
+    const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`${path} failed (${res.status}${text ? `: ${text}` : ""})`);
+    }
+    return res;
+}
+
+async function postJson<T>(path: string, body: unknown) {
+    const res = await post(path, body);
+    return (await res.json()) as T;
+}
+
 /* ---------------- Component ---------------- */
 
 export default function Finder() {
@@ -47,8 +124,8 @@ export default function Finder() {
                 width: "100vw",
                 display: "grid",
                 placeItems: "center",
-                background: "radial-gradient(1200px 800px at 20% -10%, #232325 0%, #1a1a1c 30%, #121214 100%)",
-                color: "#f2f2f7",
+                background: theme.pageBg,
+                color: theme.text,
                 fontFamily: '-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Helvetica Neue\", Arial, sans-serif',
                 padding: 0,
             }}
@@ -84,12 +161,7 @@ function FinderContent() {
 
     const currentLoadAbortRef = useRef<AbortController | null>(null);
 
-    const [menu, setMenu] = useState<{
-        open: boolean;
-        x: number;
-        y: number;
-        item: Item | null;
-    }>({ open: false, x: 0, y: 0, item: null });
+    const [menu, setMenu] = useState<MenuState | null>(null);
 
     const toast = useCallback((t: string, ms = 3000, tone: "info" | "error" = "info") => {
         setMsg(t);
@@ -101,6 +173,14 @@ function FinderContent() {
             notify({ tone: "error", message: t });
         }
     }, [notify]);
+
+    useEffect(() => {
+        return () => {
+            if (toastTimeoutRef.current) {
+                window.clearTimeout(toastTimeoutRef.current);
+            }
+        };
+    }, []);
 
     /* ---------------- Data loading ---------------- */
 
@@ -160,6 +240,10 @@ function FinderContent() {
         return () => ctrl.abort();
     }, [path, loadAll]);
 
+    useEffect(() => {
+        setMenu(null);
+    }, [path, view]);
+
     /* ---------------- Navigation ---------------- */
 
     const goInto = useCallback((folder: string) => {
@@ -194,24 +278,11 @@ function FinderContent() {
     async function uploadFiles(files: File[]) {
         for (const f of files) {
             try {
-                // 1) presign
-                const r = await fetch("/api/files/upload", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "same-origin",
-                    body: JSON.stringify({
-                        filename: f.name,
-                        contentType: f.type || "application/octet-stream",
-                        path,
-                    }),
+                const { url } = await postJson<{ url: string }>("/api/files/upload", {
+                    filename: f.name,
+                    contentType: f.type || "application/octet-stream",
+                    path,
                 });
-                    if (!r.ok) {
-                        const text = await r.text().catch(() => "");
-                        console.error("[presign] failed", r.status, text);
-                        toast(`Upload presign failed (${r.status})`, 3000, "error");
-                        continue;
-                    }
-                const { url } = (await r.json()) as { url: string };
 
                 // 2) PUT to S3 with progress
                 setProgress(0);
@@ -220,7 +291,8 @@ function FinderContent() {
             } catch (err) {
                 console.error(err);
                 setProgress(null);
-                toast("Upload error", 5000, "error");
+                const reason = err instanceof Error ? err.message : "Upload error";
+                toast(reason, 5000, "error");
             }
         }
         await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
@@ -231,25 +303,24 @@ function FinderContent() {
     const createFolder = useCallback(async () => {
         const name = prompt("New folder name");
         if (!name) return;
-        const res = await fetch("/api/files/folder", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ name, path }),
-        });
-        if (!res.ok) return toast("Couldn't create folder", 3000, "error");
-        toast("Folder created");
-        await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
+        try {
+            await post("/api/files/folder", { name, path });
+            toast("Folder created");
+            await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
+        } catch (error) {
+            console.error(error);
+            toast("Couldn't create folder", 3000, "error");
+        }
     }, [path, loadAll, toast]);
 
     const deleteKey = useCallback(async (key: string, recursive = false) => {
-        const res = await fetch("/api/files/delete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ key, recursive }),
-        });
-        return res.ok;
+        try {
+            await post("/api/files/delete", { key, recursive });
+            return true;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
     }, []);
 
     const remove = useCallback(
@@ -278,10 +349,15 @@ function FinderContent() {
             )
         )
             return;
-        await Promise.all(
+        const results = await Promise.all(
             Array.from(selected).map((key) => deleteKey(key, key.endsWith("/")))
         );
-        toast("Deleted");
+        const failed = results.filter((ok) => !ok).length;
+        if (failed) {
+            toast(`Failed to delete ${failed} item(s)`, 5000, "error");
+        } else {
+            toast("Deleted");
+        }
         await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
     }, [selected, deleteKey, loadAll, path, toast]);
 
@@ -293,15 +369,14 @@ function FinderContent() {
             if (!next || next === base) return;
             const parent = file.key.split("/").slice(0, -1).join("/") + "/";
             const toKey = parent + next;
-            const res = await fetch("/api/files/rename", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify({ fromKey: file.key, toKey }),
-            });
-            if (!res.ok) return toast("Rename failed", 5000, "error");
-            toast("Renamed");
-            await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
+            try {
+                await post("/api/files/rename", { fromKey: file.key, toKey });
+                toast("Renamed");
+                await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
+            } catch (error) {
+                console.error(error);
+                toast("Rename failed", 5000, "error");
+            }
         },
         [loadAll, path, toast]
     );
@@ -318,40 +393,38 @@ function FinderContent() {
             const newPrefix = parentPrefix + next + "/";
 
             // Create new folder marker
-            const markerRes = await fetch("/api/files/folder", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "same-origin",
-                body: JSON.stringify({
+            try {
+                await post("/api/files/folder", {
                     name: next,
                     path: parentPrefix.replace(/^user\/[^/]+\//, ""),
-                }),
-            });
-            if (!markerRes.ok) return toast("Couldn't create new folder", 5000, "error");
+                });
+            } catch (error) {
+                console.error(error);
+                return toast("Couldn't create new folder", 5000, "error");
+            }
 
             // Move visible files (when viewing the parent)
             const visibleInFolder = items.filter(
                 (it) => it.kind === "file" && it.key.startsWith(oldPrefix)
             ) as FileItem[];
 
-            await Promise.all(
-                visibleInFolder.map((f) => {
-                    const relName = f.key.slice(oldPrefix.length);
-                    const toKey = newPrefix + relName;
-                    return fetch("/api/files/rename", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "same-origin",
-                        body: JSON.stringify({ fromKey: f.key, toKey }),
-                    });
-                })
-            );
+            try {
+                await Promise.all(
+                    visibleInFolder.map((f) => {
+                        const relName = f.key.slice(oldPrefix.length);
+                        const toKey = newPrefix + relName;
+                        return post("/api/files/rename", { fromKey: f.key, toKey });
+                    })
+                );
 
-            // Delete old folder recursively
-            await deleteKey(oldPrefix, true);
+                await deleteKey(oldPrefix, true);
 
-            toast("Folder renamed");
-            await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
+                toast("Folder renamed");
+                await loadAll(path, currentLoadAbortRef.current?.signal ?? undefined);
+            } catch (error) {
+                console.error(error);
+                toast("Rename failed", 5000, "error");
+            }
         },
         [items, deleteKey, loadAll, path, toast]
     );
@@ -449,7 +522,7 @@ function FinderContent() {
 
         const sel = document.createElement("div");
         sel.style.position = "absolute";
-        sel.style.border = "1px solid #3a3a3f";
+        sel.style.border = `1px solid ${theme.border}`;
         sel.style.background = "rgba(10,132,255,0.2)";
         sel.style.pointerEvents = "none";
         sel.style.left = `${start.x}px`;
@@ -532,7 +605,7 @@ function FinderContent() {
             }
             if (e.key === "Escape") {
                 setSelected(new Set());
-                setMenu({ open: false, x: 0, y: 0, item: null });
+                setMenu(null);
             }
         };
         window.addEventListener("keydown", onKey);
@@ -541,6 +614,14 @@ function FinderContent() {
 
     /* ---------------- Render ---------------- */
 
+    const selectedBytes = useMemo(
+        () =>
+            Array.from(selected).reduce((total, key) => {
+                const it = items.find((i) => i.key === key);
+                return it && it.kind === "file" ? total + (it as FileItem).size : total;
+            }, 0),
+        [items, selected]
+    );
     const count = sorted.length;
 
     return (
@@ -552,196 +633,68 @@ function FinderContent() {
                 width: "100vw",
                 display: "grid",
                 placeItems: "center",
-                background:
-                    "radial-gradient(1200px 800px at 20% -10%, #232325 0%, #1a1a1c 30%, #121214 100%)",
-                color: "#f2f2f7",
-                fontFamily:
-                    '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif',
+                background: theme.pageBg,
+                color: theme.text,
             }}
         >
             <div
-                style={{
-                    width: "min(1200px,95vw)",
-                    height: "min(760px,92vh)",
-                    background: "linear-gradient(180deg, #2b2b2e, #1d1d20)",
-                    border: "1px solid #3a3a3f",
-                    borderRadius: 14,
-                    display: "grid",
-                    gridTemplateRows: "auto auto auto 1fr auto",
-                    boxShadow: "0 12px 34px rgba(0,0,0,.5)",
-                    overflow: "hidden",
-                    position: "relative",
-                }}
+                style={panelStyle}
                 aria-label="File manager"
                 role="application"
                 onContextMenu={(e) => {
-                    // prevent default global context menu only if we're inside the app
                     e.preventDefault();
                 }}
             >
-                {/* toast */}
-                {msg && (
-                    <div
-                        role="status"
-                        aria-live="polite"
-                        style={{
-                            position: "absolute",
-                            top: 10,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            padding: "6px 12px",
-                            borderRadius: 999,
-                            border: "1px solid #3a3a3f",
-                            background: "#3a2f12",
-                            color: "#ffe9a6",
-                            zIndex: 20,
-                        }}
-                    >
-                        {msg}
-                    </div>
-                )}
+                <ToastBanner message={msg} />
 
-                {/* titlebar */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "10px 12px",
-                        gap: 10,
-                        background: "linear-gradient(180deg,#2f2f32,#232326)",
-                        borderBottom: "1px solid #3a3a3f",
-                    }}
-                >
-                    <div style={{ display: "flex", gap: 8 }}>
-                        {/* Red closes to '/' */}
-                        <Dot c="#ff5f57" onClick={() => router.push("/")} title="Close" />
-                        <Dot c="#febc2e" title="Minimize (inactive)" />
-                        <Dot c="#28c840" title="Zoom (inactive)" />
-                    </div>
-                    <strong style={{ marginLeft: 8 }}>Files</strong>
-                </div>
+                <TitleBar onClose={() => router.push("/")} />
 
-                {/* toolbar */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 12px",
-                        borderBottom: "1px solid #3a3a3f",
-                        background: "#232326",
-                    }}
-                >
-                    <button style={btn} onClick={createFolder}>
-                        New Folder
-                    </button>
-                    <button style={btn} onClick={pickFiles}>
-                        Upload
-                    </button>
-                    <button
-                        style={{ ...btn, opacity: selected.size ? 1 : 0.6 }}
-                        onClick={removeSelected}
-                        disabled={!selected.size}
-                        aria-disabled={!selected.size}
-                        title={selected.size ? "Delete selected" : "No selection"}
-                    >
-                        Delete Selected
-                    </button>
-                    <input ref={fileInputRef} type="file" multiple hidden onChange={onPick} />
-                    <div style={{ flex: 1 }} />
-                    <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search"
-                        aria-label="Search files"
-                        style={{
-                            width: 240,
-                            padding: "6px 10px",
-                            borderRadius: 8,
-                            border: "1px solid #3a3a3f",
-                            background: "#1f1f21",
-                            color: "#fff",
-                            outline: "none",
-                        }}
-                    />
-                    <button
-                        style={btn}
-                        onClick={() => setView((v) => (v === "list" ? "grid" : "list"))}
-                        aria-label={`Switch to ${view === "list" ? "grid" : "list"} view`}
-                    >
-                        {view === "list" ? "Grid" : "List"}
-                    </button>
-                </div>
+                <Toolbar
+                    onCreateFolder={createFolder}
+                    onUpload={pickFiles}
+                    onDeleteSelected={removeSelected}
+                    hasSelection={!!selected.size}
+                    query={query}
+                    onQueryChange={setQuery}
+                    view={view}
+                    onToggleView={() => setView((v) => (v === "list" ? "grid" : "list"))}
+                />
 
-                {/* breadcrumbs */}
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "8px 12px",
-                        borderBottom: "1px solid #3a3a3f",
-                        background: "linear-gradient(180deg,#222224,#1b1b1d)",
-                        flexWrap: "wrap",
-                    }}
-                    aria-label="Path bar"
-                >
-                    <button
-                        onClick={() => setPath("")}
-                        style={crumb}
-                        aria-label="Go to root"
-                        aria-current={crumbs.length === 0 ? "page" : undefined}
-                    >
-                        Home
-                    </button>
-                    {crumbs.map((c, i) => (
-                        <Fragment key={`${c}-${i}`}>
-                            <span style={{ color: "#8e8e93" }} aria-hidden="true">
-                                ›
-                            </span>
-                            <button
-                                onClick={() => goToIndex(i)}
-                                style={crumb}
-                                aria-label={`Go to ${c}`}
-                                aria-current={i === crumbs.length - 1 ? "page" : undefined}
-                            >
-                                {c}
-                            </button>
-                        </Fragment>
-                    ))}
-                </div>
+                <input ref={fileInputRef} type="file" multiple hidden onChange={onPick} />
+
+                <BreadcrumbsBar crumbs={crumbs} onHome={() => setPath("")} onSelect={goToIndex} />
 
                 {/* main content */}
-                <section style={{ background: "#1b1b1d", display: "grid", gridTemplateRows: "1fr" }}>
+                <section style={{ background: theme.surface, display: "grid", gridTemplateRows: "1fr" }}>
                     <div style={{ overflow: "auto" }}>
                         {view === "list" ? (
-                            <>
-                                <div role="grid" aria-rowcount={count + 1} aria-colcount={4}>
-                                    <RowHeader sortKey={sortKey} sortAsc={sortAsc} sortBy={sortBy} />
-                                    {loading ? (
-                                        <SkeletonList />
-                                    ) : sorted.length ? (
-                                        sorted.map((it, i) => (
-                                            <Row
-                                                key={`${it.kind}-${it.key}-${i}`}
-                                                item={it}
-                                                selected={selected.has(it.key)}
-                                                onSelect={(e) => toggleSelect(it.key, e)}
-                                                onOpenFolder={() => goInto((it as FolderItem).name)}
-                                                onDelete={() =>
-                                                    remove(it.kind === "folder" ? (it as FolderItem).key : (it as FileItem).key)
-                                                }
-                                                onRename={() => onRename(it)}
-                                                onContextMenu={(x, y) =>
-                                                    setMenu({ open: true, x, y, item: it })
-                                                }
-                                            />
-                                        ))
-                                    ) : (
-                                        <Empty />
-                                    )}
-                                </div>
-                            </>
+                            <div role="grid" aria-rowcount={count + 1} aria-colcount={4}>
+                                <RowHeader sortKey={sortKey} sortAsc={sortAsc} sortBy={sortBy} />
+                                {loading ? (
+                                    <SkeletonList />
+                                ) : sorted.length ? (
+                                    sorted.map((it, i) => (
+                                        <Row
+                                            key={`${it.kind}-${it.key}-${i}`}
+                                            item={it}
+                                            selected={selected.has(it.key)}
+                                            onSelect={(e) => toggleSelect(it.key, e)}
+                                            onOpenFolder={() => goInto((it as FolderItem).name)}
+                                            onDelete={() =>
+                                                remove(
+                                                    it.kind === "folder"
+                                                        ? (it as FolderItem).key
+                                                        : (it as FileItem).key
+                                                )
+                                            }
+                                            onRename={() => onRename(it)}
+                                            onContextMenu={(x, y) => setMenu({ x, y, item: it })}
+                                        />
+                                    ))
+                                ) : (
+                                    <Empty onUpload={pickFiles} />
+                                )}
+                            </div>
                         ) : loading ? (
                             <SkeletonGrid />
                         ) : sorted.length ? (
@@ -754,7 +707,7 @@ function FinderContent() {
                                     userSelect: dragStartRef.current ? "none" : "auto",
                                 }}
                                 role="grid"
-                                aria-rowcount={Math.ceil(sorted.length)}
+                                aria-rowcount={sorted.length}
                             >
                                 <Grid
                                     items={sorted}
@@ -763,82 +716,39 @@ function FinderContent() {
                                     open={(name) => goInto(name)}
                                     del={(k) => remove(k)}
                                     rename={(it) => onRename(it)}
-                                    onContextMenu={(it, x, y) => setMenu({ open: true, x, y, item: it })}
+                                    onContextMenu={(it, x, y) => setMenu({ x, y, item: it })}
                                 />
                             </div>
                         ) : (
-                            <Empty />
+                            <Empty onUpload={pickFiles} />
                         )}
                     </div>
                 </section>
 
                 {/* bottom bar */}
-                <div
-                    style={{
-                        padding: "6px 12px",
-                        borderTop: "1px solid #3a3a3f",
-                        color: "#8e8e93",
-                        background: "#1a1a1c",
-                        display: "flex",
-                        justifyContent: "space-between",
-                    }}
-                    aria-live="polite"
-                >
-                    <span>
-                        {sorted.length} item{sorted.length === 1 ? "" : "s"}
-                    </span>
-                    <span>
-                        {selected.size
-                            ? `${selected.size} selected${selected.size > 1
-                                ? ` • ${formatBytes(
-                                    Array.from(selected)
-                                        .map((k) => {
-                                            const it = sorted.find((i) => i.key === k);
-                                            return it?.kind === "file" ? (it as FileItem).size : 0;
-                                        })
-                                        .reduce((a, b) => a + b, 0)
-                                )}`
-                                : ""
-                            }`
-                            : ""}
-                    </span>
-                </div>
+                <StatusBar
+                    total={sorted.length}
+                    selectedCount={selected.size}
+                    selectedBytes={selectedBytes}
+                />
 
                 {/* upload progress */}
-                {typeof progress === "number" && (
-                    <div
-                        role="progressbar"
-                        aria-valuemin={0}
-                        aria-valuemax={100}
-                        aria-valuenow={progress}
-                        aria-label="Upload progress"
-                        style={{
-                            position: "absolute",
-                            bottom: 0,
-                            left: 0,
-                            height: 3,
-                            width: `${progress}%`,
-                            background: "#0a84ff",
-                            transition: "width .2s linear",
-                        }}
-                    />
-                )}
+                <UploadProgress progress={progress} />
 
                 {/* context menu */}
-                {menu.open && menu.item && (
+                {menu && (
                     <ContextMenu
                         x={menu.x}
                         y={menu.y}
-                        onClose={() => setMenu({ open: false, x: 0, y: 0, item: null })}
+                        onClose={() => setMenu(null)}
                         onOpen={() => {
-                            const it = menu.item!;
-                            if (it.kind === "folder") goInto((it as FolderItem).name);
-                            else window.open((it as FileItem).url, "_blank");
+                            if (menu.item.kind === "folder") goInto((menu.item as FolderItem).name);
+                            else window.open((menu.item as FileItem).url, "_blank");
                         }}
-                        onRename={() => onRename(menu.item!)}
+                        onRename={() => onRename(menu.item)}
                         onDelete={() =>
                             remove(
-                                menu.item!.kind === "folder"
+                                menu.item.kind === "folder"
                                     ? (menu.item as FolderItem).key
                                     : (menu.item as FileItem).key
                             )
@@ -851,6 +761,233 @@ function FinderContent() {
 }
 
 /* ---------------- Helpers & Subcomponents ---------------- */
+
+function ToastBanner({ message }: { message: string | null }) {
+    if (!message) return null;
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            style={{
+                position: "absolute",
+                top: 10,
+                left: "50%",
+                transform: "translateX(-50%)",
+                padding: "6px 12px",
+                borderRadius: 999,
+                border: `1px solid ${theme.border}`,
+                background: theme.toolbarBg,
+                color: theme.text,
+                zIndex: 20,
+                boxShadow: "0 10px 24px rgba(0,0,0,.35)",
+            }}
+        >
+            {message}
+        </div>
+    );
+}
+
+function TitleBar({ onClose }: { onClose: () => void }) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                gap: 10,
+                background: theme.panelBg,
+                borderBottom: `1px solid ${theme.border}`,
+            }}
+        >
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Dot c="#ff5f57" onClick={onClose} title="Close" />
+                <Dot c="#febc2e" title="Minimize (inactive)" />
+                <Dot c="#28c840" title="Zoom (inactive)" />
+                <strong style={{ marginLeft: 8 }}>Files</strong>
+            </div>
+            <span style={{ color: theme.muted, fontSize: 13 }}>Drag & drop anywhere to upload</span>
+        </div>
+    );
+}
+
+function Toolbar({
+    onCreateFolder,
+    onUpload,
+    onDeleteSelected,
+    hasSelection,
+    query,
+    onQueryChange,
+    view,
+    onToggleView,
+}: {
+    onCreateFolder: () => void;
+    onUpload: () => void;
+    onDeleteSelected: () => void;
+    hasSelection: boolean;
+    query: string;
+    onQueryChange: (v: string) => void;
+    view: ViewMode;
+    onToggleView: () => void;
+}) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                borderBottom: `1px solid ${theme.border}`,
+                background: theme.toolbarBg,
+            }}
+        >
+            <button type="button" style={controlButton} onClick={onCreateFolder}>
+                New Folder
+            </button>
+            <button type="button" style={controlButton} onClick={onUpload}>
+                Upload
+            </button>
+            <button
+                type="button"
+                style={{
+                    ...controlButton,
+                    opacity: hasSelection ? 1 : 0.55,
+                    cursor: hasSelection ? "pointer" : "not-allowed",
+                }}
+                onClick={onDeleteSelected}
+                disabled={!hasSelection}
+                aria-disabled={!hasSelection}
+                title={hasSelection ? "Delete selected" : "No selection"}
+            >
+                Delete Selected
+            </button>
+            <div style={{ flex: 1 }} />
+            <input
+                type="search"
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                placeholder="Search"
+                aria-label="Search files"
+                style={textInput}
+            />
+            <button
+                type="button"
+                style={controlButton}
+                onClick={onToggleView}
+                aria-label={`Switch to ${view === "list" ? "grid" : "list"} view`}
+            >
+                {view === "list" ? "Grid View" : "List View"}
+            </button>
+        </div>
+    );
+}
+
+function BreadcrumbsBar({
+    crumbs,
+    onHome,
+    onSelect,
+}: {
+    crumbs: string[];
+    onHome: () => void;
+    onSelect: (index: number) => void;
+}) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 12px",
+                borderBottom: `1px solid ${theme.border}`,
+                background: theme.panelBg,
+                flexWrap: "wrap",
+            }}
+            aria-label="Path bar"
+        >
+            <button
+                type="button"
+                onClick={onHome}
+                style={crumbButton}
+                aria-label="Go to root"
+                aria-current={crumbs.length === 0 ? "page" : undefined}
+            >
+                Home
+            </button>
+            {crumbs.map((c, i) => (
+                <Fragment key={`${c}-${i}`}>
+                    <span style={{ color: theme.muted }} aria-hidden="true">
+                        ›
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => onSelect(i)}
+                        style={crumbButton}
+                        aria-label={`Go to ${c}`}
+                        aria-current={i === crumbs.length - 1 ? "page" : undefined}
+                    >
+                        {c}
+                    </button>
+                </Fragment>
+            ))}
+        </div>
+    );
+}
+
+function StatusBar({
+    total,
+    selectedCount,
+    selectedBytes,
+}: {
+    total: number;
+    selectedCount: number;
+    selectedBytes: number;
+}) {
+    return (
+        <div
+            style={{
+                padding: "6px 12px",
+                borderTop: `1px solid ${theme.border}`,
+                color: theme.muted,
+                background: theme.surface,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+            }}
+            aria-live="polite"
+        >
+            <span>
+                {total} item{total === 1 ? "" : "s"}
+            </span>
+            <span>
+                {selectedCount
+                    ? `${selectedCount} selected${selectedBytes ? ` • ${formatBytes(selectedBytes)}` : ""}`
+                    : "No selection"}
+            </span>
+        </div>
+    );
+}
+
+function UploadProgress({ progress }: { progress: number | null }) {
+    if (typeof progress !== "number") return null;
+    return (
+        <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+            aria-label="Upload progress"
+            style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                height: 3,
+                width: `${progress}%`,
+                background: theme.accent,
+                transition: "width .2s linear",
+            }}
+        />
+    );
+}
 
 async function putWithProgress(
     url: string,
@@ -912,11 +1049,11 @@ function RowHeader({
                 gridTemplateColumns: "minmax(280px,1.4fr) 120px 1fr 220px",
                 gap: 10,
                 padding: "10px 14px",
-                color: "#8e8e93",
+                color: theme.muted,
                 position: "sticky",
                 top: 0,
-                background: "linear-gradient(180deg,#222224,#1b1b1d)",
-                borderBottom: "1px solid #3a3a3f",
+                background: theme.panelBg,
+                borderBottom: `1px solid ${theme.border}`,
                 textTransform: "uppercase",
                 fontSize: 12,
                 letterSpacing: ".4px",
@@ -926,6 +1063,13 @@ function RowHeader({
             <div
                 role="columnheader"
                 onClick={() => sortBy("name")}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        sortBy("name");
+                    }
+                }}
                 style={{ cursor: "pointer", userSelect: "none" }}
             >
                 Name{caret("name")}
@@ -933,6 +1077,13 @@ function RowHeader({
             <div
                 role="columnheader"
                 onClick={() => sortBy("size")}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        sortBy("size");
+                    }
+                }}
                 style={{ cursor: "pointer", userSelect: "none" }}
             >
                 Size{caret("size")}
@@ -941,6 +1092,13 @@ function RowHeader({
             <div
                 role="columnheader"
                 onClick={() => sortBy("date")}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        sortBy("date");
+                    }
+                }}
                 style={{ cursor: "pointer", userSelect: "none" }}
             >
                 Date Added{caret("date")}
@@ -993,14 +1151,20 @@ function Row({
             onMouseDown={(e) => {
                 if (e.shiftKey) e.preventDefault();
             }}
-            onClick={() => onSelect({})}
+            onClick={(e) =>
+                onSelect({
+                    metaKey: e.metaKey,
+                    ctrlKey: e.ctrlKey,
+                    shiftKey: e.shiftKey,
+                })
+            }
             onKeyDown={(e) => {
                 if (e.key === "Enter") {
                     e.preventDefault();
                     openItem();
                 } else if (e.key === " ") {
                     e.preventDefault();
-                    onSelect({ metaKey: true }); // toggle-like
+                    onSelect({ metaKey: true, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey }); // toggle-like
                 } else if (e.key === "F2") {
                     e.preventDefault();
                     onRename();
@@ -1014,10 +1178,12 @@ function Row({
                 gridTemplateColumns: "minmax(280px,1.4fr) 120px 1fr 220px",
                 gap: 10,
                 padding: "10px 14px",
-                borderBottom: "1px solid #2a2a2d",
+                borderBottom: `1px solid ${theme.border}`,
                 cursor: "default",
-                background: selected ? "#2c2c30" : undefined,
+                background: selected ? theme.highlight : undefined,
                 outline: "none",
+                borderLeft: selected ? `2px solid ${theme.accent}` : "2px solid transparent",
+                transition: "background-color 120ms ease, border-color 120ms ease",
             }}
         >
             <div role="cell" style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -1087,14 +1253,19 @@ function Grid({
                             e.preventDefault();
                             onContextMenu(it, e.clientX, e.clientY);
                         }}
-                        onClick={(e) => onSelect(it.key, e)}
+                        onClick={(e) =>
+                            onSelect(it.key, {
+                                metaKey: e.metaKey,
+                                ctrlKey: e.ctrlKey,
+                                shiftKey: e.shiftKey,
+                            })
+                        }
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 e.preventDefault();
                                 openItem();
                             } else if (e.key === " ") {
                                 e.preventDefault();
-                                // toggle select
                                 onSelect(it.key, {
                                     metaKey: true,
                                     ctrlKey: e.ctrlKey,
@@ -1109,13 +1280,15 @@ function Grid({
                             }
                         }}
                         style={{
-                            border: "1px solid #3a3a3f",
+                            border: `1px solid ${theme.border}`,
                             borderRadius: 12,
                             padding: 12,
-                            background: isSel ? "#2c2c30" : "#232326",
+                            background: isSel ? theme.highlight : theme.toolbarBg,
                             textAlign: "center",
                             userSelect: "none",
                             outline: "none",
+                            boxShadow: isSel ? "0 0 0 1px rgba(5,150,105,0.35)" : "0 8px 18px rgba(0,0,0,.12)",
+                            transition: "background-color 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
                         }}
                     >
                         <div style={{ fontSize: 48, marginBottom: 8 }} aria-hidden="true">
@@ -1133,7 +1306,7 @@ function Grid({
                             {it.name}
                         </div>
                         {it.kind === "file" && (
-                            <div style={{ fontSize: 11, color: "#8e8e93", marginTop: 4 }}>
+                            <div style={{ fontSize: 11, color: theme.muted, marginTop: 4 }}>
                                 {formatBytes(file.size)}
                             </div>
                         )}
@@ -1146,28 +1319,28 @@ function Grid({
 
 /* --- visuals & utilities --- */
 
-const btn: React.CSSProperties = {
-    padding: "6px 10px",
-    borderRadius: 8,
-    border: "1px solid #3a3a3f",
-    background: "#2a2a2d",
-    color: "#fff",
-    cursor: "pointer",
-};
-
-const crumb: React.CSSProperties = {
-    cursor: "pointer",
-    padding: "4px 10px",
-    borderRadius: 999,
-    border: "1px solid #3a3a3f",
-    background: "#2a2a2e",
-    color: "#fff",
-};
-
-function Empty() {
+function Empty({ onUpload }: { onUpload?: () => void }) {
     return (
-        <div style={{ padding: "28px 14px", color: "#8e8e93" }}>
-            Empty folder. Drag files here or click <b>Upload</b>.
+        <div
+            style={{
+                padding: "28px 14px",
+                color: theme.muted,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                flexWrap: "wrap",
+            }}
+        >
+            <span>Empty folder. Drag files here.</span>
+            {onUpload && (
+                <button
+                    type="button"
+                    style={{ ...controlButton, padding: "6px 12px" }}
+                    onClick={onUpload}
+                >
+                    Upload
+                </button>
+            )}
         </div>
     );
 }
@@ -1180,7 +1353,7 @@ function SkeletonList() {
                     key={i}
                     style={{
                         height: 18,
-                        background: "#2a2a2d",
+                        background: theme.toolbarBg,
                         marginBottom: 10,
                         borderRadius: 6,
                         width: `${60 + (i % 3) * 10}%`,
@@ -1205,16 +1378,16 @@ function SkeletonGrid() {
                 <div
                     key={i}
                     style={{
-                        border: "1px solid #3a3a3f",
+                        border: `1px solid ${theme.border}`,
                         borderRadius: 12,
                         padding: 12,
-                        background: "#232326",
+                        background: theme.toolbarBg,
                     }}
                 >
                     <div
-                        style={{ height: 48, background: "#2a2a2d", borderRadius: 8, marginBottom: 8 }}
+                        style={{ height: 48, background: theme.surface, borderRadius: 8, marginBottom: 8 }}
                     />
-                    <div style={{ height: 12, background: "#2a2a2d", borderRadius: 6 }} />
+                    <div style={{ height: 12, background: theme.surface, borderRadius: 6 }} />
                 </div>
             ))}
         </div>
@@ -1305,6 +1478,11 @@ function ContextMenu({
         };
     }, [onClose]);
 
+    const withClose = (fn: () => void) => () => {
+        fn();
+        onClose();
+    };
+
     return (
         <div
             id="ctxmenu"
@@ -1313,9 +1491,9 @@ function ContextMenu({
                 position: "absolute",
                 top: y,
                 left: x,
-                background: "#2a2a2d",
-                color: "#fff",
-                border: "1px solid #3a3a3f",
+                background: theme.panelBg,
+                color: theme.text,
+                border: `1px solid ${theme.border}`,
                 borderRadius: 8,
                 minWidth: 160,
                 zIndex: 30,
@@ -1323,9 +1501,9 @@ function ContextMenu({
                 overflow: "hidden",
             }}
         >
-            <MenuItem onClick={onOpen} label="Open" />
-            <MenuItem onClick={onRename} label="Rename (F2)" />
-            <MenuItem onClick={onDelete} label="Delete (Del)" danger />
+            <MenuItem onClick={withClose(onOpen)} label="Open" />
+            <MenuItem onClick={withClose(onRename)} label="Rename (F2)" />
+            <MenuItem onClick={withClose(onDelete)} label="Delete (Del)" danger />
         </div>
     );
 }
@@ -1342,6 +1520,7 @@ function MenuItem({
     return (
         <button
             role="menuitem"
+            type="button"
             onClick={onClick}
             style={{
                 display: "block",
@@ -1350,7 +1529,7 @@ function MenuItem({
                 padding: "8px 12px",
                 background: "transparent",
                 border: "none",
-                color: danger ? "#ff6b6b" : "#fff",
+                color: danger ? "#b91c1c" : theme.text,
                 cursor: "pointer",
             }}
         >

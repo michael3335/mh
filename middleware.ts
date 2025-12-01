@@ -2,36 +2,27 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
-const isDev = process.env.NODE_ENV === "development";
-
 export async function middleware(req: NextRequest) {
-  // ✅ Skip all auth checks in local development
-  if (isDev) {
+  const { pathname, search } = req.nextUrl;
+
+  // Allow NextAuth internals + auth error display so users can sign in.
+  if (pathname.startsWith("/api/auth") || pathname.startsWith("/auth/error")) {
     return NextResponse.next();
   }
 
-  const { pathname } = req.nextUrl;
-
-  // ✅ Public routes that anyone can access
-  if (
-    pathname === "/" || // Home
-    pathname.startsWith("/auth/error") || // Auth error page
-    pathname.startsWith("/api/auth") // NextAuth internals
-  ) {
-    return NextResponse.next();
-  }
-
-  // ✅ Check if authenticated
   const token = await getToken({ req });
 
-  // ❌ If NOT authenticated → redirect to error page
   if (!token) {
-    const url = new URL("/auth/error", req.url);
-    url.searchParams.set("error", "AccessDenied");
+    // API callers get a 401 JSON instead of a redirect.
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const url = new URL("/api/auth/signin", req.url);
+    url.searchParams.set("callbackUrl", `${pathname}${search}`);
     return NextResponse.redirect(url);
   }
 
-  // ✅ Authenticated → allow
   return NextResponse.next();
 }
 

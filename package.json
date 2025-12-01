@@ -2,6 +2,9 @@
   "name": "mh",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "worker": "python3 -m pip install --disable-pip-version-check -r research-worker/requirements.txt && python3 -m pip install --disable-pip-version-check --no-deps freqtrade==2024.5 && python3 research-worker/worker.py",

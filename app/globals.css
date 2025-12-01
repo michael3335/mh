@@ -7,36 +7,34 @@
 :root {
   color-scheme: light;
 
-  /* Core palette */
-  --white: #ffffff;
-  --black: #000000;
+  /* Core palette: neutral slate with a single emerald accent */
+  --background: #ffffff;
+  --foreground: #0f172a; /* slate-900 */
+  --text-secondary: #334155; /* slate-700 */
+  --text-muted: #64748b; /* slate-500 */
+  --border: #e2e8f0; /* slate-200 */
+  --accent: #059669; /* emerald-ish green */
+  --accent-soft: #ecfdf5;
+  --accent-strong: #047857;
 
-  /* Text + surfaces */
-  --background: var(--white);
-  --foreground: var(--black);
-
-  /* Hairline and UI neutrals (keep it subtle) */
-  --hairline: 1px;
-  --rule: rgba(0, 0, 0, 0.14);
-  --rule-strong: rgba(0, 0, 0, 0.28);
-
-  /* UI tokens used by Tailwind theme bridge below */
-  --card: var(--white);
-  --card-foreground: var(--black);
-  --popover: var(--white);
-  --popover-foreground: var(--black);
-  --primary: var(--black);
-  --primary-foreground: var(--white);
-  --secondary: var(--white);
-  --secondary-foreground: var(--black);
-  --muted: var(--white);
-  --muted-foreground: rgba(0, 0, 0, 0.66);
-  --accent: var(--white);
-  --accent-foreground: var(--black);
+  /* UI surfaces */
+  --card: var(--background);
+  --card-foreground: var(--foreground);
+  --popover: var(--background);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: #ffffff;
+  --secondary: #f8fafc; /* soft slate-50 */
+  --secondary-foreground: var(--foreground);
+  --muted: #f8fafc;
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: #ffffff;
   --destructive: #cf2e2e;
-  --border: rgba(0, 0, 0, 0.14);
-  --input: rgba(0, 0, 0, 0.14);
-  --ring: rgba(0, 0, 0, 0.5);
+  --input: var(--border);
+  --ring: #94a3b8; /* slate-400 */
+  --hairline: 1px;
+  --rule: var(--border);
+  --rule-strong: #cbd5e1;
 
   /* Radius */
   --radius: 0.625rem;
@@ -44,6 +42,18 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --section-y-mobile: 40px;
+  --section-y-desktop: 80px;
 }
 
 /* Retina hairlines look heavy; reduce optically */
@@ -118,6 +128,8 @@ h2,
 h3 {
   letter-spacing: -0.01em;
   font-weight: 700;
+  font-family: var(--font-heading), var(--font-sans), ui-sans-serif, system-ui, -apple-system,
+    Segoe UI, Roboto, Helvetica, Arial;
 }
 
 h1 {
@@ -140,7 +152,7 @@ p {
   line-height: 1.6;
 }
 
-/* Links: black text, underline only on hover/focus for minimal vibe */
+/* Links: primary text color with underline on hover/focus */
 a {
   color: var(--foreground);
   text-decoration: none;

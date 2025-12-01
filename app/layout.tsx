@@ -4,11 +4,16 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import AuthProvider from "@/components/AuthProvider";
 import BottomLeftControls from "@/components/BottomLeftControls";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, Jost } from "next/font/google";
 import { CustomCursor } from "@/components/CustomCursor";
 
-// Single strong sans for a bold, minimal aesthetic
-const inter = Inter({
+const headingFont = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+});
+
+const bodyFont = Jost({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
@@ -77,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={inter.variable}
+      className={`${bodyFont.variable} ${headingFont.variable}`}
       style={{ colorScheme: "light" }}
     >
       <body className="font-sans antialiased">

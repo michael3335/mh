@@ -1,9 +1,22 @@
 // app/layout.tsx
-import './globals.css';
+import "../../globals.css";
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/react';
 import AuthProvider from "@/components/AuthProvider";
 import BottomLeftControls from "@/components/BottomLeftControls";
+import { Space_Grotesk, Jost } from "next/font/google";
+
+const headingFont = Space_Grotesk({
+    subsets: ["latin"],
+    variable: "--font-heading",
+    display: "swap",
+});
+
+const bodyFont = Jost({
+    subsets: ["latin"],
+    variable: "--font-sans",
+    display: "swap",
+});
 
 export const metadata: Metadata = {
     metadataBase: new URL('https://private.michaelharrison.au'),
@@ -56,22 +69,17 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-    width: 'device-width',
+    width: "device-width",
     initialScale: 1,
-    interactiveWidget: 'resizes-content',
-    // ✅ themeColor belongs here now:
-    themeColor: [
-        { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-        { media: '(prefers-color-scheme: dark)', color: '#0b0b0c' },
-    ],
-    // Optional but nice: hint supported color schemes
-    colorScheme: 'light dark',
+    interactiveWidget: "resizes-content",
+    themeColor: "#ffffff",
+    colorScheme: "light",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en">
-            <body>
+        <html lang="en" className={`${bodyFont.variable} ${headingFont.variable}`}>
+            <body className="font-sans antialiased">
                 <AuthProvider>{children}
                     <BottomLeftControls />
                 </AuthProvider>

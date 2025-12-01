@@ -1,6 +1,5 @@
 "use client";
 
-import ContactLink from "@shared/components/ContactLink";
 import ASCIIText from "@/components/ASCIIText";
 import UserStatus from "@/components/UserStatus";
 
@@ -47,8 +46,6 @@ export default function HomePage() {
                         <ASCIIText text="Michael Harrison" enableWaves interactive={false} />
                     </div>
                 </h1>
-
-                <ContactLink />
             </section>
         </main>
     );
