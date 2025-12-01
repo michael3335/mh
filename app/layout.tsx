@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import AuthProvider from "@/components/AuthProvider";
 import BottomLeftControls from "@/components/BottomLeftControls";
 import { Inter } from "next/font/google";
+import { CustomCursor } from "@/components/CustomCursor";
 
 // Single strong sans for a bold, minimal aesthetic
 const inter = Inter({
@@ -92,6 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main">{children}</main>
           <BottomLeftControls />
         </AuthProvider>
+        <CustomCursor />
 
         {/* Vercel Analytics */}
         <Analytics />

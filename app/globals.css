@@ -285,3 +285,50 @@ button:where(:hover, :focus-visible) {
     outline-color: CanvasText;
   }
 }
+
+/* Custom text selection */
+::selection {
+  background-color: none;
+  /* color: #cc5500; */
+  color: rgb(219, 52, 242);
+}
+
+/* Firefox uses a separate pseudo-element */
+::-moz-selection {
+  background-color: none;
+  /* color: #cc5500; */
+  color: rgb(219, 52, 242);
+}
+
+.custom-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.80);
+  mix-blend-mode: difference;
+  pointer-events: none;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+  transition: transform 140ms ease, opacity 180ms ease;
+  opacity: 0;
+  z-index: 50;
+  will-change: transform, opacity;
+}
+
+@media (pointer: fine) {
+  * {
+    cursor: none !important;
+  }
+
+  .custom-cursor {
+    display: block;
+  }
+}
+
+@media (pointer: coarse) {
+  .custom-cursor {
+    display: none;
+  }
+}
