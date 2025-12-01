@@ -153,11 +153,8 @@ export default async function NewsBriefingPage() {
             <li>Storage/battery headlines and notable bids/auctions.</li>
           </ul>
           <nav className="links">
-            <Link className="pill" href="/energy" prefetch>
-              Energy hub
-            </Link>
             <Link className="pill" href="/commodities" prefetch>
-              Commodities
+              Energy &amp; commodities lab
             </Link>
           </nav>
         </Card>

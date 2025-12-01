@@ -273,6 +273,17 @@ function CommoditiesContent() {
                     {asof && (
                         <Badge>{new Date(asof).toLocaleTimeString("en-AU")}</Badge>
                     )}
+                    <Badge>
+                        <Link
+                            href="/energy"
+                            style={{
+                                textDecoration: "none",
+                                color: "inherit",
+                            }}
+                        >
+                            Energy hub thesis
+                        </Link>
+                    </Badge>
                 </div>
                 <p
                     style={{

@@ -10,7 +10,7 @@ export default function HomePage() {
 
       <header className="landing-header">
         <div className="landing-title-block">
-          <p className="section-label">Michael Harrison</p>
+          <h1 className="landing-item-title">Michael Harrison</h1>
         </div>
       </header>
 
@@ -34,18 +34,10 @@ export default function HomePage() {
             </Link>
           </li>
           <li className="landing-item">
-            <Link href="/energy" className="landing-link">
-              <span className="landing-item-title">Energy hub</span>
-              <span className="landing-item-meta">
-                Data backbone, strategy complexes, and transition hypotheses.
-              </span>
-            </Link>
-          </li>
-          <li className="landing-item">
             <Link href="/commodities" className="landing-link">
-              <span className="landing-item-title">Commodities hub</span>
+              <span className="landing-item-title">Energy &amp; commodities lab</span>
               <span className="landing-item-meta">
-                Research around metals, fuels, and transition supply chains.
+                Combined hub for energy thesis, data backbone, and commodity/FX research lab.
               </span>
             </Link>
           </li>

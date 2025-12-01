@@ -4,6 +4,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import CommoditiesMiniBoard from "@/components/CommoditiesMiniBoard";
 
 export const metadata = {
   title: "Energy",
@@ -32,6 +33,15 @@ export default function EnergyPage() {
       </header>
 
       <section className="grid">
+        {/* 0. Market snapshot from lab */}
+        <Card title="Market snapshot — key commodities" icon="📊">
+          <p>
+            Live snapshot from the Energy &amp; Commodities Lab, used to
+            contextualise the energy thesis and stress-test forecast models.
+          </p>
+          <CommoditiesMiniBoard />
+        </Card>
+
         {/* 1. Data backbone */}
         <Card title="Data backbone" icon="🧾">
           <p>
@@ -956,7 +966,7 @@ export default function EnergyPage() {
           </ul>
           <nav className="links">
             <Link className="pill" href="/commodities">
-              Commodities<span aria-hidden> ↗</span>
+              Energy &amp; commodities lab<span aria-hidden> ↗</span>
             </Link>
             <Link className="pill" href="/models">
               Models<span aria-hidden> ↗</span>

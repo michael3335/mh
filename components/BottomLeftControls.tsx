@@ -14,7 +14,7 @@ const AUTH_DESTINATION_COASTER: Route = "/models";
 const AUTH_DESTINATION_PICKAXE: Route = "/commodities"; // keeping constant name for minimal diff
 const AUTH_DESTINATION_NOTE: Route = "/notes"; // <— sticky note destination
 const AUTH_DESTINATION_FUTURE: Route = "/future";
-const AUTH_DESTINATION_ENERGY: Route = "/energy"; // energy hub
+const AUTH_DESTINATION_ENERGY: Route = "/commodities"; // energy & commodities hub (same as commodities lab)
 const AUTH_DESTINATION_NEWS: Route = "/news"; // NEW: news briefing
 const AUTH_DESTINATION_INSIGHTS: Route = "/insights"; // NEW: portfolio blog
 const RICK = "https://youtu.be/dQw4w9WgXcQ?si=ejrEVACw40p2BpNw";
@@ -121,7 +121,7 @@ export default function BottomLeftControls() {
       {status === "authenticated" ? (
         <Link
           href={AUTH_DESTINATION_ENERGY}
-          aria-label="Open energy hub"
+          aria-label="Open energy & commodities hub"
           className="energyBtn iconBox"
           prefetch
         >
@@ -133,7 +133,7 @@ export default function BottomLeftControls() {
         <button
           type="button"
           className="energyBtn iconBox"
-          aria-label="Open energy hub (sign in required)"
+          aria-label="Open energy & commodities hub (sign in required)"
           onClick={handleUnauthedRick}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") handleUnauthedRick(e);

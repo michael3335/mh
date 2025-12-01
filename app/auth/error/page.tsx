@@ -1,6 +1,5 @@
 // app/auth/error/page.tsx
 import type { Metadata } from "next";
-import Link from "next/link";
 import Image from "next/image";
 
 export const metadata: Metadata = {
@@ -15,9 +14,10 @@ type AuthErrorPageProps = {
 export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
     const callbackUrl =
         typeof searchParams?.callbackUrl === "string" ? searchParams.callbackUrl : undefined;
-    const signinHref = callbackUrl
-        ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`
-        : "/auth/signin";
+    const signinHref =
+        callbackUrl != null
+            ? `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`
+            : "/auth/signin";
 
     return (
         <main
@@ -83,7 +83,7 @@ export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
                     </p>
                 </div>
 
-                <Link
+                <a
                     href={signinHref}
                     style={{
                         display: "inline-flex",
@@ -103,7 +103,7 @@ export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
                 >
                     <GitHubMark />
                     <span>Sign in with GitHub</span>
-                </Link>
+                </a>
 
                 <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 13 }}>
                     Need access? Contact Michael for an invite.
