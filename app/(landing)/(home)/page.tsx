@@ -107,10 +107,11 @@ const styles = `
 }
 
 .landing-header {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .landing-title-block {
