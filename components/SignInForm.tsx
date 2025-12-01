@@ -12,7 +12,7 @@ export default function SignInForm() {
             <div className="max-w-md w-full bg-white/80 backdrop-blur border border-zinc-200 rounded-2xl shadow-sm p-8 space-y-6">
                 <div className="space-y-2">
                     <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Access</p>
-                    <h1 className="text-3xl font-semibold font-display">Michael Harrison - Private</h1>
+                    <h1 className="text-3xl font-semibold font-display">Michael Harrison</h1>
                     <p className="text-zinc-600">
                         Private workspace. Sign in with the approved GitHub account to continue.
                     </p>

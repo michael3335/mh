@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import AuthProvider from "@/components/AuthProvider";
 import { Space_Grotesk, Jost } from "next/font/google";
 import { CustomCursor } from "@/components/CustomCursor";
+import PageNavigation from "@/components/PageNavigation";
 
 const headingFont = Space_Grotesk({
   subsets: ["latin"],
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
 
         <AuthProvider>
+          <PageNavigation />
           <main id="main">{children}</main>
         </AuthProvider>
         <CustomCursor />

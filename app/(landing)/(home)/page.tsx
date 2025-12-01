@@ -8,13 +8,14 @@ export default function HomePage() {
     <main className="landing-shell">
       <UserStatus />
 
-      <header className="landing-header">
-        <div className="landing-title-block">
-          <h1 className="landing-item-title">Michael Harrison</h1>
-        </div>
-      </header>
+      <div className="landing-group">
+        <header className="landing-header">
+          <div className="landing-title-block">
+            <h1 className="landing-item-title">Michael Harrison</h1>
+          </div>
+        </header>
 
-      <section className="landing-section">
+        <section className="landing-section">
         <p className="section-label">Projects</p>
         <ul className="landing-grid">
           <li className="landing-item">
@@ -66,7 +67,8 @@ export default function HomePage() {
             </Link>
           </li>
         </ul>
-      </section>
+        </section>
+      </div>
 
       <style>{styles}</style>
     </main>
@@ -81,27 +83,34 @@ const styles = `
   padding: 32px 20px 72px;
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
 }
 
 @media (min-width: 900px) {
   .landing-shell {
     padding-top: 56px;
     padding-bottom: 96px;
-    gap: 56px;
+    gap: 32px;
   }
+}
+
+.landing-group {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
 }
 
 .landing-header {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-@media (min-width: 900px) {
-  .landing-header {
-    gap: 20px;
-  }
+  gap: 6px;
+  align-items: center;
 }
 
 .landing-title-block {
@@ -114,7 +123,7 @@ const styles = `
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.35rem;
 }
 
 .landing-heading {
@@ -128,16 +137,19 @@ const styles = `
 
 .landing-section {
   border-top: var(--hairline) solid var(--rule);
-  padding-top: 1.5rem;
+  padding-top: 0.6rem;
+  width: 100%;
+  max-width: 720px;
 }
 
 .landing-grid {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.9rem;
+  width: min(640px, 100%);
 }
 
 @media (min-width: 800px) {
