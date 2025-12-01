@@ -1382,7 +1382,7 @@ function ExternalLink({
 
 /* --------------------------- UNIVERSITY TIMELINE UI ------------------------ */
 
-function UniTimeline({ items }: { items: UniTimelineItem[] }) {
+function UniTimeline({ items }: { items: readonly UniTimelineItem[] }) {
     return (
         <ol className="relative ml-3 border-s border-black/20">
             {items.map((t) => (
