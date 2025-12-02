@@ -29,7 +29,8 @@ export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
                 paddingBlock: "clamp(32px, 8vh, 64px)",
                 background: "var(--background)",
                 color: "var(--foreground)",
-                fontFamily: 'var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+                fontFamily:
+                    'var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
             }}
         >
             <div
@@ -98,15 +99,28 @@ export default function AuthErrorPage({ searchParams }: AuthErrorPageProps) {
                         fontWeight: 600,
                         textDecoration: "none",
                         boxShadow: "0 10px 30px rgba(5, 150, 105, 0.18)",
-                        transition: "transform 120ms ease, box-shadow 120ms ease, background 120ms ease",
+                        transition:
+                            "transform 120ms ease, box-shadow 120ms ease, background 120ms ease",
                     }}
                 >
                     <GitHubMark />
                     <span>Sign in with GitHub</span>
                 </a>
 
-                <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 13 }}>
-                    Need access? Contact Michael for an invite.
+                <p style={{ margin: 0, color: "var(--text-muted)", fontSize: 13, lineHeight: 1.6 }}>
+                    Don&apos;t have an approved GitHub login?{" "}
+                    <a
+                        href="https://michaelharrison.au"
+                        style={{
+                            color: "var(--accent)",
+                            fontWeight: 500,
+                            textDecoration: "underline",
+                            textUnderlineOffset: 3,
+                        }}
+                    >
+                        Visit michaelharrison.au
+                    </a>
+                    .
                 </p>
             </div>
         </main>
